@@ -4,9 +4,9 @@ using System.Text;
 using GMath;
 using static GMath.Gfx;
 
-namespace Rendering
+namespace Renderer.Rendering
 {
-	static class Transforms
+	public	static class Transforms
 	{
 		public static float4x4 Identity
         {

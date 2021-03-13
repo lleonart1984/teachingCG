@@ -4,7 +4,7 @@ using System.Text;
 using GMath;
 using static GMath.Gfx;
 
-namespace Rendering
+namespace Renderer.Rendering
 {
     /// <summary>
     /// Represents a rasterizer object allowing to draw primitives in a specific texture.
