@@ -76,5 +76,17 @@ namespace GMath
         {
             return FromBaricenter(rnd.random());
         }
+
+        public List<float3> RandomPoints(int ammount, GRandom rnd)
+        {
+            List<float3> points = new List<float3>();
+
+            for(int i = 0; i < ammount; i++)
+            {
+                points.Add(A + (B - A) * rnd.random());
+            }
+
+            return points;
+        }
     }
 }

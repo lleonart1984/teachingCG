@@ -1,6 +1,7 @@
 ﻿using GMath;
 using Rendering;
 using System;
+using System.Collections.Generic;
 using static GMath.Gfx;
 
 namespace Renderer
@@ -10,8 +11,9 @@ namespace Renderer
         static void Main(string[] args)
         {
             Raster render = new Raster(1024, 512);
-            FreeTransformTest(render);
+            // FreeTransformTest(render);
             //DrawRoomTest(render);
+            CofeeMakerTest(render);
             render.RenderTarget.Save("test.rbm");
             Console.WriteLine("Done.");
         }
@@ -134,6 +136,105 @@ namespace Renderer
 
             float3[] pointsToDraw = ApplyTransform(boxPoints, transformingIntoBox);
             raster.DrawPoints(pointsToDraw);
+        }
+
+        private static void CofeeMakerTest(Raster render)
+        {
+            render.ClearRT(float4(0, 0, 0.2f, 1)); // clear with color dark blue.
+
+            int sides = 10;
+            int cloud = 1000;
+            GRandom random = new GRandom();
+
+            float h_base = 3;
+            float altura_base = 0;
+
+            float h_union = 0.5f;
+            float altura_union = altura_base + h_base;
+
+            float h_tope = 3;
+            float altura_tope = altura_union + h_union;
+
+            float h_tapa = 0.3f;
+            float altura_tapa = altura_tope + h_tope;
+
+            float h_cosita = 1f;
+            float altura_cosita = altura_tapa + h_tapa;
+
+            List<float3> buttonBasePoints = PoliedroXZ(sides, float3(0, 0, 0), 2);
+            List<float3> topBasePoints = PoliedroXZ(sides, float3(0, altura_base + h_base, 0), 1.3f);
+
+            List<float3> buttonUnionPoints = PoliedroXZ(sides * 10, float3(0, altura_union, 0), 1.35f);
+            List<float3> topUnionPoints = PoliedroXZ(sides * 10, float3(0, altura_union + h_union, 0), 1.35f);
+
+            List<float3> buttonTopPoints = PoliedroXZ(sides, float3(0, altura_tope, 0), 1.4f);
+            List<float3> topTopPoints = PoliedroXZ(sides, float3(0, altura_tope + h_tope, 0), 2.1f);
+
+            List<float3> buttonTapaPoints = PoliedroXZ(sides, float3(0, altura_tapa, 0), 2.1f);
+            List<float3> topTapaPoints = PoliedroXZ(sides, float3(0, altura_tapa + h_tapa, 0), 0.3f);
+
+            List<float3> buttonCositaPoints = PoliedroXZ(sides, float3(0, altura_cosita, 0), 0.3f);
+            List<float3> topCositaPoints = PoliedroXZ(sides, float3(0, altura_cosita + h_cosita, 0), 0.4f);
+
+            List<float3> DownPointsList = new List<float3>();
+            List<float3> UpPointsList = new List<float3>();
+
+
+            DownPointsList.AddRange(UnirPoliedros(buttonBasePoints, topBasePoints, cloud, random));
+
+            UpPointsList.AddRange(UnirPoliedros(buttonUnionPoints, topUnionPoints, 5, random));
+            UpPointsList.AddRange(UnirPoliedros(buttonTopPoints, topTopPoints, cloud, random));
+            UpPointsList.AddRange(UnirPoliedros(buttonTapaPoints, topTapaPoints, cloud, random));
+            UpPointsList.AddRange(UnirPoliedros(buttonCositaPoints, topCositaPoints, cloud, random));
+
+            float4x4 rosca_transform = Transforms.RotateRespectTo(float3(0,0,0), float3(0,1,0), pi/3);
+            UpPointsList = new List<float3>(ApplyTransform(UpPointsList.ToArray(), rosca_transform));
+
+            // float3[] base_points = pointsList.ToArray();
+
+            // Apply a free transform
+            // points = ApplyTransform(points, p => float3(p.x * cos(p.y) + p.z * sin(p.y), p.y, p.x * sin(p.y) - p.z * cos(p.y)));
+            // float3[] top_points = ApplyTransform(base_points, mul(Transforms.RotateRespectTo(float3(0,0,0), float3(0,0,1), pi), Transforms.Translate(0,7,0)));
+
+
+            DownPointsList.AddRange(UpPointsList);
+            float3[] points = DownPointsList.ToArray();
+
+
+            #region viewing and projecting
+
+            points = ApplyTransform(points, Transforms.LookAtLH(float3(11f, 6.6f, 9), float3(0, 4, 0), float3(0, 1, 0)));
+            points = ApplyTransform(points, Transforms.PerspectiveFovLH(pi_over_4, render.RenderTarget.Height / (float)render.RenderTarget.Width, 0.01f, 20));
+
+            #endregion
+
+            render.DrawPoints(points);
+        }
+
+        private static List<float3> UnirPoliedros(List<float3> poli1, List<float3> poli2, int cloud, GRandom random)
+        {
+            List<float3> points = new List<float3>();
+            int sides = poli1.Count;
+
+            for(int i = 0; i < sides; i++)
+            {
+                points.AddRange(new Segment3D(poli1[i], poli1[(i + 1) % sides]).RandomPoints(cloud, random));
+                points.AddRange(new Segment3D(poli2[i], poli2[(i + 1) % sides]).RandomPoints(cloud, random));
+                points.AddRange(new Segment3D(poli1[i], poli2[i]).RandomPoints(cloud, random));
+            }
+            return points;
+        }
+
+        private static List<float3> PoliedroXZ(int sides, float3 centre, float radio)
+        {
+            List<float3> points = new List<float3>();
+
+            for(float i = 0; i < pi * 2; i += (pi * 2 / sides))
+            {
+                points.Add(centre + float3(radio * (float)Math.Cos(i), 0, radio * (float)Math.Sin(i)));
+            }
+
+            return points;
         }
     }
 }
