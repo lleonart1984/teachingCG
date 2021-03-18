@@ -12,7 +12,7 @@ namespace Renderer
         {
             Raster render = new Raster(1024, 512);
             // FreeTransformTest(render);
-            //DrawRoomTest(render);
+            // DrawRoomTest(render);
             CofeeMakerTest(render);
             render.RenderTarget.Save("test.rbm");
             Console.WriteLine("Done.");
@@ -164,6 +164,8 @@ namespace Renderer
             List<float3> buttonBasePoints = PoliedroXZ(sides, float3(0, 0, 0), 2);
             List<float3> topBasePoints = PoliedroXZ(sides, float3(0, altura_base + h_base, 0), 1.3f);
 
+            List<float3> basePoints = FillPoliedroXZ(buttonBasePoints, float3(0, 0, 0), cloud);
+
             List<float3> buttonUnionPoints = PoliedroXZ(sides * 10, float3(0, altura_union, 0), 1.35f);
             List<float3> topUnionPoints = PoliedroXZ(sides * 10, float3(0, altura_union + h_union, 0), 1.35f);
 
@@ -198,6 +200,7 @@ namespace Renderer
 
 
             DownPointsList.AddRange(UpPointsList);
+            DownPointsList.AddRange(basePoints);
             float3[] points = DownPointsList.ToArray();
 
 
@@ -224,6 +227,36 @@ namespace Renderer
             }
             return points;
         }
+
+        private static List<float3> FillPoliedroXZ(List<float3> poli, float3 center, int cloud)
+        {
+            List<float3> points = new List<float3>();
+            for(int i = 1; i < poli.Count; ++i){
+                points.AddRange(FillTriangleXZ(center, poli[i], poli[i - 1], cloud));
+            }
+            points.AddRange(FillTriangleXZ(center, poli[0], poli[poli.Count - 1], cloud));
+            return points;
+        }
+
+        private static List<float3> FillTriangleXZ(float3 a, float3 b, float3 c, int cloud)
+        {
+            Random rnd = new Random();
+            
+
+            List<float3> points = new List<float3>();
+            for(int i = 0; i < cloud; ++i)
+            {
+                float u = (float)rnd.NextDouble();
+                float v = (float)rnd.NextDouble();
+                float3 item = (1 - sqrt(u)) * a;
+                item += (sqrt(u) * (1 - v)) * b;
+                item += v * sqrt(u) * c;
+                // Console.WriteLine(item);
+                points.Add(item);
+            }
+            return points;
+        }
+
 
         private static List<float3> PoliedroXZ(int sides, float3 centre, float radio)
         {
