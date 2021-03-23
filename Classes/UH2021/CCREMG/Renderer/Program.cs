@@ -1,4 +1,4 @@
-﻿using GMath;
+using GMath;
 using Rendering;
 using System;
 using System.Collections.Generic;
@@ -75,7 +75,7 @@ namespace Renderer
             List<float3> topBasePoints = PoliedroXZ(sides, float3(0, altura_base + h_base, 0), 1.3f);
 
             List<float3> basePoints = FillPoliedroXZ(buttonBasePoints, float3(0, 0, 0), cloud);
-            List<float3> coffeeBasePoints = FillCoffeeBase(buttonBasePoints, topBasePoints, cloud);
+            List<float3> coffeeBasePoints = DrawCoffeeMakerSection(buttonBasePoints, topBasePoints, cloud);
 
             List<float3> unionPoints = DrawCylinder(float3(0, 0, 0), altura_union, h_union, 1.35f, cloud, random);
             // List<float3> buttonUnionPoints = PoliedroXZ(sides * 10, float3(0, altura_union, 0), 1.35f);
@@ -83,12 +83,15 @@ namespace Renderer
 
             List<float3> buttonTopPoints = PoliedroXZ(sides, float3(0, altura_tope, 0), 1.4f);
             List<float3> topTopPoints = PoliedroXZ(sides, float3(0, altura_tope + h_tope, 0), 2.1f);
+            List<float3> topPoints = DrawCoffeeMakerSection(buttonTopPoints, topTopPoints, cloud);
 
             List<float3> buttonTapaPoints = PoliedroXZ(sides, float3(0, altura_tapa, 0), 2.1f);
             List<float3> topTapaPoints = PoliedroXZ(sides, float3(0, altura_tapa + h_tapa, 0), 0.3f);
+            List<float3> tapaPoints = DrawCoffeeMakerSection(buttonTapaPoints, topTapaPoints, cloud / 10);
 
             List<float3> buttonCositaPoints = PoliedroXZ(sides, float3(0, altura_cosita, 0), 0.3f);
             List<float3> topCositaPoints = PoliedroXZ(sides, float3(0, altura_cosita + h_cosita, 0), 0.4f);
+            List<float3> cositaPoints = DrawCoffeeMakerSection(buttonCositaPoints, topCositaPoints, cloud / 10);
 
             List<float3> DownPointsList = new List<float3>();
             List<float3> UpPointsList = new List<float3>();
@@ -100,6 +103,9 @@ namespace Renderer
             UpPointsList.AddRange(UnirPoliedros(buttonTopPoints, topTopPoints, cloud, random));
             UpPointsList.AddRange(UnirPoliedros(buttonTapaPoints, topTapaPoints, cloud, random));
             UpPointsList.AddRange(UnirPoliedros(buttonCositaPoints, topCositaPoints, cloud, random));
+            UpPointsList.AddRange(topPoints);
+            UpPointsList.AddRange(tapaPoints);
+            UpPointsList.AddRange(cositaPoints);
 
             float4x4 rosca_transform = Transforms.RotateRespectTo(float3(0,0,0), float3(0,1,0), pi/3);
             UpPointsList = new List<float3>(ApplyTransform(UpPointsList.ToArray(), rosca_transform));
@@ -151,7 +157,7 @@ namespace Renderer
             points.AddRange(FillTriangleXZ(center, poli[0], poli[poli.Count - 1], cloud));
             return points;
         }
-        private static List<float3> FillCoffeeBase(List<float3> baseF, List<float3> topF, int cloud){
+        private static List<float3> DrawCoffeeMakerSection(List<float3> baseF, List<float3> topF, int cloud){
             var points = new List<float3>();
             for(int i = 1; i < baseF.Count; ++i){
                 points.AddRange(FillTriangleXZ(baseF[i - 1], baseF[i], topF[i - 1], cloud));
