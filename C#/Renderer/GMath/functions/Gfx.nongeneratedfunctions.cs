@@ -154,6 +154,17 @@ namespace GMath
             return float3(0, 0, 0); // should never occur... but compiler doesn't know...
         }
 
+        public static float3 randomInSphere()
+        {
+            while (true)
+            {
+                float3 v = float3(random(), random(), random()) * 2 - 1;
+                float l = length(v);
+                if (l > 0 && l < 1)
+                    return v / l;
+            }
+        }
+
         #endregion
     }
 }
