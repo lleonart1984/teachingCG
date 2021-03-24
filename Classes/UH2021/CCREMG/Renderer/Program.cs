@@ -93,6 +93,24 @@ namespace Renderer
             List<float3> topCositaPoints = PoliedroXZ(sides, float3(0, altura_cosita + h_cosita, 0), 0.4f);
             List<float3> cositaPoints = DrawCoffeeMakerSection(buttonCositaPoints, topCositaPoints, cloud / 10);
 
+
+            List<float3> handlePoints = AsaXZ(float3(0, altura_tapa, 1.7f), h_tope, h_tope/2, h_union);
+            List<float3> handlePoints1 = new List<float3>();
+            List<float3> handlePoints2 = new List<float3>();
+            for(int i = 0; i < handlePoints.Count; i++)
+            {
+                if(i < handlePoints.Count/2)
+                    handlePoints1.Add(handlePoints[i]);
+                else
+                    handlePoints2.Add(handlePoints[i]);
+            }
+            List<float3> listHandlePoints = UnirPoliedros(handlePoints1, handlePoints2, cloud, random);
+
+            listHandlePoints.AddRange(DrawCoffeeMakerSection(handlePoints1, handlePoints2, cloud/50));
+            listHandlePoints.AddRange(FillAsaLateral(handlePoints1, cloud/50, random));
+            listHandlePoints.AddRange(FillAsaLateral(handlePoints2, cloud/50, random));
+
+
             List<float3> DownPointsList = new List<float3>();
             List<float3> UpPointsList = new List<float3>();
 
@@ -106,6 +124,7 @@ namespace Renderer
             UpPointsList.AddRange(topPoints);
             UpPointsList.AddRange(tapaPoints);
             UpPointsList.AddRange(cositaPoints);
+            UpPointsList.AddRange(listHandlePoints);
 
             float4x4 rosca_transform = Transforms.RotateRespectTo(float3(0,0,0), float3(0,1,0), pi/3);
             UpPointsList = new List<float3>(ApplyTransform(UpPointsList.ToArray(), rosca_transform));
@@ -116,32 +135,17 @@ namespace Renderer
             // points = ApplyTransform(points, p => float3(p.x * cos(p.y) + p.z * sin(p.y), p.y, p.x * sin(p.y) - p.z * cos(p.y)));
             // float3[] top_points = ApplyTransform(base_points, mul(Transforms.RotateRespectTo(float3(0,0,0), float3(0,0,1), pi), Transforms.Translate(0,7,0)));
 
-            List<float3> handlePoints = AsaXZ(float3(0, altura_tapa, 2.1f), h_tope, h_tope/2, h_union);
-            List<float3> handlePoints1 = new List<float3>();
-            List<float3> handlePoints2 = new List<float3>();
-            for(int i = 0; i < handlePoints.Count; i++)
-            {
-                if(i < handlePoints.Count/2)
-                    handlePoints1.Add(handlePoints[i]);
-                else
-                    handlePoints2.Add(handlePoints[i]);
-            }
-            List<float3> listHandlePoints = UnirPoliedros(handlePoints1, handlePoints2, cloud, random);
-
-
-
 
             DownPointsList.AddRange(UpPointsList);
             DownPointsList.AddRange(basePoints);
             DownPointsList.AddRange(coffeeBasePoints);
             DownPointsList.AddRange(unionPoints);
-            DownPointsList.AddRange(listHandlePoints);
 
             float3[] points = DownPointsList.ToArray();
 
             #region viewing and projecting
 
-            points = ApplyTransform(points, Transforms.LookAtLH(float3(11f, 6.6f, 0), float3(0, 4, 0), float3(0, 1, 0)));
+            points = ApplyTransform(points, Transforms.LookAtLH(float3(-11f, 6.6f, 0), float3(0, 4, 0), float3(0, 1, 0)));
             points = ApplyTransform(points, Transforms.PerspectiveFovLH(pi_over_4, render.RenderTarget.Height / (float)render.RenderTarget.Width, 0.01f, 20));
 
             #endregion
@@ -298,11 +302,35 @@ namespace Renderer
             }
 
 
-            float4x4 transform = mul(mul(Transforms.Translate(0, -1 * height/2, 0), Transforms.RotateZ(pi/2)), Transforms.Translate(site));
+            float4x4 transform = mul(mul(mul(Transforms.Translate(0, -1 * height/2, 0), Transforms.RotateRespectTo(float3(0,0,0), float3(0,0,1), -1 * pi / 2)), Transforms.Translate(site)), Transforms.RotateRespectTo(float3(0,0,0), float3(0,1,0), 8 * pi/5));
 
             float3[] points_r = ApplyTransform(points.ToArray(), transform);
 
             return new List<float3>(points_r);
+        }
+    
+        private static List<float3> FillAsaLateral(List<float3> asa, int cloud, GRandom rnd)
+        {
+            List<float3> points = new List<float3>();
+
+            int n = asa.Count;
+            for(int i = 0; i < n; i++)
+            {
+                points.AddRange(FillTriangleXZ(asa[0], asa[n - 1], asa[n - 2], cloud));
+                points.AddRange(FillTriangleXZ(asa[0], asa[n - 2], asa[n - 3], cloud));
+                points.AddRange(FillTriangleXZ(asa[0], asa[1], asa[n - 3], cloud));
+                points.AddRange(FillTriangleXZ(asa[1], asa[n - 3], asa[n - 4], cloud));
+                points.AddRange(FillTriangleXZ(asa[1], asa[n - 4], asa[n - 5], cloud));
+                points.AddRange(FillTriangleXZ(asa[1], asa[n - 5], asa[n - 6], cloud));
+                points.AddRange(FillTriangleXZ(asa[1], asa[2], asa[n - 6], cloud));
+                points.AddRange(FillTriangleXZ(asa[2], asa[3], asa[n - 6], cloud));
+                points.AddRange(FillTriangleXZ(asa[3], asa[n - 6], asa[n - 7], cloud));
+                points.AddRange(FillTriangleXZ(asa[3], asa[n - 7], asa[n - 8], cloud));
+                points.AddRange(FillTriangleXZ(asa[3], asa[n - 8], asa[n - 9], cloud));
+                points.AddRange(FillTriangleXZ(asa[3], asa[4], asa[n - 9], cloud));
+                points.AddRange(FillTriangleXZ(asa[4], asa[5], asa[6], cloud));
+            }
+            return points;
         }
     }
 }
