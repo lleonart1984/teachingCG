@@ -1,4 +1,4 @@
-using GMath;
+﻿using GMath;
 using Rendering;
 using System;
 using System.Collections.Generic;
@@ -45,7 +45,7 @@ namespace Renderer
         }
 
         private static void DrawCoffeeMaker(Raster render){
-            
+
         }
 
         private static void CofeeMakerTest(Raster render)
@@ -83,7 +83,7 @@ namespace Renderer
 
             List<float3> buttonTopPoints = PoliedroXZ(sides, float3(0, altura_tope, 0), 1.4f);
             List<float3> topTopPoints = PoliedroXZ(sides, float3(0, altura_tope + h_tope, 0), 2.1f);
-            List<float3> topPoints = DrawCoffeeMakerSection(buttonTopPoints, topTopPoints, cloud);
+            List<float3> topPoints = DrawCoffeeMakerTopSection(buttonTopPoints, topTopPoints, cloud, 2.1f, 0.7f, random);
 
             List<float3> buttonTapaPoints = PoliedroXZ(sides, float3(0, altura_tapa, 0), 2.1f);
             List<float3> topTapaPoints = PoliedroXZ(sides, float3(0, altura_tapa + h_tapa, 0), 0.3f);
@@ -167,6 +167,42 @@ namespace Renderer
             points.AddRange(FillTriangleXZ(baseF[baseF.Count - 1], baseF[0], topF[topF.Count - 1], cloud));
             points.AddRange(FillTriangleXZ(baseF[0], topF[0], topF[topF.Count - 1], cloud));
             return points;
+        }
+
+        private static List<float3> DrawCoffeeMakerTopSection(List<float3> baseF, List<float3> topF, int cloud, float r, float d, GRandom rnd){
+            var points = new List<float3>();
+            int n = baseF.Count;
+
+            for(int i = 1; i < n; ++i){
+                points.AddRange(FillTriangleXZ(baseF[i - 1], baseF[i], topF[i - 1], cloud));
+                points.AddRange(FillTriangleXZ(baseF[i], topF[i], topF[i - 1], cloud));
+            }
+
+            float3 a = (topF[n - 1] + baseF[n - 1]) / 2;
+            float3 b = (topF[0] + baseF[0]) / 2;
+            float3 q = (b + a) / 2;
+            float3 p = Find(topF[n - 1], topF[0], r, d);
+
+            points.AddRange(new Segment3D(topF[n - 1], p).RandomPoints(cloud, rnd));
+            points.AddRange(new Segment3D(topF[0], p).RandomPoints(cloud, rnd));
+            points.AddRange(new Segment3D(q, p).RandomPoints(cloud, rnd));
+            points.AddRange(new Segment3D(topF[n - 1], q).RandomPoints(cloud, rnd));
+            points.AddRange(new Segment3D(topF[0], q).RandomPoints(cloud, rnd));
+            points.AddRange(FillTriangleXZ(baseF[n - 1], baseF[0], a, cloud / 5));
+            points.AddRange(FillTriangleXZ(a, baseF[0], b, cloud / 5));
+            points.AddRange(FillTriangleXZ(topF[n - 1], a, q, cloud/ 10));
+            points.AddRange(FillTriangleXZ(q, b, topF[0], cloud / 10));
+            points.AddRange(FillTriangleXZ(q, p, topF[n - 1], cloud / 5));
+            points.AddRange(FillTriangleXZ(q, p, topF[0], cloud / 5));
+
+            return points;
+        }
+
+        private static float3 Find(float3 a, float3 b, float r, float d){
+            float3 m = (a + b) / 2;
+            float k = m[2] / m[0];
+            float xp = (float)Math.Sqrt(((d + r) * (d + r)) / (1 + k * k));
+            return float3(xp, m[1], k * xp);
         }
 
         private static List<float3> FillTriangleXZ(float3 a, float3 b, float3 c, int cloud)
