@@ -53,7 +53,7 @@ namespace Renderer
             render.ClearRT(float4(0, 0, 0.2f, 1)); // clear with color dark blue.
 
             int sides = 10;
-            int cloud = 1000;
+            int cloud = 500;
             GRandom random = new GRandom();
 
             float h_base = 3;
@@ -145,7 +145,7 @@ namespace Renderer
 
             #region viewing and projecting
 
-            points = ApplyTransform(points, Transforms.LookAtLH(float3(-11f, 6.6f, 0), float3(0, 4, 0), float3(0, 1, 0)));
+            points = ApplyTransform(points, Transforms.LookAtLH(float3(-12f, 6.6f, 0), float3(0, 4, 0), float3(0, 1, 0)));
             points = ApplyTransform(points, Transforms.PerspectiveFovLH(pi_over_4, render.RenderTarget.Height / (float)render.RenderTarget.Width, 0.01f, 20));
 
             #endregion
@@ -228,16 +228,28 @@ namespace Renderer
         {
             Random rnd = new Random();
             
+            GRandom random = new GRandom();
 
             List<float3> points = new List<float3>();
-            for(int i = 0; i < cloud; ++i)
+
+            if(cloud < 0)
             {
-                float u = (float)rnd.NextDouble();
-                float v = (float)rnd.NextDouble();
-                float3 item = (1 - sqrt(u)) * a;
-                item += (sqrt(u) * (1 - v)) * b;
-                item += v * sqrt(u) * c;
-                points.Add(item);
+                cloud = cloud * -1;
+                points.AddRange(new Segment3D(a, b).RandomPoints(cloud, random));
+                points.AddRange(new Segment3D(b, c).RandomPoints(cloud, random));
+                points.AddRange(new Segment3D(c, a).RandomPoints(cloud, random));
+            }
+            else
+            {
+                for(int i = 0; i < cloud; ++i)
+                {
+                    float u = (float)rnd.NextDouble();
+                    float v = (float)rnd.NextDouble();
+                    float3 item = (1 - sqrt(u)) * a;
+                    item += (sqrt(u) * (1 - v)) * b;
+                    item += v * sqrt(u) * c;
+                    points.Add(item);
+                }
             }
             return points;
         }
