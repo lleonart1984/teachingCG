@@ -1,4 +1,4 @@
-using GMath;
+﻿using GMath;
 using Rendering;
 using System;
 using System.Collections.Generic;
@@ -116,17 +116,32 @@ namespace Renderer
             // points = ApplyTransform(points, p => float3(p.x * cos(p.y) + p.z * sin(p.y), p.y, p.x * sin(p.y) - p.z * cos(p.y)));
             // float3[] top_points = ApplyTransform(base_points, mul(Transforms.RotateRespectTo(float3(0,0,0), float3(0,0,1), pi), Transforms.Translate(0,7,0)));
 
+            List<float3> handlePoints = AsaXZ(float3(0, altura_tapa, 2.1f), h_tope, h_tope/2, h_union);
+            List<float3> handlePoints1 = new List<float3>();
+            List<float3> handlePoints2 = new List<float3>();
+            for(int i = 0; i < handlePoints.Count; i++)
+            {
+                if(i < handlePoints.Count/2)
+                    handlePoints1.Add(handlePoints[i]);
+                else
+                    handlePoints2.Add(handlePoints[i]);
+            }
+            List<float3> listHandlePoints = UnirPoliedros(handlePoints1, handlePoints2, cloud, random);
+
+
+
 
             DownPointsList.AddRange(UpPointsList);
             DownPointsList.AddRange(basePoints);
             DownPointsList.AddRange(coffeeBasePoints);
             DownPointsList.AddRange(unionPoints);
-            float3[] points = DownPointsList.ToArray();
+            DownPointsList.AddRange(listHandlePoints);
 
+            float3[] points = DownPointsList.ToArray();
 
             #region viewing and projecting
 
-            points = ApplyTransform(points, Transforms.LookAtLH(float3(11f, 6.6f, 9), float3(0, 4, 0), float3(0, 1, 0)));
+            points = ApplyTransform(points, Transforms.LookAtLH(float3(11f, 6.6f, 0), float3(0, 4, 0), float3(0, 1, 0)));
             points = ApplyTransform(points, Transforms.PerspectiveFovLH(pi_over_4, render.RenderTarget.Height / (float)render.RenderTarget.Width, 0.01f, 20));
 
             #endregion
@@ -218,6 +233,40 @@ namespace Renderer
             }
 
             return points;
+        }
+
+        private static List<float3> AsaXZ(float3 site, float length, float width, float height)
+        {
+            List<float3> points = new List<float3>();
+
+            points.Add(float3(0, 0, 0));
+            points.Add(float3(0, 0, width/3));
+            points.Add(float3(0, 0, 2 * width / 3));
+            points.Add(float3(length/4, 0, width));
+            points.Add(float3(length, 0, width/3));
+            points.Add(float3(5 * length / 6, 0, width / 6));
+            points.Add(float3(4 * length / 6, 0, width/6));
+            points.Add(float3(length/2, 0, width/2));
+            points.Add(float3(length/4, 0, 2 * width/3));
+            points.Add(float3(length/5, 0, 3 * width/5));
+            points.Add(float3(length/4, 0, 2 * width/5));
+            points.Add(float3(9 * length/40, 0, width/3));
+            points.Add(float3(length/5, 0, width/5));
+            points.Add(float3(length/4, 0, width/8));
+            points.Add(float3(length/4, 0, -1 * width/8));
+
+            int l = points.Count;
+            for(int i = 0; i < l; i++)
+            {
+                points.Add(points[i] + float3(0, height, 0));
+            }
+
+
+            float4x4 transform = mul(mul(Transforms.Translate(0, -1 * height/2, 0), Transforms.RotateZ(pi/2)), Transforms.Translate(site));
+
+            float3[] points_r = ApplyTransform(points.ToArray(), transform);
+
+            return new List<float3>(points_r);
         }
     }
 }
