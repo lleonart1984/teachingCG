@@ -45,13 +45,56 @@ namespace MainForm
 
         private void SetGuitar()
         {
-            var body = ShapeGenerator.Box(5000).ApplyTransforms(Transforms.Scale(float3(1, 2, .3f)));
-            var bridge = ShapeGenerator.Box(5000).ApplyTransforms(Transforms.Scale(float3(.3f, 2, .2f)),
-                                                                  Transforms.Translate(float3(0, 2, 0)));
-            var top = ShapeGenerator.Box(5000).ApplyTransforms(Transforms.Scale(.4f,.6f,.1f),
-                                                               Transforms.Translate(float3(0,3.3f,0)));
-            body += bridge + top;
-            _baseModel = body;
+            //var body = ShapeGenerator.Box(5000).ApplyTransforms(Transforms.Scale(float3(1, 2, .3f)));
+            //var bridge = ShapeGenerator.Box(5000).ApplyTransforms(Transforms.Scale(float3(.3f, 2, .2f)),
+            //                                                      Transforms.Translate(float3(0, 2, 0)));
+            //var top = ShapeGenerator.Box(5000).ApplyTransforms(Transforms.Scale(.4f,.6f,.1f),
+            //                                                   Transforms.Translate(float3(0,3.3f,0)));
+            //body += bridge + top;
+            //_baseModel = body;
+            //var axesy = ShapeGenerator.Box(4000).ApplyTransforms(Transforms.Scale(10, .01f, 10),
+            //                                                     Transforms.Translate(0,.5f,0));
+
+            float stringLength = 20;
+
+            float bridgeLength = stringLength * 475 / 610;
+            float bridgeWidth = 4;
+
+            var strings = new Model();
+            var stringWidthScalars = new float[] { .06f, .05f, .04f, .04f, .03f, .02f };
+            var step = bridgeWidth / (stringWidthScalars.Length + 1);
+            for (int i = 0; i < stringWidthScalars.Length; i++)
+            {
+                var cylinder = ShapeGenerator.Cylinder(1000).ApplyTransforms(Transforms.Translate(0,0,.5f),
+                                                                             Transforms.Scale(stringWidthScalars[i], stringWidthScalars[i], 1),
+                                                                             Transforms.Translate(-bridgeWidth/2 + step*(i+1),-1,0));
+                strings += cylinder;
+            }
+
+            var bridge = ShapeGenerator.Box(4000).ApplyTransforms(Transforms.Translate(0, 0, .5f), 
+                                                                  Transforms.Scale(bridgeWidth, 1, 1))
+                                                 .ApplyFilter(x => x.y != .5f); // Remove face facing the cylinder
+            var bridge2 = ShapeGenerator.Cylinder(5000).ApplyFilter(x => x.y > 0) // Remove top half of the cylinder
+                                                       .ApplyTransforms(Transforms.Translate(0, 0, .5f), 
+                                                                        Transforms.Scale(bridgeWidth/2, 1, 1),
+                                                                        Transforms.Translate(0,.5f,0));
+
+            var baseBridge = bridge.Min(x => x.z);
+            var fretsAmount = 20;
+            step = bridgeLength / fretsAmount;
+            var frets = new Model();
+            for (int i = 0; i < fretsAmount; i++) // Frets
+            {
+                var fret = ShapeGenerator.Box(500).ApplyTransforms(Transforms.Translate(0, 0, .5f), 
+                                                                   Transforms.Scale(bridgeWidth, bridgeWidth/30, bridgeWidth / 30),
+                                                                   Transforms.Translate(0, -.5f, -baseBridge + step * i)); // This is not the correct fret spacing
+                frets += fret;
+            }
+
+            _baseModel = (bridge + bridge2).ApplyTransforms(Transforms.Scale(1, 1, bridgeLength)) + 
+                          strings.ApplyTransforms(Transforms.Scale(1,1, stringLength)) + 
+                          frets;
+
         }
 
         public void DrawModel()

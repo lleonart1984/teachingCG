@@ -20,35 +20,35 @@ namespace Renderer.Modeling
 
             for (int i = 0; i < pointsAmount; i++)
             {
-                var ellipse_point = new float3(random(), random(), random());
-                ellipse_point = normalize(ellipse_point);
+                var point = new float3(random(), random(), random());
+                point = normalize(point);
                 switch ((int)(random() * 8))
                 {
                     case 1:
-                        ellipse_point = new float3(ellipse_point.x, ellipse_point.y, -ellipse_point.z);
+                        point = new float3(point.x, point.y, -point.z);
                         break;
                     case 2:
-                        ellipse_point = new float3(ellipse_point.x, -ellipse_point.y, ellipse_point.z);
+                        point = new float3(point.x, -point.y, point.z);
                         break;
                     case 3:
-                        ellipse_point = new float3(-ellipse_point.x, ellipse_point.y, ellipse_point.z);
+                        point = new float3(-point.x, point.y, point.z);
                         break;
                     case 4:
-                        ellipse_point = new float3(ellipse_point.x, -ellipse_point.y, -ellipse_point.z);
+                        point = new float3(point.x, -point.y, -point.z);
                         break;
                     case 5:
-                        ellipse_point = new float3(-ellipse_point.x, ellipse_point.y, -ellipse_point.z);
+                        point = new float3(-point.x, point.y, -point.z);
                         break;
                     case 6:
-                        ellipse_point = new float3(-ellipse_point.x, -ellipse_point.y, ellipse_point.z);
+                        point = new float3(-point.x, -point.y, point.z);
                         break;
                     case 7:
-                        ellipse_point = new float3(-ellipse_point.x, -ellipse_point.y, -ellipse_point.z);
+                        point = new float3(-point.x, -point.y, -point.z);
                         break;
                     default:
                         break;
                 }
-                points[i] = ellipse_point;
+                points[i] = point;
             }
 
             return new Model(points);
@@ -87,6 +87,39 @@ namespace Renderer.Modeling
                 pointIndex += amount;
             }
             return new Model(points).ApplyTransforms(Transforms.Translate(-.5f,-.5f,-.5f));
+        }
+        
+        /// <summary>
+        /// Create a cylinder with height in z between -.5 and .5 and radius 1 centered in xy 0,0
+        /// </summary>
+        /// <param name="pointAmounts"></param>
+        /// <returns></returns>
+        public static Model Cylinder(int pointAmounts = 10000)
+        {
+            float3[] points = new float3[pointAmounts];
+
+            for (int i = 0; i < pointAmounts; i++)
+            {
+                float3 point = float3(random(), random(), 0);
+                point = normalize(point);
+                switch ((int)(random() * 4))
+                {
+                    case 1:
+                        point = new float3(-point.x, point.y, 0);
+                        break;
+                    case 2:
+                        point = new float3(point.x, -point.y, 0);
+                        break;
+                    case 3:
+                        point = new float3(-point.x, -point.y, 0);
+                        break;
+                    default:
+                        break;
+                }
+                point = float3(point.x, point.y, random() - .5f);
+                points[i] = point;
+            }
+            return new Model(points);
         }
     }
 }
