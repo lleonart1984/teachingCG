@@ -15,6 +15,8 @@ namespace Renderer.Modeling
     {
         private float3[] _points;
 
+        public (float3 topCorner, float3 oppositeCorner) BoundBox;
+
         public float3 this[int index]
         {
             get { return _points[index]; }
@@ -30,6 +32,9 @@ namespace Renderer.Modeling
         public Model(float3[] points)
         {
             _points = points;
+            if (_points.Any())
+                BoundBox = (float3(_points.Max(x => x.x), _points.Max(x => x.y), _points.Max(x => x.z)),
+                            float3(_points.Min(x => x.x), _points.Min(x => x.y), _points.Min(x => x.z)));
         }
 
         public Model ApplyTransforms(params float4x4[] transforms)
@@ -95,10 +100,13 @@ namespace Renderer.Modeling
         
         public static Model operator - (Model a, Model b)
         {
+            a += b;
             List<float3> points = new List<float3>();
             foreach (var point in a._points)
             {
-                if (!b._points.Any(x => x.x == point.x && x.y == point.y && x.z == point.z))
+                if (b.BoundBox.oppositeCorner.x >= point.x || point.x >= b.BoundBox.topCorner.x ||
+                    b.BoundBox.oppositeCorner.y >= point.y || point.y >= b.BoundBox.topCorner.y ||
+                    b.BoundBox.oppositeCorner.z >= point.z || point.z >= b.BoundBox.topCorner.z)
                 {
                     points.Add(point);
                 }

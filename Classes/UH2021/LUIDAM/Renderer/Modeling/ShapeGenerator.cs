@@ -94,14 +94,32 @@ namespace Renderer.Modeling
         /// </summary>
         /// <param name="pointAmounts"></param>
         /// <returns></returns>
-        public static Model Cylinder(int pointAmounts = 10000)
+        public static Model Cylinder(int pointAmounts = 10000, float thickness=0)
         {
-            float3[] points = new float3[pointAmounts];
 
-            for (int i = 0; i < pointAmounts; i++)
+            var faceArea = 2 * pi * 1;
+
+            if (thickness != 0)
+            {
+                faceArea = 2 * pi * (float)Math.Pow(1 + thickness, 2) - faceArea;
+            }
+
+            var cylinderArea = 2 * pi * 1 * 1;
+            if (thickness != 0)
+            {
+                cylinderArea += 2 * pi * (1 + thickness) * 1;
+            }
+
+            var cylinderAmounts = (int)(cylinderArea / (cylinderArea + faceArea) * pointAmounts);
+            
+            float3[] points = new float3[cylinderAmounts];
+            for (int i = 0; i < points.Length; i++)
             {
                 float3 point = float3(random(), random(), 0);
                 point = normalize(point);
+                if (i % 2 == 0)
+                    point *= 1 + thickness;
+
                 switch ((int)(random() * 4))
                 {
                     case 1:
@@ -119,7 +137,38 @@ namespace Renderer.Modeling
                 point = float3(point.x, point.y, random() - .5f);
                 points[i] = point;
             }
-            return new Model(points);
+
+            var faceAmounts = (int)(faceArea / (cylinderArea + faceArea) * pointAmounts);
+            float3[] faces = new float3[faceAmounts];
+
+            for (int i = 0; i < faces.Length; i++)
+            {
+                float3 point = float3(random(), random(), 0);
+
+                if (thickness == 0)
+                    point = normalize(point) * random() + float3(0, 0, i % 2 == 0 ? -.5f : .5f); // Fill cylinder
+                else
+                    point = normalize(point) * (thickness * random() + 1) + float3(0, 0, i % 2 == 0 ? -.5f : .5f); // Fill like a pipe
+
+                switch ((int)(random() * 4))
+                {
+                    case 1:
+                        point *= float3(-1, 1, 1);
+                        break;
+                    case 2:
+                        point *= float3(1, -1, 1);
+                        break;
+                    case 3:
+                        point *= float3(-1, -1, 1);
+                        break;
+                    default:
+                        break;
+                }
+
+                faces[i] = point;
+            }
+
+            return new Model(points) + new Model(faces);
         }
     }
 }

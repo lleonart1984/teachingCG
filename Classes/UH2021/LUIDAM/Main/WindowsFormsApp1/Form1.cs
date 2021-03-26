@@ -34,7 +34,7 @@ namespace MainForm
             //_baseModel = ShapeGenerator.Box(5000);
             SetGuitar();
             _baseTranslation = float3(imagePbx.Width / 2, imagePbx.Height / 2, 0);
-            _baseZoom = float3(40, 40, 40);
+            _baseZoom = float3(20, 20, 20);
             _model = _baseModel.ApplyTransforms(Transforms.Scale(_baseZoom), Transforms.Translate(_baseTranslation));
             _maxScale = 4.0f;
             _minScale = .5f;
@@ -49,7 +49,6 @@ namespace MainForm
             var generator = new GuitarBuilder();
 
             _baseModel = generator.Guitar();
-
         }
 
         public void DrawModel()
