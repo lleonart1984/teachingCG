@@ -50,6 +50,17 @@ namespace Renderer.Modeling
             return new Model(points);
         }
     
+        public Model ApplyFreeTransform(Func<float3, float3> freeTransform)
+        {
+            float3[] result = new float3[_points.Length];
+
+            // Transform points with a function
+            for (int i = 0; i < _points.Length; i++)
+                result[i] = freeTransform(_points[i]);
+
+            return new Model(result);
+        }
+
         public Model ApplyFilter(Func<float3, bool> selector)
         {
             List<float3> points = new List<float3>();
