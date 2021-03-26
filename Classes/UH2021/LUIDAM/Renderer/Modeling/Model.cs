@@ -4,7 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using GMath;
-using Renderer.Rendering;
+using Renderer;
+using Rendering;
 using static GMath.Gfx;
 
 

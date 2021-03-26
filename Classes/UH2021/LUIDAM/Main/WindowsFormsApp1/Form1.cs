@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Renderer.Rendering;
+using Rendering;
 using static GMath.Gfx;
 using GMath;
 using System.IO;
