@@ -82,26 +82,57 @@ namespace MainForm
             var yHoleScale = 1;
             var zHoleScale = 3 / 4.0f;
             var holeDZ = -length * (1 - zHoleScale) / 2;
-            var hole1 = basePiece.ApplyTransforms(Transforms.Scale(xHoleScale, yHoleScale, zHoleScale),
-                                                  Transforms.Translate(width*xHoleScale,0, holeDZ));
+            var hole1 = basePiece.ApplyTransforms(Transforms.Scale(xHoleScale, yHoleScale*2f, zHoleScale),
+                                                  Transforms.Translate(width*xHoleScale,height/2, holeDZ));
             var hole2 = hole1.ApplyTransforms(Transforms.Translate(-2 * width * xHoleScale, 0, 0));
 
+            basePiece -= hole1;
+            basePiece -= hole2;
+
             var stringRollCylinders = new Model();
-            // ARREGLAR POSICION DE LOS PINES Y QUITAR LOS PUNTOS DE LOS HOLE DEL MODELO DEJANDO LAS CARAS QUE CHOCAN CON LA BASE
-            var step = length * zHoleScale / 6.0f;
+            var stringPins = new Model();
+            var step = length * zHoleScale / 3.0f;
             for (int i = 0; i < 6; i++)
             {
+                var xBaseCylinderScale = width * xHoleScale;
+
                 var baseCylinder = ShapeGenerator.Cylinder(1000).ApplyTransforms(Transforms.RotateY(pi_over_4 * 2),
-                                                                Transforms.Scale(width * xHoleScale, height * yHoleScale * .25f, height * yHoleScale * .25f));
+                                                                                 Transforms.Scale(xBaseCylinderScale, height * yHoleScale * .25f, height * yHoleScale * .25f));
 
-                var zTranslate = ((i%3)+1) * step - length + holeDZ;
+                var zTranslate = ((i%3)) * step - length - holeDZ + step/2;
+                var yTranslate = -height / 2.0f;
 
-                baseCylinder = baseCylinder.ApplyTransforms(Transforms.Translate((i < 3 ? 1 : -1) * 1f * (width * xHoleScale), 0, zTranslate));
+                baseCylinder = baseCylinder.ApplyTransforms(Transforms.Translate((i < 3 ? 1 : -1) * 1f * (width * xHoleScale), yTranslate, zTranslate));
 
                 stringRollCylinders += baseCylinder;
+
+                var xPinScale = xBaseCylinderScale / 3;
+                var yPinScale = height * .2f;
+
+                var basePin = ShapeGenerator.Cylinder(1000).ApplyTransforms(Transforms.RotateY(pi_over_4 * 2),
+                                                                            Transforms.Scale(xPinScale, yPinScale, yPinScale));
+
+                var yHolderScale = height * 1.5f;
+                var xHolderScale = xPinScale / 4;
+                var headHolder = ShapeGenerator.Cylinder(1000).ApplyTransforms(Transforms.RotateX(pi_over_4 * 2),
+                                                                               Transforms.Translate(0, .5f, 0),
+                                                                               Transforms.Scale(xHolderScale, yHolderScale, xHolderScale),
+                                                                               Transforms.Translate((i < 3 ? 1 : -1) * xHolderScale, -yPinScale, -xHolderScale*2));
+
+                var head = ShapeGenerator.Cylinder(1000).ApplyTransforms(Transforms.RotateX(pi_over_4 * 2),
+                                                                         Transforms.Scale(1.1f*xHolderScale, 2*yHolderScale/6, 2*yHolderScale/3),
+                                                                         Transforms.RotateY((two_pi/12*i)),
+                                                                         Transforms.Translate((i < 3 ? 1 : -1) * xHolderScale, -yPinScale + yHolderScale, -xHolderScale * 2));
+
+
+                var pin = basePin + headHolder + head;
+
+                pin = pin.ApplyTransforms(Transforms.Translate((i < 3 ? 1 : -1) * (width/2 + xPinScale/2), yTranslate, zTranslate));
+                
+                stringPins += pin;
             }
 
-            basePiece += hole1 + hole2 + stringRollCylinders;
+            basePiece += stringRollCylinders + stringPins;
             return basePiece;
         }
 
@@ -111,9 +142,15 @@ namespace MainForm
 
             var bodyLength = BridgeLength * 1.1f;
 
-            var body = ShapeGenerator.Box(10000).ApplyTransforms(Transforms.Translate(0,0,.5f),
-                                                                Transforms.Scale(BodyWidth, BridgeHeight*2, bodyLength),
-                                                                Transforms.Translate(0, BridgeHeight, BridgeLength - BridgeBodyDif));
+            float transform(float x, float val) => x*sin(val);
+
+            var body = ShapeGenerator.Box(10000).ApplyTransforms(Transforms.Translate(0,0,.5f))
+                                                .ApplyFreeTransform(p => float3( transform(p.x, p.z), p.y, p.z))
+                                                .ApplyTransforms(Transforms.Translate(0,0,-.5f));
+            
+            body = body.ApplyTransforms(Transforms.Translate(0,0,.5f),
+                                        Transforms.Scale(BodyWidth, BridgeHeight*2, bodyLength),
+                                        Transforms.Translate(0, BridgeHeight, BridgeLength - BridgeBodyDif));
 
             var radius = BridgeWidth * 1.5f / 2;
             var dz = BridgeLength + radius - (BridgeLength / 4 * .2f);

@@ -100,7 +100,6 @@ namespace Renderer.Modeling
         
         public static Model operator - (Model a, Model b)
         {
-            a += b;
             List<float3> points = new List<float3>();
             foreach (var point in a._points)
             {
