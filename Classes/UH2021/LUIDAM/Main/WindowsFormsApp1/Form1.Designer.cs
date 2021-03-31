@@ -46,6 +46,7 @@
             this.yTranslationLbl = new System.Windows.Forms.Label();
             this.zTranslation = new System.Windows.Forms.NumericUpDown();
             this.zTranslationLbl = new System.Windows.Forms.Label();
+            this.saveBtn = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.xRotation)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.yRotation)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.zRotation)).BeginInit();
@@ -107,6 +108,7 @@
             this.imagePbx.Size = new System.Drawing.Size(538, 472);
             this.imagePbx.TabIndex = 3;
             this.imagePbx.TabStop = false;
+            this.imagePbx.SizeChanged += new System.EventHandler(this.imagePbx_SizeChanged);
             this.imagePbx.Click += new System.EventHandler(this.imagePbx_Click);
             // 
             // toolStripMenuItem1
@@ -217,11 +219,22 @@
             this.zTranslationLbl.TabIndex = 4;
             this.zTranslationLbl.Text = "Z translation";
             // 
+            // saveBtn
+            // 
+            this.saveBtn.Location = new System.Drawing.Point(69, 455);
+            this.saveBtn.Name = "saveBtn";
+            this.saveBtn.Size = new System.Drawing.Size(94, 29);
+            this.saveBtn.TabIndex = 6;
+            this.saveBtn.Text = "Save";
+            this.saveBtn.UseVisualStyleBackColor = true;
+            this.saveBtn.Click += new System.EventHandler(this.saveBtn_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(805, 496);
+            this.Controls.Add(this.saveBtn);
             this.Controls.Add(this.zTranslationLbl);
             this.Controls.Add(this.zTranslation);
             this.Controls.Add(this.yTranslationLbl);
@@ -240,6 +253,7 @@
             this.Controls.Add(this.imagePbx);
             this.Name = "Form1";
             this.Text = "Form1";
+            this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
             ((System.ComponentModel.ISupportInitialize)(this.xRotation)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.yRotation)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.zRotation)).EndInit();
@@ -272,6 +286,7 @@
         private System.Windows.Forms.Label yTranslationLbl;
         private System.Windows.Forms.NumericUpDown zTranslation;
         private System.Windows.Forms.Label zTranslationLbl;
+        private System.Windows.Forms.Button saveBtn;
     }
 }
 

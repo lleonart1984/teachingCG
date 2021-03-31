@@ -2,6 +2,7 @@
 using Rendering;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Text;
 using static GMath.Gfx;
 
@@ -14,9 +15,10 @@ namespace Renderer.Modeling
         /// </summary>
         /// <param name="pointsAmount"></param>
         /// <returns></returns>
-        public static Model Sphere(int pointsAmount = 10000)
+        public static Model Sphere(Color color, int pointsAmount = 10000)
         {
             float3[] points = new float3[pointsAmount];
+            var colors = new Color[points.Length];
 
             for (int i = 0; i < pointsAmount; i++)
             {
@@ -49,9 +51,12 @@ namespace Renderer.Modeling
                         break;
                 }
                 points[i] = point;
+                colors[i] = color;
             }
 
-            return new Model(points);
+
+
+            return new Model(points, colors);
         }
     
         /// <summary>
@@ -59,7 +64,7 @@ namespace Renderer.Modeling
         /// </summary>
         /// <param name="pointAmounts"></param>
         /// <returns></returns>
-        public static Model Box(int pointAmounts = 10000)
+        public static Model Box(Color color, int pointAmounts = 10000)
         {
             Func<int, float3, float3, float3[]> GenerateSurface = (amount, vanisher, side) =>
             {
@@ -73,6 +78,8 @@ namespace Renderer.Modeling
 
             pointAmounts += pointAmounts % 6;
             float3[] points = new float3[pointAmounts];
+            var colors = new Color[points.Length];
+
             var pointIndex = 0;
             foreach (var (sides, vanisher) in new[] { 
                 (float3(1, 0, 0), float3(0, 1, 1)), 
@@ -83,10 +90,17 @@ namespace Renderer.Modeling
                 (float3(0, 0, 0), float3(1, 1, 0)),})
             {
                 var amount = pointAmounts / 6;
+                var localColors = new Color[amount];
+                for (int i = 0; i < localColors.Length; i++)
+                {
+                    localColors[i] = color;
+                }
+
                 Array.Copy(GenerateSurface(amount, vanisher, sides), 0, points, pointIndex, amount);
+                Array.Copy(localColors, 0, colors, pointIndex, amount);
                 pointIndex += amount;
             }
-            return new Model(points).ApplyTransforms(Transforms.Translate(-.5f,-.5f,-.5f));
+            return new Model(points, colors).ApplyTransforms(Transforms.Translate(-.5f,-.5f,-.5f));
         }
         
         /// <summary>
@@ -94,7 +108,7 @@ namespace Renderer.Modeling
         /// </summary>
         /// <param name="pointAmounts"></param>
         /// <returns></returns>
-        public static Model Cylinder(int pointAmounts = 10000, float thickness=0)
+        public static Model Cylinder(Color color, int pointAmounts = 10000, float thickness=0)
         {
 
             var faceArea = 2 * pi * 1;
@@ -113,8 +127,11 @@ namespace Renderer.Modeling
             var cylinderAmounts = (int)(cylinderArea / (cylinderArea + faceArea) * pointAmounts);
             
             float3[] points = new float3[cylinderAmounts];
+            var colors = new Color[cylinderAmounts];
+
             for (int i = 0; i < points.Length; i++)
             {
+                colors[i] = color;
                 float3 point = float3(random(), random(), 0);
                 point = normalize(point);
                 if (i % 2 == 0)
@@ -140,9 +157,11 @@ namespace Renderer.Modeling
 
             var faceAmounts = (int)(faceArea / (cylinderArea + faceArea) * pointAmounts);
             float3[] faces = new float3[faceAmounts];
+            var facesColors = new Color[faceAmounts];
 
             for (int i = 0; i < faces.Length; i++)
             {
+                facesColors[i] = color;
                 float3 point = float3(random(), random(), 0);
 
                 if (thickness == 0)
@@ -168,7 +187,7 @@ namespace Renderer.Modeling
                 faces[i] = point;
             }
 
-            return new Model(points) + new Model(faces);
+            return new Model(points, colors) + new Model(faces, facesColors);
         }
     }
 }
