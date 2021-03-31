@@ -142,11 +142,12 @@ namespace MainForm
 
             var bodyLength = BridgeLength * 1.1f;
 
-            float transform(float x, float val) => x*sin(val);
+            float bound = 2.697f;
+            float transform(float x, float val) => (x)*(-((val* bound) -1)*((val * bound) - 1)*((val * bound) - 2.3f)*((val * bound) - 3)+1); // -0.5 <= x <= 0.5   &&   0 <= z <= 1
 
-            var body = ShapeGenerator.Box(10000).ApplyTransforms(Transforms.Translate(0,0,.5f))
+            var body = ShapeGenerator.Box(30000).ApplyTransforms(Transforms.Translate(0,0,.7f))
                                                 .ApplyFreeTransform(p => float3( transform(p.x, p.z), p.y, p.z))
-                                                .ApplyTransforms(Transforms.Translate(0,0,-.5f));
+                                                .ApplyTransforms(Transforms.Translate(0,0,-.7f));
             
             body = body.ApplyTransforms(Transforms.Translate(0,0,.5f),
                                         Transforms.Scale(BodyWidth, BridgeHeight*2, bodyLength),
@@ -170,10 +171,10 @@ namespace MainForm
             body = body.ApplyFilter(x => !(Math.Pow(x.x - dx, 2) + Math.Pow(x.z - dz, 2) <= Math.Pow(radius, 2) && 
                                          minY <= x.y && x.y <= maxY));
 
-            var stringHub = ShapeGenerator.Box(5000).ApplyTransforms(Transforms.Translate(0, -.5f,.5f),
+            var stringHub = ShapeGenerator.Box(3000).ApplyTransforms(Transforms.Translate(0, -.5f,.5f),
                                                                      Transforms.Scale(BridgeWidth, 1, 1),
                                                                      Transforms.Translate(0,0,StringLength));
-            stringHub += ShapeGenerator.Box(5000).ApplyTransforms(Transforms.Translate(0, -.5f, .5f),
+            stringHub += ShapeGenerator.Box(3000).ApplyTransforms(Transforms.Translate(0, -.5f, .5f),
                                                                   Transforms.Scale(BridgeWidth * 1.5f, .5f, 1),
                                                                   Transforms.Translate(0, 0, StringLength));
 
