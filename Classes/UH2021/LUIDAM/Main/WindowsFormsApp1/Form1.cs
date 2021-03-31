@@ -33,6 +33,7 @@ namespace MainForm
             //_baseModel = ShapeGenerator.Sphere(5000);
             //_baseModel = ShapeGenerator.Box(5000);
             SetGuitar();
+            AddWalls();
             _baseTranslation = float3(imagePbx.Width / 2, imagePbx.Height / 2, 0);
             _baseZoom = float3(20, 20, 20);
             _model = _baseModel.ApplyTransforms(Transforms.Scale(_baseZoom), Transforms.Translate(_baseTranslation));
@@ -49,6 +50,11 @@ namespace MainForm
             var generator = new GuitarBuilder();
 
             _baseModel = generator.Guitar();
+        }
+
+        private void AddWalls()
+        {
+            _baseModel += new WallsBuilder().Wall();
         }
 
         public void DrawModel()
