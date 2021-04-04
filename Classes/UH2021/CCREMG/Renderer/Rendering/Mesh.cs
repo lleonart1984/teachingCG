@@ -137,6 +137,69 @@ namespace Renderer
 
             throw new ArgumentException("Wrong topology.");
         }
+
+
+        public Mesh<V> Bigger_Mesh()
+        {
+            V[] vertices = new V[this.Indices.Length * 2];
+            int[] indices = new int[this.Indices.Length * 4];
+
+            int j = 0;
+            int k = 0;
+            for(int i = 0; i < this.Indices.Length; i+=3)
+            {
+                vertices[j] = this.Vertices[this.Indices[i]];
+                vertices[j+1] = this.Vertices[this.Indices[i]].Add(this.Vertices[this.Indices[i + 1]]).Mul(0.5f);
+                vertices[j+2] = this.Vertices[this.Indices[i + 1]];
+                vertices[j+3] = this.Vertices[this.Indices[i + 1]].Add(this.Vertices[this.Indices[i + 2]]).Mul(0.5f);
+                vertices[j+4] = this.Vertices[this.Indices[i + 2]];
+                vertices[j+5] = this.Vertices[this.Indices[i]].Add(this.Vertices[this.Indices[i + 2]]).Mul(0.5f);
+
+                indices[k] = j;
+                indices[k+1] = j + 1;
+                indices[k+2] = j + 5;
+                indices[k+3] = j + 1;
+                indices[k+4] = j + 2;
+                indices[k+5] = j + 3;
+                indices[k+6] = j + 1;
+                indices[k+7] = j + 3;
+                indices[k+8] = j + 5;
+                indices[k+9] = j + 3;
+                indices[k+10] = j + 4;
+                indices[k+11] = j + 5;
+
+                j += 6;
+                k += 12;
+            }
+
+            return new Mesh<V>(vertices, indices);
+        }
+
+
+        public Mesh<V> Add_Mesh(Mesh<V> B)
+        {
+            V[] vertices = new V[this.Vertices.Length + B.Vertices.Length];
+            int[] indices = new int[this.Indices.Length + B.Indices.Length];
+
+            for(int i = 0; i < this.Vertices.Length; i++)
+            {
+                vertices[i] = this.Vertices[i];
+            }
+            for(int i = 0; i < B.Vertices.Length; i++)
+            {
+                vertices[i + this.Vertices.Length] = B.Vertices[i];
+            }
+
+            for(int i = 0; i < this.Indices.Length; i++)
+            {
+                indices[i] = this.Indices[i];
+            }
+            for(int i = 0; i < B.Indices.Length; i++)
+            {
+                indices[i + this.Indices.Length] = B.Indices[i] + this.Vertices.Length;
+            }
+            return new Mesh<V>(vertices, indices);
+        }
     }
 
     /// <summary>
