@@ -53,11 +53,190 @@ namespace Renderer
         static void Main(string[] args)
         {
             Raster<MyVertex, MyProjectedVertex> render = new Raster<MyVertex, MyProjectedVertex>(1024, 512);
-            CofeeMakerTest(render);
+            // CofeeMakerTest(render);
+            GeneratingMeshes(render);
             render.RenderTarget.Save("test.rbm");
             Console.WriteLine("Done.");
         }
 
+        static float3 EvalBezier(float3[] control, float t)
+        {
+            // DeCasteljau
+            if (control.Length == 1)
+                return control[0]; // stop condition
+            float3[] nestedPoints = new float3[control.Length - 1];
+            for (int i = 0; i < nestedPoints.Length; i++)
+                nestedPoints[i] = lerp(control[i], control[i + 1], t);
+            return EvalBezier(nestedPoints, t);
+        }
+
+        static float3 EvalMyControl(float3[] control, float t)
+        {
+            float dist = 0f;
+            float[] dist_tramos = new float[control.Length - 1];
+
+            for(int i = 0; i < control.Length - 1; i++)
+            {
+                dist_tramos[i] = Gfx.length(control[i+1] - control[i]);
+                dist += dist_tramos[i];
+            }
+
+            float dist_t = dist * t;
+            float3 r = control[control.Length - 1];
+            for(int i = 0; i < dist_tramos.Length; i++)
+            {
+                if(dist_t > dist_tramos[i])
+                {
+                    dist_t -= dist_tramos[i];
+                    continue;
+                }
+                else
+                {
+                    r = lerp(control[i], control[i + 1], dist_t/dist_tramos[i]);
+                    break;
+                }
+            }
+            return r;
+        }
+
+
+        static Mesh<MyVertex>[] CreateModel()
+        {
+            // Parametric representation of a sphere.
+            //return Manifold<MyVertex>.Surface(30, 30, (u, v) =>
+            //{
+            //    float alpha = u * 2 * pi;
+            //    float beta = pi / 2 - v * pi;
+            //    return float3(cos(alpha) * cos(beta), sin(beta), sin(alpha) * cos(beta));
+            //});
+
+            // Generative model
+            //return Manifold<MyVertex>.Generative(30, 30,
+            //    // g function
+            //    u => float3(cos(2 * pi * u), 0, sin(2 * pi * u)),
+            //    // f function
+            //    (p, v) => p + float3(cos(v * pi), 2*v-1, 0)
+            //);
+
+            int sides = 10;
+
+            float h_base = 3;
+            float altura_base = 0;
+
+            float h_union = 0.5f;
+            float altura_union = altura_base + h_base;
+
+            float h_tope = 3;
+            float altura_tope = altura_union + h_union;
+
+            float h_tapa = 0.3f;
+            float altura_tapa = altura_tope + h_tope;
+
+            float h_cosita = 1f;
+            float altura_cosita = altura_tapa + h_tapa;
+
+            // Revolution Sample with Bezier
+            float3[] contourn_base =
+            {
+                float3(0, 0, 0),
+                float3(2, 0, 0),
+                float3(1.3f, h_base,0),
+                float3(1.3f, altura_union + h_union, 0)
+            };
+
+            float3[] countourn_union =
+            {
+                float3(1.35f, altura_union, 0),
+                float3(1.35f, altura_union + h_union, 0)
+            };
+
+            float3[] contourn_top = 
+            {
+                float3(1.35f, altura_tope, 0),
+                float3(1.4f, altura_tope, 0),
+                float3(2.1f, altura_tope + h_tope, 0),
+                float3(0, altura_tope + h_tope, 0),
+                float3(2.1f, altura_tope + h_tope, 0),
+                float3(0.3f, altura_cosita, 0),
+                float3(0.4f, altura_cosita + h_cosita, 0),
+                float3(0, altura_cosita + h_cosita, 0)
+            };
+            // return Manifold<MyVertex>.Revolution(2, 10, t => EvalBezier(contourn, t), float3(0, 1, 0));
+            Mesh<MyVertex> button_mesh = Manifold<MyVertex>.Revolution(20, 10, t => EvalMyControl(contourn_base, t), float3(0, 1, 0));
+            Mesh<MyVertex> union_mesh = Manifold<MyVertex>.Revolution(10, 50, t => EvalMyControl(countourn_union, t), float3(0, 1, 0));
+            Mesh<MyVertex> top_mesh = Manifold<MyVertex>.Revolution(40, 10, t => EvalMyControl(contourn_top, t), float3(0, 1, 0));
+
+            List<float3> buttonTopPoints = PoliedroXZ(sides, float3(0, altura_tope, 0), 1.4f);
+            List<float3> topTopPoints = PoliedroXZ(sides, float3(0, altura_tope + h_tope, 0), 2.1f);
+            Mesh<MyVertex> mesh_piquito = Mesh_Piquito(buttonTopPoints, topTopPoints, 2.1f, 0.7f);
+            mesh_piquito = mesh_piquito.Bigger_Mesh();
+
+
+            List<float3> handlePoints = AsaXZ(float3(0, altura_tapa, 1.7f), h_tope, h_tope/2, h_union);
+            List<float3> handlePoints1 = new List<float3>();
+            List<float3> handlePoints2 = new List<float3>();
+            for(int i = 0; i < handlePoints.Count; i++)
+            {
+                if(i < handlePoints.Count/2)
+                    handlePoints1.Add(handlePoints[i]);
+                else
+                    handlePoints2.Add(handlePoints[i]);
+            }
+            Mesh<MyVertex> handle_mesh = CoffeMakerSection_Mesh(handlePoints1, handlePoints2);
+
+            handle_mesh = handle_mesh.Add_Mesh(AsaLateralMesh(handlePoints1));
+            handle_mesh = handle_mesh.Add_Mesh(AsaLateralMesh(handlePoints2));
+            handle_mesh = handle_mesh.Bigger_Mesh();
+
+            Mesh<MyVertex> up_mesh = top_mesh.Add_Mesh(mesh_piquito).Add_Mesh(handle_mesh);
+            up_mesh = up_mesh.Transform(Transforms.RotateRespectTo(float3(0,0,0), float3(0,1,0), pi/3));
+
+            handle_mesh = handle_mesh.Transform(Transforms.RotateRespectTo(float3(0,0,0), float3(0,1,0), pi/3));
+
+
+            Mesh<MyVertex> r_model = button_mesh.Add_Mesh(union_mesh).Add_Mesh(up_mesh);
+
+            Mesh<MyVertex>[] models = {r_model};
+            return models;
+        }
+
+        private static void GeneratingMeshes(Raster<MyVertex, MyProjectedVertex> render)
+        {
+            render.ClearRT(float4(0, 0, 0.2f, 1)); // clear with color dark blue.
+
+            Mesh<MyVertex>[] models = CreateModel();
+
+            for(int i = 0; i < models.Length; i++)
+            {
+                /// Convert to a wireframe to render. Right now only lines can be rasterized.
+                Mesh<MyVertex> primitive = models[i].ConvertTo(Topology.Lines);
+
+                #region viewing and projecting
+
+                float4x4 viewMatrix = Transforms.LookAtLH(float3(-12f, 6.6f, 0), float3(0, 4, 0), float3(0, 1, 0));
+                float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, render.RenderTarget.Height / (float)render.RenderTarget.Width, 0.01f, 20);
+
+                // Define a vertex shader that projects a vertex into the NDC.
+                render.VertexShader = v =>
+                {
+                    float4 hPosition = float4(v.Position, 1);
+                    hPosition = mul(hPosition, viewMatrix);
+                    hPosition = mul(hPosition, projectionMatrix);
+                    return new MyProjectedVertex { Homogeneous = hPosition };
+                };
+
+                // Define a pixel shader that colors using a constant value
+                render.PixelShader = p =>
+                {
+                    return float4(p.Homogeneous.x / 1024.0f, p.Homogeneous.y / 512.0f, 1, 1);
+                };
+
+                #endregion
+
+                // Draw the mesh.
+                render.DrawMesh(primitive);
+            }
+        }
 
         public static float3[] ApplyTransform(float3[] points, float4x4 matrix)
         {
@@ -84,10 +263,6 @@ namespace Renderer
                 result[i] = freeTransform(points[i]);
 
             return result;
-        }
-
-        private static void DrawCoffeeMaker(Raster<MyVertex, MyProjectedVertex>  render){
-
         }
 
         private static void CofeeMakerTest(Raster<MyVertex, MyProjectedVertex>  render)
@@ -218,6 +393,72 @@ namespace Renderer
             points.AddRange(FillTriangleXZ(center, poli[0], poli[poli.Count - 1], cloud));
             return points;
         }
+
+
+        private static Mesh<MyVertex> Mesh_Piquito(List<float3> baseF, List<float3> topF, float r, float d)
+        {
+            int n = baseF.Count;
+
+            float3 a = (topF[n - 1] + baseF[n - 1]) / 2;
+            float3 b = (topF[0] + baseF[0]) / 2;
+            float3 q = (b + a) / 2;
+            float3 p = Find(topF[n - 1], topF[0], r, d);
+
+            MyVertex[] vertices = new MyVertex[4];
+            int[] indices = new int[6];
+
+            vertices[0] = new MyVertex{Position = topF[n-1]};
+            vertices[1] = new MyVertex{Position = p};
+            vertices[2] = new MyVertex{Position = topF[0]};
+            vertices[3] = new MyVertex{Position = q};
+
+            indices[0] = 0;
+            indices[1] = 1;
+            indices[2] = 3;
+            indices[3] = 1;
+            indices[4] = 2;
+            indices[5] = 3;
+
+            return new Mesh<MyVertex>(vertices, indices);
+        }
+
+
+        private static Mesh<MyVertex> CoffeMakerSection_Mesh(List<float3> baseF, List<float3> topF)
+        {
+            MyVertex[] vertices = new MyVertex[baseF.Count + topF.Count];
+            int[] indices = new int[baseF.Count * 3 * 2];
+
+            int j = 0;
+            int k = 0;
+            for(int i = 0; i < baseF.Count - 1; i++)
+            {
+                vertices[j] = new MyVertex{Position = baseF[i]};
+                vertices[j+1] = new MyVertex{Position = topF[i]};
+
+                indices[k] = j;
+                indices[k+1] = j + 1;
+                indices[k+2] = j + 2;
+                indices[k+3] = j + 1;
+                indices[k+4] = j + 3;
+                indices[k+5] = j + 2;
+
+                j += 2;
+                k += 6;
+            }
+
+            vertices[j] = new MyVertex{Position = baseF[baseF.Count - 1]};
+            vertices[j+1] = new MyVertex{Position = topF[topF.Count - 1]};
+
+            indices[k] = j;
+            indices[k+1] = j + 1;
+            indices[k+2] = 0;
+            indices[k+3] = j + 1;
+            indices[k+4] = 0;
+            indices[k+5] = 1;
+
+            return new Mesh<MyVertex>(vertices, indices);
+        }
+
         private static List<float3> DrawCoffeeMakerSection(List<float3> baseF, List<float3> topF, int cloud){
             var points = new List<float3>();
             for(int i = 1; i < baseF.Count; ++i){
@@ -333,21 +574,20 @@ namespace Renderer
         {
             List<float3> points = new List<float3>();
 
-            points.Add(float3(0, 0, 0));
-            points.Add(float3(0, 0, width/3));
-            points.Add(float3(0, 0, 2 * width / 3));
-            points.Add(float3(length/4, 0, width));
-            points.Add(float3(length, 0, width/3));
-            points.Add(float3(5 * length / 6, 0, width / 6));
-            points.Add(float3(4 * length / 6, 0, width/6));
-            points.Add(float3(length/2, 0, width/2));
-            points.Add(float3(length/4, 0, 2 * width/3));
-            points.Add(float3(length/5, 0, 3 * width/5));
-            points.Add(float3(length/4, 0, 2 * width/5));
-            points.Add(float3(9 * length/40, 0, width/3));
-            points.Add(float3(length/5, 0, width/5));
-            points.Add(float3(length/4, 0, width/8));
-            points.Add(float3(length/4, 0, -1 * width/8));
+            points.Add(float3(0, 0, 0)); //0
+            points.Add(float3(0, 0, width/3)); //1
+            points.Add(float3(0, 0, 2 * width / 3)); //2
+            points.Add(float3(length/4, 0, width)); //3
+            points.Add(float3(length, 0, width/3)); //4
+            points.Add(float3(5 * length / 6, 0, width / 6)); //5
+            points.Add(float3(4 * length / 6, 0,  width/3)); //6
+            points.Add(float3(length/2, 0, width/2)); //7
+            points.Add(float3(length/4, 0, 2 * width/3)); //8
+            points.Add(float3(length/5, 0, 3 * width/5)); //9
+            points.Add(float3(length/4, 0, 2 * width/5)); //10
+            points.Add(float3(length/5, 0, width/5)); //11
+            points.Add(float3(length/4, 0, width/6)); //12
+            points.Add(float3(length/4, 0, -1 * width/8)); //13
 
             int l = points.Count;
             for(int i = 0; i < l; i++)
@@ -363,6 +603,69 @@ namespace Renderer
             return new List<float3>(points_r);
         }
     
+
+        private static Mesh<MyVertex> AsaLateralMesh(List<float3>asa)
+        {
+            int n = asa.Count;
+            MyVertex[] vertices = new MyVertex[n];
+            int[] indices = new int[36];
+
+            int j = 0;
+            for(int i = 0; i < n; i++)
+            {
+                vertices[i] = new MyVertex{Position = asa[i]};
+
+            }
+            indices[j] = 0;
+            indices[++j] = 13;
+            indices[++j] = 12;
+
+            indices[++j] = 0;
+            indices[++j] = 12;
+            indices[++j] = 11;
+
+            indices[++j] = 0;
+            indices[++j] = 1;
+            indices[++j] = 11;
+
+            indices[++j] = 1;
+            indices[++j] = 11;
+            indices[++j] = 10;
+
+            indices[++j] = 1;
+            indices[++j] = n - 4;
+            indices[++j] = n - 5;
+
+            indices[++j] = 1;
+            indices[++j] = n - 5;
+            indices[++j] = n - 6;
+
+            indices[++j] = 1;
+            indices[++j] = 2;
+            indices[++j] = n - 6;
+
+            indices[++j] = 2;
+            indices[++j] = 3;
+            indices[++j] = n - 6;
+
+            indices[++j] = 3;
+            indices[++j] = n - 6;
+            indices[++j] = n - 7;
+
+            indices[++j] = 3;
+            indices[++j] = 7;
+            indices[++j] = 6;
+
+            indices[++j] = 3;
+            indices[++j] = 6;
+            indices[++j] = 4;
+
+            indices[++j] = 4;
+            indices[++j] = 5;
+            indices[++j] = 6;
+
+            return new Mesh<MyVertex>(vertices, indices);
+        }
         private static List<float3> FillAsaLateral(List<float3> asa, int cloud, GRandom rnd)
         {
             List<float3> points = new List<float3>();
