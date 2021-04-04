@@ -8,9 +8,51 @@ namespace Renderer
 {
     class Program
     {
+        struct MyVertex : IVertex<MyVertex>
+        {
+            public float3 Position { get; set; }
+
+            public MyVertex Add(MyVertex other)
+            {
+                return new MyVertex
+                {
+                    Position = this.Position + other.Position,
+                };
+            }
+
+            public MyVertex Mul(float s)
+            {
+                return new MyVertex
+                {
+                    Position = this.Position * s,
+                };
+            }
+        }
+
+        struct MyProjectedVertex : IProjectedVertex<MyProjectedVertex>
+        {
+            public float4 Homogeneous { get; set; }
+
+            public MyProjectedVertex Add(MyProjectedVertex other)
+            {
+                return new MyProjectedVertex
+                {
+                    Homogeneous = this.Homogeneous + other.Homogeneous
+                };
+            }
+
+            public MyProjectedVertex Mul(float s)
+            {
+                return new MyProjectedVertex
+                {
+                    Homogeneous = this.Homogeneous * s
+                };
+            }
+        }
+
         static void Main(string[] args)
         {
-            Raster render = new Raster(1024, 512);
+            Raster<MyVertex, MyProjectedVertex> render = new Raster<MyVertex, MyProjectedVertex>(1024, 512);
             CofeeMakerTest(render);
             render.RenderTarget.Save("test.rbm");
             Console.WriteLine("Done.");
@@ -44,11 +86,11 @@ namespace Renderer
             return result;
         }
 
-        private static void DrawCoffeeMaker(Raster render){
+        private static void DrawCoffeeMaker(Raster<MyVertex, MyProjectedVertex>  render){
 
         }
 
-        private static void CofeeMakerTest(Raster render)
+        private static void CofeeMakerTest(Raster<MyVertex, MyProjectedVertex>  render)
         {
             render.ClearRT(float4(0, 0, 0.2f, 1)); // clear with color dark blue.
 
