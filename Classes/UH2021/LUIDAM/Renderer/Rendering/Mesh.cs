@@ -1,14 +1,21 @@
 ﻿using GMath;
 using Rendering;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using static GMath.Gfx;
 
 namespace Renderer
 {
-    public class Mesh<V> where V : struct, IVertex<V>
+    public class Mesh<V> : IEnumerable<V> where V : struct, IVertex<V>
     {
+        /// <summary>
+        /// Gets the extreme points of the bounding box of that contains all mesh points
+        /// </summary>
+        public (float3 topCorner, float3 oppositeCorner) BoundBox;
+
         /// <summary>
         /// Gets the vertices of this mesh.
         /// </summary>
@@ -32,6 +39,15 @@ namespace Renderer
             this.Vertices = vertices;
             this.Indices = indices;
             this.Topology = topology;
+            
+            if (Vertices.Any())
+                BoundBox = (float3(Vertices.Max(x => x.Position.x), Vertices.Max(x => x.Position.y), Vertices.Max(x => x.Position.z)),
+                            float3(Vertices.Min(x => x.Position.x), Vertices.Min(x => x.Position.y), Vertices.Min(x => x.Position.z)));
+        }
+
+        public Mesh () : this(new V[] { }, new int[] { })
+        {
+
         }
 
         /// <summary>
@@ -72,6 +88,16 @@ namespace Renderer
                 newVertex.Position = hP.xyz / hP.w;
                 return newVertex;
             });
+        }
+
+        public Mesh<V> ApplyTransforms(params float4x4[] transforms)
+        {
+            var id = Transforms.Identity;
+            foreach (var item in transforms)
+            {
+                id = mul(id, item);
+            }
+            return Transform(id);
         }
 
         #endregion
@@ -137,6 +163,23 @@ namespace Renderer
 
             throw new ArgumentException("Wrong topology.");
         }
+
+        public IEnumerator<V> GetEnumerator()
+        {
+            return ((IEnumerable<V>)Vertices).GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return Vertices.GetEnumerator();
+        }
+
+        public static Mesh<V> operator + (Mesh<V> a, Mesh<V> b)
+        {
+            return new Mesh<V>(a.Vertices.Concat(b.Vertices).ToArray(), 
+                               a.Indices.Concat(b.Indices.Select(x => x + a.Vertices.Length)).ToArray());
+        }
+
     }
 
     /// <summary>
@@ -182,9 +225,9 @@ namespace Renderer
             return Generative(slices, stacks, g, (v, t) => v + direction * t);
         }
 
-        public static Mesh<V> Revolution(int slices, int stacks, Func<float, float3> g, float3 axis)
+        public static Mesh<V> Revolution(int slices, int stacks, Func<float, float3> g, float3 axis, float angle = 2 * pi)
         {
-            return Generative(slices, stacks, g, (v, t) => mul(float4(v, 1), Transforms.Rotate(t * 2 * pi, axis)).xyz);
+            return Generative(slices, stacks, g, (v, t) => mul(float4(v, 1), Transforms.Rotate(t * angle, axis)).xyz);
         }
 
         public static Mesh<V> Lofted(int slices, int stacks, Func<float, float3> g1, Func<float, float3> g2)
