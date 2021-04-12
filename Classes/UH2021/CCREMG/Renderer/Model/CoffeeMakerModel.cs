@@ -229,24 +229,24 @@ namespace Renderer
             indices[++j] = 10;
 
             indices[++j] = 1;
-            indices[++j] = n - 4;
-            indices[++j] = n - 5;
-
-            indices[++j] = 1;
-            indices[++j] = n - 5;
-            indices[++j] = n - 6;
+            indices[++j] = 10;
+            indices[++j] = 9;
 
             indices[++j] = 1;
             indices[++j] = 2;
-            indices[++j] = n - 6;
+            indices[++j] = 9;
 
             indices[++j] = 2;
             indices[++j] = 3;
-            indices[++j] = n - 6;
+            indices[++j] = 9;
 
             indices[++j] = 3;
-            indices[++j] = n - 6;
-            indices[++j] = n - 7;
+            indices[++j] = 9;
+            indices[++j] = 8;
+
+            indices[++j] = 3;
+            indices[++j] = 8;
+            indices[++j] = 7;
 
             indices[++j] = 3;
             indices[++j] = 7;
