@@ -8,90 +8,150 @@ namespace Renderer
 {
     class Program
     {
-        struct MyVertex : IVertex<MyVertex>
+        struct PositionNormal : INormalVertex<PositionNormal>
         {
             public float3 Position { get; set; }
+            public float3 Normal { get; set; }
 
-            public MyVertex Add(MyVertex other)
+            public PositionNormal Add(PositionNormal other)
             {
-                return new MyVertex
+                return new PositionNormal
                 {
                     Position = this.Position + other.Position,
+                    Normal = this.Normal + other.Normal
                 };
             }
 
-            public MyVertex Mul(float s)
+            public PositionNormal Mul(float s)
             {
-                return new MyVertex
+                return new PositionNormal
                 {
                     Position = this.Position * s,
+                    Normal = this.Normal * s
+                };
+            }
+
+            public PositionNormal Transform(float4x4 matrix)
+            {
+                float4 p = float4(Position, 1);
+                p = mul(p, matrix);
+                
+                float4 n = float4(Normal, 0);
+                n = mul(n, matrix);
+
+                return new PositionNormal
+                {
+                    Position = p.xyz / p.w,
+                    Normal = n.xyz
                 };
             }
         }
 
-        struct MyProjectedVertex : IProjectedVertex<MyProjectedVertex>
+        /// <summary>
+        /// Payload used to pick a color from a hit intersection
+        /// </summary>
+        struct MyRayPayload
         {
-            public float4 Homogeneous { get; set; }
+            public float3 Color;
+        }
 
-            public MyProjectedVertex Add(MyProjectedVertex other)
-            {
-                return new MyProjectedVertex
-                {
-                    Homogeneous = this.Homogeneous + other.Homogeneous
-                };
-            }
-
-            public MyProjectedVertex Mul(float s)
-            {
-                return new MyProjectedVertex
-                {
-                    Homogeneous = this.Homogeneous * s
-                };
-            }
+        /// <summary>
+        /// Payload used to flag when a ray was shadowed.
+        /// </summary>
+        struct ShadowRayPayload
+        {
+            public bool Shadowed;
         }
 
         static void Main(string[] args)
         {
-            Raster<MyVertex, MyProjectedVertex> render = new Raster<MyVertex, MyProjectedVertex>(1024, 512);
-            GeneratingMeshes(render);
-            render.RenderTarget.Save("test.rbm");
+            // Texture to output the image.
+            Texture2D texture = new Texture2D(512, 512);
+
+            RaycastingMesh(texture);
+
+            texture.Save("test.rbm");
             Console.WriteLine("Done.");
         }
 
-        private static void GeneratingMeshes(Raster<MyVertex, MyProjectedVertex> render)
+        static Mesh<PositionNormal> CreateCoffeeModel()
         {
-            render.ClearRT(float4(0, 0, 0.2f, 1)); // clear with color dark blue.
+            CoffeeMakerModel<PositionNormal> CoffeeMaker = new CoffeeMakerModel<PositionNormal>();
+            Mesh<PositionNormal> model = CoffeeMaker.GetMesh();
+            model.ComputeNormals();
+            return model;
+        }
 
-            CoffeeMakerModel<MyVertex> CoffeeMaker = new CoffeeMakerModel<MyVertex>();
-            Mesh<MyVertex> models = CoffeeMaker.GetMesh();
+        static void CreateMeshScene(Scene<PositionNormal> scene)
+        {
+            var model = CreateCoffeeModel();
+            scene.Add(model.AsRaycast(), Transforms.Identity);
+        }
 
-            /// Convert to a wireframe to render. Right now only lines can be rasterized.
-            Mesh<MyVertex> primitive = models.ConvertTo(Topology.Lines);
+        static void RaycastingMesh (Texture2D texture)
+        {
+            // Scene Setup
+            float3 CameraPosition = float3(-12f, 6.6f, 0);
+            float3 LightPosition = float3(-12, 6.6f, -20);
+            // View and projection matrices
+            float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(0, 4, 0), float3(0, 1, 0));
+            float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 20);
 
-            #region viewing and projecting
+            Scene<PositionNormal> scene = new Scene<PositionNormal>();
+            CreateMeshScene(scene);
 
-            float4x4 viewMatrix = Transforms.LookAtLH(float3(-12f, 6.6f, 0), float3(0, 4, 0), float3(0, 1, 0));
-            float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, render.RenderTarget.Height / (float)render.RenderTarget.Width, 0.01f, 20);
-
-            // Define a vertex shader that projects a vertex into the NDC.
-            render.VertexShader = v =>
+            // Raycaster to trace rays and check for shadow rays.
+            Raytracer<ShadowRayPayload, PositionNormal> shadower = new Raytracer<ShadowRayPayload, PositionNormal>();
+            shadower.OnAnyHit += delegate (IRaycastContext context, PositionNormal attribute, ref ShadowRayPayload payload)
             {
-                float4 hPosition = float4(v.Position, 1);
-                hPosition = mul(hPosition, viewMatrix);
-                hPosition = mul(hPosition, projectionMatrix);
-                return new MyProjectedVertex { Homogeneous = hPosition };
+                // If any object is found in ray-path to the light, the ray is shadowed.
+                payload.Shadowed = true;
+                // No neccessary to continue checking other objects
+                return HitResult.Stop;
             };
 
-            // Define a pixel shader that colors using a constant value
-            render.PixelShader = p =>
+            // Raycaster to trace rays and lit closest surfaces
+            Raytracer<MyRayPayload, PositionNormal> raycaster = new Raytracer<MyRayPayload, PositionNormal>();
+            raycaster.OnClosestHit += delegate (IRaycastContext context, PositionNormal attribute, ref MyRayPayload payload)
             {
-                return float4(p.Homogeneous.x / 1024.0f, p.Homogeneous.y / 512.0f, 1, 1);
+                // Move geometry attribute to world space
+                attribute = attribute.Transform(context.FromGeometryToWorld);
+
+                float3 V = normalize(CameraPosition - attribute.Position);
+                float3 L = normalize(LightPosition - attribute.Position);
+                float lambertFactor = max(0, dot(attribute.Normal, L));
+
+                // Check ray to light...
+                ShadowRayPayload shadow = new ShadowRayPayload();
+                shadower.Trace(scene,
+                    RayDescription.FromTo(attribute.Position + attribute.Normal * 0.001f, // Move an epsilon away from the surface to avoid self-shadowing 
+                    LightPosition), ref shadow);
+
+                payload.Color = shadow.Shadowed ? float3(0, 0, 0) : float3(1, 1, 1) * lambertFactor;
+            };
+            raycaster.OnMiss += delegate (IRaycastContext context, ref MyRayPayload payload)
+            {
+                payload.Color = float3(0, 0, 1); // Blue, as the sky.
             };
 
-            #endregion
+            /// Render all points of the screen
+            for (int px = 0; px < texture.Width; px++)
+                for (int py = 0; py < texture.Height; py++)
+                {
+                    int progress = (px * texture.Height + py);
+                    if (progress % 100 == 0)
+                    {
+                        Console.Write("\r" + progress * 100 / (float)(texture.Width * texture.Height) + "%            ");
+                    }
 
-            // Draw the mesh.
-            render.DrawMesh(primitive);
+                    RayDescription ray = RayDescription.FromScreen(px + 0.5f, py + 0.5f, texture.Width, texture.Height, inverse(viewMatrix), inverse(projectionMatrix), 0, 1000);
+
+                    MyRayPayload coloring = new MyRayPayload();
+
+                    raycaster.Trace(scene, ray, ref coloring);
+
+                    texture.Write(px, py, float4(coloring.Color, 1));
+                }
         }
     }
 }
