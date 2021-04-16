@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace Rendering
+namespace Renderer
 {
     public class Texture2D
     {

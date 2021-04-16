@@ -57,6 +57,7 @@ namespace Renderer
             GeneratingMeshes(render);
             //DrawRoomTest(render);
             render.RenderTarget.Save("test.rbm");
+
             Console.WriteLine("Done.");
         }
 
@@ -107,7 +108,8 @@ namespace Renderer
             //var m = Manifold<MyVertex>.Revolution(20, 20, x => float3(1, x, 0), float3(0, 1, 0));
             //var m = Manifold<MyVertex>.Revolution(20, 20, x => float3(x, 0, 0), float3(0, 1, 0));
             //var m = MeshShapeGenerator<Renderer.Modeling.MyVertex>.Box(1000);
-            var m = MeshShapeGenerator<MyVertex>.Cylinder(1000, 0, pi);
+            //var m = MeshShapeGenerator<MyVertex>.Cylinder(1000);
+            var m = new GuitarBuilder().GuitarMesh();
             var minX = m.Vertices.Min(x => x.Position.x);
             var maxX = m.Vertices.Max(x => x.Position.x);
             var minY = m.Vertices.Min(x => x.Position.y);
@@ -115,7 +117,10 @@ namespace Renderer
             var minZ = m.Vertices.Min(x => x.Position.z);
             var maxZ = m.Vertices.Max(x => x.Position.z);
             Console.WriteLine($"X:{minX} {maxX}\nY:{minY} {maxY}\nZ:{minZ} {maxZ}");
-            return m.Transform(Transforms.Scale(1,1,1));
+            return m.ApplyTransforms(Transforms.Scale(.06f,.06f,.06f),
+                                     Transforms.RotateX(-pi/2.0f),
+                                     Transforms.RotateY(pi + pi*.1f),
+                                     Transforms.Translate(0,1.1f,0));
             //MyVertex[] points =
             //{
             //    new MyVertex(),
