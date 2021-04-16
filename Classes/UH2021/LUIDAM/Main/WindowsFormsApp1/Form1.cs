@@ -30,6 +30,7 @@ namespace MainForm
         private float _minScale;
         private Model _wall;
         private Raster<MyVertex, MyProjectedVertex> _raster;
+        private bool mesh = false;
 
         public Form1()
         {
@@ -53,23 +54,28 @@ namespace MainForm
             _minScale = .5f;
             var stepSize = (_maxScale - _minScale) / (zoomBar.Maximum - zoomBar.Minimum);
             zoomBar.Value = (int)((1 - _minScale) / stepSize); // Setting zoomBar value to the value that represent scaling by 1
+            _raster = new Raster<MyVertex, MyProjectedVertex>(imagePbx.Width, imagePbx.Height);
             DrawModel();
         }
 
         private void SetGuitar()
         {
-
             var generator = new GuitarBuilder();
-            //_baseModel = generator.Guitar().ApplyTransforms(Transforms.Translate(-40,0,0));
-
-            _baseModelMesh = generator.GuitarMesh();
+            if (mesh)
+                _baseModelMesh = generator.GuitarMesh();
+            else
+                _baseModel = generator.Guitar().ApplyTransforms(Transforms.Translate(-40, 0, 0));
         }
 
         private void AddWalls()
         {
-            //_wall = new WallsBuilder().Wall();
-            //var wallWidth = _wall.BoundBox.topCorner.x - _wall.BoundBox.oppositeCorner.x;
-            //_baseModel += _wall.ApplyTransforms(Transforms.Scale(2 / 3.0f, 1, 1), Transforms.Translate(-1 / 3.0f * wallWidth, 0, 0));
+            var builder = new WallsBuilder();
+            if (!mesh)
+            {
+                _wall = builder.Wall();
+                var wallWidth = _wall.BoundBox.topCorner.x - _wall.BoundBox.oppositeCorner.x;
+                _baseModel += _wall.ApplyTransforms(Transforms.Scale(2 / 3.0f, 1, 1), Transforms.Translate(-1 / 3.0f * wallWidth, 0, 0));
+            }
         }
 
         public void ClearImagePbx()
@@ -84,40 +90,50 @@ namespace MainForm
             if (imagePbx.Width == 0 || imagePbx.Height == 0)
                 return;
             Bitmap image = new Bitmap(imagePbx.Width, imagePbx.Height);
-            
-            // Drawing Model
-            for (int i = 0; i < _model.Length; i++)
-            {
-                var (point, color)= _model[i];
-                (int x, int y) = ((int)point.x, (int)point.y);
-                if (x < 0 || y < 0 || x >= image.Width || y >= image.Height)
-                    continue;
-                image.SetPixel(x, y, color);
-            }
 
-            // Drawing Mesh
-            var lineMesh = _modelMesh.ConvertTo(Topology.Lines);
-            _raster.DrawMesh(lineMesh);
-            var target = _raster.RenderTarget;
-            for (int i = 0; i < target.Width; i++)
+            if (mesh)
             {
-                for (int j = 0; j < target.Height; j++)
+                // Drawing Mesh NOT WORKING
+                var lineMesh = _modelMesh.FitIn(1, 1, 1).ConvertTo(Topology.Lines);
+                _raster.ClearRT(float4(0,0,0,0));
+                _raster.DrawMesh(lineMesh);
+                var target = _raster.RenderTarget;
+                for (int i = 0; i < target.Width; i++)
                 {
-                    var colorVector = target.Read(i, j);
-                    image.SetPixel(i, j, Color.FromArgb(ColorComponent(colorVector.w), ColorComponent(colorVector.x), ColorComponent(colorVector.y), ColorComponent(colorVector.z)));
-                    if (length(colorVector) != 0)
+                    for (int j = 0; j < target.Height; j++)
                     {
-                        int a = 1;
+                        var colorVector = target.Read(i, j);
+                        image.SetPixel(i, j,
+                            Color.FromArgb(ColorComponent(colorVector.w), ColorComponent(colorVector.x), ColorComponent(colorVector.y), ColorComponent(colorVector.z))
+                            //length(colorVector) != 0 ? Color.White : Color.Red
+                            );
+                        //if (length(colorVector) != 0)
+                        //{
+                        //    int a = 1;
+                        //}
                     }
                 }
             }
-            
+            else
+            {
+                // Drawing Model
+                for (int i = 0; i < _model.Length; i++)
+                {
+                    var (point, color) = _model[i];
+                    (int x, int y) = ((int)point.x, (int)point.y);
+                    if (x < 0 || y < 0 || x >= image.Width || y >= image.Height)
+                        continue;
+                    image.SetPixel(x, y, color);
+                }
+            }
             imagePbx.Image = image;
             imagePbx.Invalidate();
         }
 
         public void SaveModel()
         {
+
+
             var model = _model.ApplyFilter(x => x.y >= 0 && x.y <= imagePbx.Height);
             var top = model.BoundBox.topCorner;
             var low = model.BoundBox.oppositeCorner;
@@ -129,6 +145,9 @@ namespace MainForm
             texture = _raster.RenderTarget;
             height = texture.Height;
             width = texture.Width;
+
+            var bitmap = imagePbx.Image as Bitmap;
+            bitmap?.Save("image.bmp", ImageFormat.Bmp);
             
             texture.Save("guitar.rbm");
             var btimap = new Bitmap(width, height);
@@ -215,7 +234,6 @@ namespace MainForm
             
             // RASTER CONFIG
             // Define a vertex shader that projects a vertex into the NDC.
-            _raster = new Raster<MyVertex, MyProjectedVertex>(imagePbx.Width, imagePbx.Height);
             _raster.VertexShader = v =>
             {
                 float4 hPosition = float4(v.Position, 1);
@@ -252,11 +270,12 @@ namespace MainForm
 
         public void SetBaseTranslation() 
         {
-            _baseTranslation = float3(0, -300, 0);//float3(1.0f / 2.0f * imagePbx.Width, 1.0f / 2.0f * imagePbx.Height, 0);
+            _baseTranslation = float3(0, 0, 0);//float3(1.0f / 2.0f * imagePbx.Width, 1.0f / 2.0f * imagePbx.Height, 0);
         }
 
         private void imagePbx_SizeChanged(object sender, EventArgs e)
         {
+            _raster = new Raster<MyVertex, MyProjectedVertex>(imagePbx.Width, imagePbx.Height);
             SetBaseTranslation();
             UpdateModel(sender, e);
         }
