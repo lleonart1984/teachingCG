@@ -34,16 +34,16 @@ namespace Renderer.Modeling
         {
             var ss = (int)ceil(sqrt(points));
             var baseCylOuter = new Mesh<MyVertex>();
-            var face1 = Manifold<MyVertex>.Revolution(ss, ss, x => float3(1 * x, 0, 0), float3(0, 0, 1), angle).Transform(Transforms.Translate(0,0,.5f));
-            var face2 = Manifold<MyVertex>.Revolution(ss, ss, x => float3(1 * x, 0, 0), float3(0, 0, 1), angle).Transform(Transforms.Translate(0,0,-.5f));
+            var face1 = Manifold<MyVertex>.Revolution(ss, ss, x => float3(.5f * x, 0, 0), float3(0, 0, 1), angle).Transform(Transforms.Translate(0,0,.5f));
+            var face2 = Manifold<MyVertex>.Revolution(ss, ss, x => float3(.5f * x, 0, 0), float3(0, 0, 1), angle).Transform(Transforms.Translate(0,0,-.5f));
             
             if (thickness != 0)
             {
-                baseCylOuter = Manifold<MyVertex>.Revolution(ss, ss, x => float3(1 + thickness, 0, x), float3(0, 0, 1), angle).Transform(Transforms.Translate(0, 0, -.5f));
-                face1 = Manifold<MyVertex>.Revolution(ss, ss, x => float3(1 + x * thickness, 0, 0), float3(0, 0, 1), angle).Transform(Transforms.Translate(0, 0, .5f));
-                face2 = Manifold<MyVertex>.Revolution(ss, ss, x => float3(1 + x * thickness, 0, 0), float3(0, 0, 1), angle).Transform(Transforms.Translate(0, 0, -.5f));
+                baseCylOuter = Manifold<MyVertex>.Revolution(ss, ss, x => float3(.5f + thickness, 0, x), float3(0, 0, 1), angle).Transform(Transforms.Translate(0, 0, -.5f));
+                face1 = Manifold<MyVertex>.Revolution(ss, ss, x => float3(.5f + x * thickness, 0, 0), float3(0, 0, 1), angle).Transform(Transforms.Translate(0, 0, .5f));
+                face2 = Manifold<MyVertex>.Revolution(ss, ss, x => float3(.5f + x * thickness, 0, 0), float3(0, 0, 1), angle).Transform(Transforms.Translate(0, 0, -.5f));
             }
-            var baseCyl = Manifold<MyVertex>.Revolution(ss, ss, x => float3(1, 0, x), float3(0,0,1), angle).Transform(Transforms.Translate(0,0,-.5f));
+            var baseCyl = Manifold<MyVertex>.Revolution(ss, ss, x => float3(.5f, 0, x), float3(0,0,1), angle).Transform(Transforms.Translate(0,0,-.5f));
             return baseCyl + face1 + face2 + baseCylOuter;
         }
     

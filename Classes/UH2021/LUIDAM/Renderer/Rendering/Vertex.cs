@@ -33,14 +33,6 @@ namespace Renderer
         float3 Position { get; set; }
     }
 
-    public interface INormalVertex<V> : IVertex<V> where V : struct
-    {
-        /// <summary>
-        /// Gets or sets the 3D normal of a vertex
-        /// </summary>
-        float3 Normal { get; set; }
-    }
-
     /// <summary>
     /// Represents a vertex with 4D homogeneous coordinates.
     /// </summary>
