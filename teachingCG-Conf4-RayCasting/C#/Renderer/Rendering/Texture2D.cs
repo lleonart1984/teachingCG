@@ -1,10 +1,11 @@
 ﻿using GMath;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Text;
 
-namespace Renderer
+namespace Rendering
 {
     public class Texture2D
     {
@@ -64,5 +65,6 @@ namespace Renderer
                 }
             binaryWriter.Close();
         }
+
     }
 }

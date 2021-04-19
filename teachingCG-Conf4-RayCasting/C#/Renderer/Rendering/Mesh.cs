@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using static GMath.Gfx;
 
-namespace Renderer
+namespace Rendering
 {
     public class Mesh<V> : IEnumerable<V> where V : struct, IVertex<V>
     {
@@ -34,18 +34,18 @@ namespace Renderer
         /// <summary>
         /// Creates a mesh object using vertices, indices and the desired topology.
         /// </summary>
-        public Mesh (V[] vertices, int[] indices, Topology topology = Topology.Triangles)
+        public Mesh(V[] vertices, int[] indices, Topology topology = Topology.Triangles)
         {
             this.Vertices = vertices;
             this.Indices = indices;
             this.Topology = topology;
-            
+
             if (Vertices.Any())
                 BoundBox = (float3(Vertices.Max(x => x.Position.x), Vertices.Max(x => x.Position.y), Vertices.Max(x => x.Position.z)),
                             float3(Vertices.Min(x => x.Position.x), Vertices.Min(x => x.Position.y), Vertices.Min(x => x.Position.z)));
         }
 
-        public Mesh () : this(new V[] { }, new int[] { })
+        public Mesh() : this(new V[] { }, new int[] { })
         {
 
         }
@@ -143,7 +143,7 @@ namespace Renderer
 
                                     newIndices[index++] = Indices[i * 3 + 1];
                                     newIndices[index++] = Indices[i * 3 + 2];
-                                    
+
                                     newIndices[index++] = Indices[i * 3 + 2];
                                     newIndices[index++] = Indices[i * 3 + 0];
                                 }
@@ -174,9 +174,9 @@ namespace Renderer
             return Vertices.GetEnumerator();
         }
 
-        public static Mesh<V> operator + (Mesh<V> a, Mesh<V> b)
+        public static Mesh<V> operator +(Mesh<V> a, Mesh<V> b)
         {
-            return new Mesh<V>(a.Vertices.Concat(b.Vertices).ToArray(), 
+            return new Mesh<V>(a.Vertices.Concat(b.Vertices).ToArray(),
                                a.Indices.Concat(b.Indices.Select(x => x + a.Vertices.Length)).ToArray());
         }
 
@@ -190,7 +190,8 @@ namespace Renderer
         public Mesh<V> FitIn(float width, float height, float deep)
         {
             var toRender = this.ApplyTransforms(Transforms.Translate(-BoundBox.oppositeCorner));
-            toRender = toRender.ApplyTransforms(Transforms.Scale(width / toRender.BoundBox.topCorner.x, height / toRender.BoundBox.topCorner.y, deep / toRender.BoundBox.topCorner.z));
+            var scale = new float[] { width / toRender.BoundBox.topCorner.x, height / toRender.BoundBox.topCorner.y, deep / toRender.BoundBox.topCorner.z }.Min();
+            toRender = toRender.ApplyTransforms(Transforms.Scale(scale, scale, scale));
             return toRender;
         }
 

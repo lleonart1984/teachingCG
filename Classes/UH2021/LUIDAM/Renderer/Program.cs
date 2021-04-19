@@ -1,13 +1,15 @@
 ﻿using GMath;
+using Renderer.Modeling;
 using Rendering;
 using System;
+using System.Linq;
 using static GMath.Gfx;
 
 namespace Renderer
 {
-    class Program
+    public class Program
     {
-        struct MyVertex : IVertex<MyVertex>
+        public struct MyVertex : IVertex<MyVertex>
         {
             public float3 Position { get; set; }
 
@@ -28,7 +30,7 @@ namespace Renderer
             }
         }
 
-        struct MyProjectedVertex : IProjectedVertex<MyProjectedVertex>
+        public struct MyProjectedVertex : IProjectedVertex<MyProjectedVertex>
         {
             public float4 Homogeneous { get; set; }
 
@@ -55,6 +57,7 @@ namespace Renderer
             GeneratingMeshes(render);
             //DrawRoomTest(render);
             render.RenderTarget.Save("test.rbm");
+
             Console.WriteLine("Done.");
         }
 
@@ -90,17 +93,57 @@ namespace Renderer
             //);
 
             // Revolution Sample with Bezier
-            float3[] contourn =
-            {
-                float3(0, -.5f,0),
-                float3(0.8f, -0.5f,0),
-                float3(1f, -0.2f,0),
-                float3(0.6f,1,0),
-                float3(0,1,0)
-            };
-            return Manifold<MyVertex>.Revolution(30, 30, t => EvalBezier(contourn, t), float3(0, 1, 0));
+            //float3[] contourn =
+            //{
+            //    float3(0, -.5f,0),
+            //    float3(0.8f, -0.5f,0),
+            //    float3(1f, -0.2f,0),
+            //    float3(0.6f,1,0),
+            //    float3(0,1,0)
+            //};
+            //return Manifold<MyVertex>.Revolution(30, 30, t => EvalBezier(contourn, t), float3(0, 1, 0));
+
+            //var m = Manifold<MyVertex>.Surface(20, 20, (x, y) => float3(x, y, 0));
+            //var m = Manifold<MyVertex>.Extrude(20, 20, x => float3(x, 0, 0), float3(0, 0,1));
+            //var m = Manifold<MyVertex>.Revolution(20, 20, x => float3(1, x, 0), float3(0, 1, 0));
+            //var m = Manifold<MyVertex>.Revolution(20, 20, x => float3(x, 0, 0), float3(0, 1, 0));
+            //var m = MeshShapeGenerator<Renderer.Modeling.MyVertex>.Box(1000);
+            //var m = MeshShapeGenerator<MyVertex>.Cylinder(1000);
+            var m = new GuitarBuilder().GuitarMesh();
+            var minX = m.Vertices.Min(x => x.Position.x);
+            var maxX = m.Vertices.Max(x => x.Position.x);
+            var minY = m.Vertices.Min(x => x.Position.y);
+            var maxY = m.Vertices.Max(x => x.Position.y);
+            var minZ = m.Vertices.Min(x => x.Position.z);
+            var maxZ = m.Vertices.Max(x => x.Position.z);
+            Console.WriteLine($"X:{minX} {maxX}\nY:{minY} {maxY}\nZ:{minZ} {maxZ}");
+            return m.ApplyTransforms(Transforms.Scale(.06f,.06f,.06f),
+                                     Transforms.RotateX(-pi/2.0f),
+                                     Transforms.RotateY(pi + pi*.1f),
+                                     Transforms.Translate(0,1.1f,0));
+            //MyVertex[] points =
+            //{
+            //    new MyVertex(),
+            //    new MyVertex(),
+            //    new MyVertex(),
+
+            //};
+
+            //float3[] d =
+            //{
+            //    float3(0,0,0),
+            //    float3(0,1,0),
+            //    float3(0,0,1),
+            //};
+
+            //for (int i = 0; i < points.Length; i++)
+            //{
+            //    points[i].Position = d[i];
+            //}
+
+            //return new Mesh<MyVertex>(points.Select(x => x).ToArray(), new int[] { 0, 1, 2 });
         }
-        
+
         private static void GeneratingMeshes(Raster<MyVertex, MyProjectedVertex> render)
         {
             render.ClearRT(float4(0, 0, 0.2f, 1)); // clear with color dark blue.
