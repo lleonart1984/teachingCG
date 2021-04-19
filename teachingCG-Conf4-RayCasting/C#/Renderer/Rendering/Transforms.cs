@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using GMath;
 using static GMath.Gfx;
@@ -174,6 +175,14 @@ namespace Rendering
 		public static float4x4 ScaleRespectTo(float3 center, float sx, float sy, float sz)
 		{
 			return ScaleRespectTo(center, float3(sx, sy, sz));
+		}
+
+		public static float4x4 FitIn(float3 lowerBound, float3 upperBound, float width, float height, float deep)
+		{
+			var toRender = Translate(-lowerBound);
+			var scale = new float[] { width / upperBound.x, height / upperBound.y, deep / upperBound.z }.Min();
+			toRender = mul(toRender,Transforms.Scale(scale, scale, scale));
+			return toRender;
 		}
 
 		//

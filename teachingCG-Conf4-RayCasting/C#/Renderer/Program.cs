@@ -3,8 +3,10 @@ using Renderer.Modeling;
 using Rendering;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using static GMath.Gfx;
+using static Rendering.Raycasting;
 
 namespace Renderer
 {
@@ -14,8 +16,26 @@ namespace Renderer
         static void CreateScene(Scene<float3> scene)
         {
             // Adding elements of the scene
-            scene.Add(Raycasting.UnitarySphere, Transforms.Translate(0,1,0));
-            scene.Add(Raycasting.PlaneXZ, Transforms.Identity);
+            //var sphere = new CSG.CSGNode(Raycasting.UnitarySphere);
+            //var cylinder1 = new CSG.CSGNode(Raycasting.Cylinder(.6f, "xy"));
+            //var cylinder2 = new CSG.CSGNode(Raycasting.Cylinder(.6f, "xz"));
+            //var cylinder3 = new CSG.CSGNode(Raycasting.Cylinder(.6f, "yz"));
+            //var bound = float3(.9f, .9f, .9f);
+            //var box = new CSG.CSGNode(Raycasting.Box(-bound, bound));
+            //scene.Add((box & sphere) / (cylinder1 | cylinder2 | cylinder3), Transforms.Translate(0, .7f, 0));
+
+
+            var guitar = new GuitarBuilder();
+            var mesh = guitar.GuitarMesh();
+            float scale = 3;
+            float3 lower = mesh.BoundBox.oppositeCorner, upper = mesh.BoundBox.topCorner;
+            guitar.CSGWorldTransformation = guitar.StackTransformations(
+                Transforms.RotateZ(pi),
+                Transforms.RotateX(-pi / 2),
+                Transforms.FitIn(lower, upper, 1, 1, 1),
+                Transforms.Scale(scale, scale, scale)
+                );
+            guitar.Guitar(scene);
         }
 
         public struct PositionNormal : INormalVertex<PositionNormal>
@@ -98,17 +118,34 @@ namespace Renderer
                 payload.Color = attribute;
             };
 
-            for (float px = 0.5f; px < texture.Width; px++)
-                for (float py = 0.5f; py < texture.Height; py++)
+            var start = new Stopwatch();
+            start.Start();
+            //for (float px = 0.5f; px < texture.Width; px++)
+            //    for (float py = 0.5f; py < texture.Height; py++)
+            //    {
+            //        RayDescription ray = RayDescription.FromScreen(px, py, texture.Width, texture.Height, inverse(viewMatrix), inverse(projectionMatrix), 0, 1000);
+
+            //        MyRayPayload coloring = new MyRayPayload();
+
+            //        raycaster.Trace(scene, ray, ref coloring);
+
+            //        texture.Write((int)px, (int)py, float4(coloring.Color, 1));
+            //    }
+
+            var tasks = new List<Task>();
+            int id = 0, xStep = texture.Width / 8, yStep = texture.Height / 8;
+            for (int i = 0; i * yStep < texture.Height; i++)
+            {
+                for (int j = 0; j * xStep < texture.Width; j++)
                 {
-                    RayDescription ray = RayDescription.FromScreen(px, py, texture.Width, texture.Height, inverse(viewMatrix), inverse(projectionMatrix), 0, 1000);
-
-                    MyRayPayload coloring = new MyRayPayload();
-
-                    raycaster.Trace(scene, ray, ref coloring);
-
-                    texture.Write((int)px, (int)py, float4(coloring.Color, 1));
+                    int threadId = id, x0 = j * xStep, y0 = i * yStep, maxX = Math.Min((j + 1) * xStep, texture.Width), maxY = Math.Min((i + 1) * yStep, texture.Height);
+                    tasks.Add(Task.Run(() => RenderArea(threadId, x0, y0, maxX, maxY, raycaster, texture, viewMatrix, projectionMatrix, scene)));
+                    id++;
                 }
+            }
+            Task.WaitAll(tasks.ToArray());
+            start.Stop();
+            Console.WriteLine($"Elapsed {start.ElapsedMilliseconds} milliseconds");
         }
 
         static void LitRaycast(Texture2D texture)
@@ -330,28 +367,28 @@ namespace Renderer
             // Texture to output the image.
             Texture2D texture = new Texture2D(512, 512);
 
-            //SimpleRaycast(texture);
+            SimpleRaycast(texture);
             //LitRaycast(texture);
             //RaycastingMesh(texture);
 
-            Raster<PositionNormal, MyProjectedVertex> render = new Raster<PositionNormal, MyProjectedVertex>(texture);
-            GeneratingMeshes(render);
+            //Raster<PositionNormal, MyProjectedVertex> render = new Raster<PositionNormal, MyProjectedVertex>(texture);
+            //GeneratingMeshes(render);
 
             texture.Save("test.rbm");
             Console.WriteLine("Done.");
             System.Diagnostics.Process.Start("CMD.exe","/C python imageviewer.py test.rbm");
         }
 
-        static void RenderArea(int id, int x0, int y0, int xf, int yf, Raytracer<MyRayPayload, PositionNormal> raycaster, Texture2D texture, float4x4 viewMatrix, float4x4 projectionMatrix, Scene<PositionNormal> scene)
+        static void RenderArea<T>(int id, int x0, int y0, int xf, int yf, Raytracer<MyRayPayload, T> raycaster, Texture2D texture, float4x4 viewMatrix, float4x4 projectionMatrix, Scene<T> scene) where T : struct
         {
             for (int px = x0; px < xf; px++)
                 for (int py = y0; py < yf; py++)
                 {
                     int progress = (px * yf + py);
-                    if (progress % 100 == 0)
-                    {
-                        Console.WriteLine($"{id}: " + progress * 100 / (xf * yf) + "%            ");
-                    }
+                    //if (progress % 100 == 0)
+                    //{
+                    //    Console.WriteLine($"{id}: " + progress * 100 / (xf * yf) + "%            ");
+                    //}
 
                     RayDescription ray = RayDescription.FromScreen(px + 0.5f, py + 0.5f, texture.Width, texture.Height, inverse(viewMatrix), inverse(projectionMatrix), 0, 1000);
 

@@ -9,6 +9,7 @@ using GMath;
 using System.Drawing;
 using static Renderer.Program;
 using Renderer;
+using Renderer.CSG;
 
 namespace Renderer
 {
@@ -382,6 +383,218 @@ namespace Renderer
 
         #endregion
 
+        #region CSG
+
+        public float4x4 CSGWorldTransformation { get; set; } = Transforms.Identity;
+        public float3 boxLower = float3(-.5f, -.5f, -.5f);
+        public float3 boxUpper = float3(.5f, .5f, .5f);
+        public float cylinderRadius = .5f;
+
+        public void BridgeStrings(Scene<float3> scene)
+        {
+            var strings = new List<(IRaycastGeometry<float3>, float4x4)>();
+            var step = BridgeWidth / (StringWidths.Length + 1);
+
+            for (int i = 0; i < StringWidths.Length; i++)
+            {
+                var cylinder = Raycasting.Cylinder(.5f
+                    , lowerBound: float3(-.5f, -.5f, -.5f)
+                    , upperBound: float3(.5f, .5f, .5f));
+                var transform = StackTransformations(
+                                        Transforms.Translate(0, 0, .5f),
+                                        Transforms.Scale(StringWidths[i], StringWidths[i], 1),
+                                        Transforms.Translate(-BridgeWidth / 2 + step * (i + 1), -StringBridgeSeparation, 0),
+                                        Transforms.Scale(1, 1, StringLength));
+                strings.Add((cylinder, transform));
+            }
+            AddToScene(scene, strings);
+        }
+
+        public void Bridge(Scene<float3> scene)
+        {
+            var parts = new List<(IRaycastGeometry<float3>, float4x4)>();
+
+            var bridge = Raycasting.Box(boxLower, boxUpper);
+            var bridgeTransf = StackTransformations(Transforms.Translate(0, 0, .5f),
+                                                    Transforms.Scale(BridgeWidth, BridgeHeight / 2, 1));
+
+            var bridge2 = Raycasting.Cylinder(cylinderRadius
+                    , lowerBound: float3(-.5f, -.5f, -.5f)
+                    , upperBound: float3(.5f, .5f, .5f));
+            var bridge2Transf = StackTransformations(Transforms.Translate(0, 0, .5f),
+                                                     Transforms.Scale(BridgeWidth / 2, BridgeHeight / 2, 1),
+                                                     Transforms.Translate(0, .5f * BridgeHeight / 2, 0));
+
+            var baseBridge = min(mul(bridgeTransf, float4x1(boxLower.x, boxLower.y, boxLower.z, 1))._m20, 
+                                 mul(bridgeTransf, float4x1(boxUpper.x, boxUpper.y, boxUpper.z, 1))._m20);
+            var fretsAmount = 20;
+            var step = BridgeLength / fretsAmount;
+            var frets = new List<(IRaycastGeometry<float3>, float4x4)>();
+            for (int i = 0; i < fretsAmount; i++) // Frets
+            {
+                var fret = Raycasting.Box(boxLower, boxUpper);
+                var transform = StackTransformations(Transforms.Translate(0, 0, .5f),
+                                                     Transforms.Scale(BridgeWidth, 1, BridgeWidth / 30),
+                                                     Transforms.Scale(1, i == 0 ? StringBridgeSeparation : BridgeWidth / 30, 1),
+                                                     Transforms.Translate(0, -.5f * BridgeHeight / 2, -baseBridge + step * i)); // This is not the correct fret spacing
+
+                frets.Add((fret, transform));
+            }
+            bridgeTransf  = StackTransformations(bridgeTransf , Transforms.Scale(1, 1, BridgeLength));
+            bridge2Transf = StackTransformations(bridge2Transf, Transforms.Scale(1, 1, BridgeLength));
+            
+            parts.Add((bridge, bridgeTransf));
+            parts.Add((bridge2, bridge2Transf));
+            parts.AddRange(frets);
+            
+            AddToScene(scene, parts);
+        }
+
+        public void Headstock(Scene<float3> scene)
+        {
+            var width = BridgeWidth * 1.3f;
+            var height = BridgeHeight / 2.0f;
+            var length = BridgeWidth * 2;
+            var parts = new List<(IRaycastGeometry<float3>, float4x4)>();
+
+            var basePieceTransform = StackTransformations(Transforms.Translate(0, -.5f, -.5f),
+                                                          Transforms.Scale(width, height, length));
+            var basePiece = new CSGNode(Raycasting.Box(boxLower, boxUpper), basePieceTransform); 
+            var xHoleScale = 3 / 16.0f;
+            var yHoleScale = 1;
+            var zHoleScale = 3 / 4.0f;
+            var holeDZ = -length * (1 - zHoleScale) / 2;
+
+            var hole1Transf = StackTransformations(basePieceTransform,
+                                                  Transforms.Scale(xHoleScale, yHoleScale * 2f, zHoleScale),
+                                                  Transforms.Translate(width * xHoleScale, height / 2, holeDZ));
+            var hole1 = new CSGNode(Raycasting.Box(boxLower, boxUpper), hole1Transf);
+            
+            var hole2Transf = StackTransformations(hole1Transf,
+                                                   Transforms.Translate(-2 * width * xHoleScale, 0, 0));
+            var hole2 = new CSGNode(Raycasting.Box(boxLower, boxUpper), hole2Transf);
+
+            basePiece = basePiece / (hole1 | hole2);
+
+            parts.Add((basePiece, Transforms.Identity)); // Identity because the transformation is already in CSGNode
+
+            var stringRollCylinders = new List<(IRaycastGeometry<float3>, float4x4)>();
+            var stringPins = new List<(IRaycastGeometry<float3>, float4x4)>();
+            var step = length * zHoleScale / 3.0f;
+            for (int i = 0; i < 6; i++)
+            {
+                var xBaseCylinderScale = width * xHoleScale;
+
+                var zTranslate = ((i % 3)) * step - length - holeDZ + step / 2;
+                var yTranslate = -height / 2.0f;
+                var baseCylinder = Raycasting.Cylinder(cylinderRadius
+                    , lowerBound: float3(-.5f, -.5f, -.5f)
+                    , upperBound: float3(.5f, .5f, .5f));
+                var baseCylinderTransf = StackTransformations(Transforms.RotateY(pi_over_4 * 2),
+                                                              Transforms.Scale(xBaseCylinderScale, height * yHoleScale * .25f, height * yHoleScale * .25f),
+                                                              Transforms.Translate((i < 3 ? 1 : -1) * 1f * (width * xHoleScale), yTranslate, zTranslate));
+                stringRollCylinders.Add((baseCylinder, baseCylinderTransf));
+
+
+                var xPinScale = xBaseCylinderScale / 3;
+                var yPinScale = height * .2f;
+                var finalPosTransf = Transforms.Translate((i < 3 ? 1 : -1) * (width / 2 + xPinScale / 2), yTranslate, zTranslate);
+
+
+                var basePin = Raycasting.Cylinder(cylinderRadius
+                    , lowerBound: float3(-.5f, -.5f, -.5f)
+                    , upperBound: float3(.5f, .5f, .5f));
+                var basePinTrans = StackTransformations(Transforms.RotateY(pi_over_4 * 2),
+                                                        Transforms.Scale(xPinScale, yPinScale, yPinScale),
+                                                        finalPosTransf);
+
+                var yHolderScale = height * 1.5f;
+                var xHolderScale = xPinScale / 4;
+                var headHolder = Raycasting.Cylinder(cylinderRadius
+                    , lowerBound: float3(-.5f, -.5f, -.5f)
+                    , upperBound: float3(.5f, .5f, .5f));
+                var headHolderTransf = StackTransformations(Transforms.RotateX(pi_over_4 * 2),
+                                                            Transforms.Translate(0, .5f, 0),
+                                                            Transforms.Scale(xHolderScale, yHolderScale, xHolderScale),
+                                                            Transforms.Translate((i < 3 ? 1 : -1) * xHolderScale, -yPinScale, -xHolderScale * 2),
+                                                            finalPosTransf);
+
+                var head = Raycasting.Cylinder(cylinderRadius
+                    , lowerBound: float3(-.5f, -.5f, -.5f)
+                    , upperBound: float3(.5f, .5f, .5f));
+                var headTransf = StackTransformations(Transforms.RotateX(pi_over_4 * 2),
+                                                      Transforms.Scale(1.1f * xHolderScale, 2 * yHolderScale / 6, 2 * yHolderScale / 3),
+                                                      Transforms.RotateY((two_pi / 12 * i)),
+                                                      Transforms.Translate((i < 3 ? 1 : -1) * xHolderScale, -yPinScale + yHolderScale, -xHolderScale * 2),
+                                                      finalPosTransf);
+
+                stringPins.Add((basePin, basePinTrans));
+                stringPins.Add((headHolder, headHolderTransf));
+                stringPins.Add((head, headTransf));
+            }
+            parts.AddRange(stringRollCylinders);
+            parts.AddRange(stringPins);
+
+            AddToScene(scene, parts);
+        }
+
+        public void MainBody(Scene<float3> scene)
+        {
+            var parts = new List<(IRaycastGeometry<float3>, float4x4)>();
+            
+            var bodyLength = BridgeLength * 1.1f;
+
+            var bodyTransf = StackTransformations(Transforms.Translate(0, 0, .5f),
+                                                  Transforms.Scale(BodyWidth, BridgeHeight * 2, bodyLength),
+                                                  Transforms.Translate(0, BridgeHeight, BridgeLength - BridgeBodyDif));
+            var body = new CSGNode(Raycasting.Box(boxLower, boxUpper), bodyTransf);
+            var innerBody = new CSGNode(Raycasting.Box(boxLower + .1f, boxUpper - .1f), bodyTransf);
+
+
+            var radius = BridgeWidth * 1.5f ;
+            var dz = BridgeLength + radius - (BridgeLength / 4 * .2f);
+            var cTransf = StackTransformations(Transforms.RotateX(pi_over_4 * 2),
+                                               Transforms.Scale(radius, 2, radius),
+                                               Transforms.Translate(0, -.25f, dz));
+            var c = new CSGNode(Raycasting.Cylinder(cylinderRadius
+                    , lowerBound: float3(-.5f, -.5f, -.5f)
+                    , upperBound: float3(.5f, .5f, .5f)), cTransf);
+
+            var holeTransf = StackTransformations(Transforms.RotateX(pi_over_4 * 2),
+                                                  Transforms.Scale(radius, .01f, radius),
+                                                  Transforms.Translate(0, 0, dz));
+            var hole = new CSGNode(Raycasting.Cylinder(cylinderRadius
+                    , lowerBound: float3(-.5f, -.5f, -.5f)
+                    , upperBound: float3(.5f, .5f, .5f)), holeTransf);
+
+            body = (body | hole) / c;
+            body /= innerBody;
+
+            parts.Add((body, Transforms.Identity));
+
+            var stringHub = Raycasting.Box(boxLower, boxUpper);
+            var stringHubTransf = StackTransformations(Transforms.Translate(0, -.5f, .5f),
+                                                       Transforms.Scale(BridgeWidth, 1, 1.5f),
+                                                       Transforms.Translate(0, 0, StringLength));
+            var stringHub2 = Raycasting.Box(boxLower, boxUpper);
+            var stringHub2Transf = StackTransformations(Transforms.Translate(0, -.5f, .5f),
+                                                        Transforms.Scale(BridgeWidth * 3f, .5f, 1.5f),
+                                                        Transforms.Translate(0, 0, StringLength));
+            parts.Add((stringHub, stringHubTransf));
+            parts.Add((stringHub2, stringHub2Transf));
+
+            AddToScene(scene, parts);
+        }
+
+        public void Guitar(Scene<float3> scene)
+        {
+            BridgeStrings(scene);
+            Bridge(scene);
+            Headstock(scene);
+            MainBody(scene);
+        }
+        #endregion
+
         /// <summary>
         /// Guitar parametric shape function, defined between 0 and 3, 
         /// initial: (0,0) 
@@ -429,7 +642,6 @@ namespace Renderer
             };
         }
 
-
         public Func<float, float2> BazierCurve(params float2[] points)
         {
             return BazierCurve(points[0], points[1], points[2], points[3]);
@@ -448,6 +660,24 @@ namespace Renderer
             + t * p3.y)) + t * ((1 - t) * ((1 - t) * p2.y
             + t * p3.y) + t * ((1 - t) * p3.y
             + t * p4.y)));
+        }
+    
+        public float4x4 StackTransformations(params float4x4[] transformations)
+        {
+            var transform = Transforms.Identity;
+            foreach (var item in transformations)
+            {
+                transform = mul(transform, item);
+            }
+            return transform;
+        }
+
+        public void AddToScene(Scene<float3> scene, IEnumerable<(IRaycastGeometry<float3>, float4x4)> geometries)
+        {
+            foreach (var (geo, trans) in geometries)
+            {
+                scene.Add(geo, mul(trans, CSGWorldTransformation));
+            }
         }
     }
 }
