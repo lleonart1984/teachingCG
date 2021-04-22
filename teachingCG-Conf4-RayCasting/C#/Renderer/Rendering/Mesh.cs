@@ -189,10 +189,12 @@ namespace Rendering
         /// <returns></returns>
         public Mesh<V> FitIn(float width, float height, float deep)
         {
-            var toRender = this.ApplyTransforms(Transforms.Translate(-BoundBox.oppositeCorner));
-            var scale = new float[] { width / toRender.BoundBox.topCorner.x, height / toRender.BoundBox.topCorner.y, deep / toRender.BoundBox.topCorner.z }.Min();
-            toRender = toRender.ApplyTransforms(Transforms.Scale(scale, scale, scale));
-            return toRender;
+            //var model = this.ApplyTransforms(Transforms.Translate(-BoundBox.oppositeCorner));
+            //var scale = new float[] { width / (model.BoundBox.topCorner.x), height / (model.BoundBox.topCorner.y), deep / (model.BoundBox.topCorner.z) }.Min();
+            //model = model.ApplyTransforms(Transforms.Scale(scale, scale, scale));
+            //return model;
+            var s = Transforms.FitIn(BoundBox.oppositeCorner, BoundBox.topCorner, width, height, deep);
+            return this.Transform(s);
         }
 
     }
@@ -405,6 +407,54 @@ namespace Rendering
         public static Mesh<V> Lofted(int slices, int stacks, Func<float, float3> g1, Func<float, float3> g2)
         {
             return Surface(slices, stacks, (u, v) => g1(u) * (1 - v) + g2(u) * v);
+        }
+    
+        /// <summary>
+        /// Builds a surface in xy plane with a hole in the middle
+        /// Boundries are (0,0,0) and (1,1,0)
+        /// </summary>
+        /// <param name="slices"></param>
+        /// <param name="stacks"></param>
+        /// <returns></returns>
+        public static Mesh<V> MiddleHoleSurface(int slices, int stacks)
+        {
+            static float3 meshGenerator(float x, float y, float z, float3 center, float radius, float3 centerDir)
+            {
+                var p = float3(x, y, z);
+                var d = p - center;
+                var lengthD = length(d);
+                if (lengthD <= .00001f)
+                {
+                    d = p + .001f * normalize(centerDir) - center;
+                }
+                if (lengthD <= radius) // Inside sphere
+                {
+                    // a,b,c Components of the parametric substitution of ray(center,d) in the sphere equation
+                    var sphereA = pow(d.x, 2) + pow(d.y, 2) + pow(d.z, 2);
+                    var alpha = radius * sqrt(1 / sphereA);
+                    var intersection = center + alpha * d;
+                    p = intersection;
+                }
+                return p;
+            }
+
+            var radius = 1f;
+            var center = float3(1, 0, 0);
+            var radiusFixScale = .9f;
+
+            var model = Surface(slices / 2, stacks / 2,
+                (x, y) => meshGenerator(2 * x, - 1 + y * radiusFixScale, 0, center, radius, float3(0, -1, 0)))
+                .Transform(Transforms.Translate((1-radiusFixScale)*float3(0,1,0)));
+
+            model += Surface(slices / 2, stacks / 2,
+                (x, y) => meshGenerator(2 * x, 1 - y * radiusFixScale, 0, center, radius, float3(0, 1, 0)))
+                .Transform(Transforms.Translate((1-radiusFixScale)*float3(0,-1,0)));
+
+            model = model.FitIn(1, 1, 1);
+            model = model.ApplyTransforms(Transforms.Scale(1 / (model.BoundBox.topCorner.x == 0 ? 1 : model.BoundBox.topCorner.x),
+                                                           1 / (model.BoundBox.topCorner.y == 0 ? 1 : model.BoundBox.topCorner.y), 
+                                                           1 / (model.BoundBox.topCorner.z == 0 ? 1 : model.BoundBox.topCorner.z)));
+            return model;
         }
     }
 
