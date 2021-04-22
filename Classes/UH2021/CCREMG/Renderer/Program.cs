@@ -74,6 +74,29 @@ namespace Renderer
             Console.WriteLine("Done.");
         }
 
+
+        public delegate float3 BRDF(float3 N, float3 Lin, float3 Lout);
+
+        static BRDF LambertBRDF(float3 diffuse)
+        {
+            return (N, Lin, Lout) => diffuse / pi;
+        }
+
+        static BRDF BlinnBRDF(float3 specular, float power)
+        {
+            return (N, Lin, Lout) =>
+            {
+                float3 H = normalize(Lin + Lout);
+                return specular * pow(max(0, dot(H, N)), power) * (power + 2) / two_pi;
+            };
+        }
+
+        static BRDF Mixture(BRDF f1, BRDF f2, float alpha)
+        {
+            return (N, Lin, Lout) => lerp(f1(N, Lin, Lout), f2(N, Lin, Lout), alpha);
+        }
+
+
         static Mesh<PositionNormal> CreateCoffeeModel()
         {
             CoffeeMakerModel<PositionNormal> CoffeeMaker = new CoffeeMakerModel<PositionNormal>();
@@ -84,8 +107,12 @@ namespace Renderer
 
         static void CreateMeshScene(Scene<PositionNormal> scene)
         {
+            // scene.Add(Raycasting.PlaneXZ.AttributesMap(a => new PositionNormal { Position = a, Normal = float3(0, 1, 0) }),
+            // Transforms.Identity);
+
             var model = CreateCoffeeModel();
-            scene.Add(model.AsRaycast(), Transforms.Identity);
+            scene.Add(model.AsRaycast(RaycastingMeshMode.Grid), Transforms.Identity);
+
         }
 
         static void RaycastingMesh (Texture2D texture)
@@ -93,12 +120,20 @@ namespace Renderer
             // Scene Setup
             float3 CameraPosition = float3(-12f, 6.6f, 0);
             float3 LightPosition = float3(-12, 6.6f, -20);
+            float3 LightIntensity = float3(1, 1, 1) * 1000;
+
             // View and projection matrices
             float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(0, 4, 0), float3(0, 1, 0));
             float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 20);
 
             Scene<PositionNormal> scene = new Scene<PositionNormal>();
             CreateMeshScene(scene);
+
+            BRDF[] brdfs =
+            {
+                // Mixture(LambertBRDF(float3(1f, 1f, 1f)), BlinnBRDF(float3(7,7,7), 0), 0.3f), //table
+                Mixture(LambertBRDF(float3(1f, 1f, 1f)), BlinnBRDF(float3(1,1,1), 70), 0.3f), //coffee_maker
+            };
 
             // Raycaster to trace rays and check for shadow rays.
             Raytracer<ShadowRayPayload, PositionNormal> shadower = new Raytracer<ShadowRayPayload, PositionNormal>();
@@ -118,16 +153,23 @@ namespace Renderer
                 attribute = attribute.Transform(context.FromGeometryToWorld);
 
                 float3 V = normalize(CameraPosition - attribute.Position);
-                float3 L = normalize(LightPosition - attribute.Position);
-                float lambertFactor = max(0, dot(attribute.Normal, L));
+                float3 L = (LightPosition - attribute.Position);
+                float d = length(L);
+                L /= d; // normalize direction to light reusing distance to light
+
+                float3 N = attribute.Normal;
+
+                float lambertFactor = max(0, dot(N, L));
 
                 // Check ray to light...
                 ShadowRayPayload shadow = new ShadowRayPayload();
                 shadower.Trace(scene,
-                    RayDescription.FromTo(attribute.Position + attribute.Normal * 0.001f, // Move an epsilon away from the surface to avoid self-shadowing 
-                    LightPosition), ref shadow);
+                    RayDescription.FromDir(attribute.Position + N * 0.001f, // Move an epsilon away from the surface to avoid self-shadowing 
+                    L), ref shadow);
 
-                payload.Color = shadow.Shadowed ? float3(0, 0, 0) : float3(1, 1, 1) * lambertFactor;
+                float3 Intensity = (shadow.Shadowed ? 0.0f : 1.0f) * LightIntensity / (d * d);
+
+                payload.Color = brdfs[context.GeometryIndex](N, L, V) * Intensity * lambertFactor;
             };
             raycaster.OnMiss += delegate (IRaycastContext context, ref MyRayPayload payload)
             {
@@ -139,7 +181,7 @@ namespace Renderer
                 for (int py = 0; py < texture.Height; py++)
                 {
                     int progress = (px * texture.Height + py);
-                    if (progress % 100 == 0)
+                    if (progress % 1000 == 0)
                     {
                         Console.Write("\r" + progress * 100 / (float)(texture.Width * texture.Height) + "%            ");
                     }
