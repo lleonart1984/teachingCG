@@ -257,6 +257,12 @@ namespace Renderer
 
         private static void GuitarRaycast(Texture2D texture)
         {
+            //// Scene Setup
+            //float3 CameraPosition = float3(1.25f, .4f, .47f);
+            //float3 LightPosition = float3(2f, 1f, -.5f);
+            //// View and projection matrices
+            //float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(1.25f, .4f, .5f), float3(0, 1, 0));
+
             // Scene Setup
             float3 CameraPosition = float3(1f, 1f, -1f);
             float3 LightPosition = float3(2f, 1f, -.5f);
@@ -314,7 +320,7 @@ namespace Renderer
 
             var tasks = new List<Task>();
             int id = 0, xStep = texture.Width / 8, yStep = texture.Height / 8;
-            int render_step = 1;
+            int render_step = 6;
             for (int i = 0; i * yStep < texture.Height; i++)
             {
                 for (int j = 0; j * xStep < texture.Width; j++)
@@ -357,7 +363,11 @@ namespace Renderer
             /// Creates the model using a revolution of a bezier.
             /// Only Positions are updated.
             model = Manifold<PositionNormal>.Revolution(5, 5, t => EvalBezier(contourn, t), float3(0, 1, 0)).Weld();
-            model = Manifold<PositionNormal>.MiddleHoleSurface(20,20);
+            model = Manifold<PositionNormal>.MiddleHoleSurface(20,20, 
+                float4(0,0,0,0));
+            //float4(.1f,.1f,.1f,.1f));
+            model = MeshShapeGenerator<PositionNormal>.Box(10, 10, 10, 
+                holeXYUp: true, sepXYUp: float4(.1f, .1f, .1f, .1f));
             model.ComputeNormals();
 
             return model;
@@ -412,7 +422,13 @@ namespace Renderer
 
                 float3 V = normalize(CameraPosition - attribute.Position);
                 float3 L = normalize(LightPosition - attribute.Position);
-                float lambertFactor = max(0, dot(attribute.Normal, L));
+                var l = dot(attribute.Normal, L);
+                if (l < 0)
+                {
+                    l = -l;
+                    attribute.Normal *= -1;
+                }
+                float lambertFactor = max(0, l);
 
                 // Check ray to light...
                 ShadowRayPayload shadow = new ShadowRayPayload();
@@ -420,7 +436,7 @@ namespace Renderer
                     RayDescription.FromTo(attribute.Position + attribute.Normal * 0.001f, // Move an epsilon away from the surface to avoid self-shadowing 
                     LightPosition), ref shadow);
 
-                payload.Color = shadow.Shadowed ? float3(0, 0, 0) : float3(1, 1, 1) * lambertFactor;
+                payload.Color = shadow.Shadowed ? float3(.1f, .1f, .1f) : float3(1, 1, 1) * lambertFactor;
             };
             raycaster.OnMiss += delegate (IRaycastContext context, ref MyRayPayload payload)
             {
@@ -430,12 +446,13 @@ namespace Renderer
             /// Render all points of the screen
             var tasks = new List<Task>();
             int id = 0, xStep = texture.Width / 8, yStep = texture.Height / 8;
+            int step = 3;
             for (int i = 0; i * yStep < texture.Height; i++)
             {
                 for (int j = 0; j * xStep < texture.Width; j++)
                 {
                     int threadId = id, x0 = j * xStep, y0 = i * yStep, maxX = Math.Min((j + 1) * xStep, texture.Width), maxY = Math.Min((i + 1) * yStep, texture.Height);
-                    tasks.Add(Task.Run(() => RenderArea(threadId, x0, y0, maxX, maxY, raycaster, texture, viewMatrix, projectionMatrix, scene)));
+                    tasks.Add(Task.Run(() => RenderArea(threadId, x0, y0, maxX, maxY, raycaster, texture, viewMatrix, projectionMatrix, scene, step)));
                     id++;
                 }
             }
@@ -450,10 +467,10 @@ namespace Renderer
             //SimpleRaycast(texture);
             //LitRaycast(texture);
             //RaycastingMesh(texture);
-            //GuitarRaycast(texture);
+            GuitarRaycast(texture);
 
-            Raster<PositionNormal, MyProjectedVertex> render = new Raster<PositionNormal, MyProjectedVertex>(texture);
-            GeneratingMeshes(render);
+            //Raster<PositionNormal, MyProjectedVertex> render = new Raster<PositionNormal, MyProjectedVertex>(texture);
+            //GeneratingMeshes(render);
 
             texture.Save("test.rbm");
             Console.WriteLine("Done.");
@@ -524,10 +541,10 @@ namespace Renderer
 
 
             // Scene Setup
-            float3 CameraPosition = float3(1f, 1f, -1f);
+            float3 CameraPosition = float3(1.25f, .4f, .47f);
             float3 LightPosition = float3(2f, 1f, -.5f);
             // View and projection matrices
-            float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(1f, .5f, .5f), float3(0, 1, 0));
+            float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(1.25f, .4f, .5f), float3(0, 1, 0));
             float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, render.RenderTarget.Height / (float)render.RenderTarget.Width, 0.01f, 20);
 
             //// Scene Setup

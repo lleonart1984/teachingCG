@@ -408,15 +408,16 @@ namespace Rendering
         {
             return Surface(slices, stacks, (u, v) => g1(u) * (1 - v) + g2(u) * v);
         }
-    
+
         /// <summary>
-        /// Builds a surface in xy plane with a hole in the middle
+        /// Builds a surface in xy plane with a hole
         /// Boundries are (0,0,0) and (1,1,0)
         /// </summary>
         /// <param name="slices"></param>
         /// <param name="stacks"></param>
+        /// <param name="separation">starting left in clockwise, separation of the hole from the surface borders</param>
         /// <returns></returns>
-        public static Mesh<V> MiddleHoleSurface(int slices, int stacks)
+        public static Mesh<V> MiddleHoleSurface(int slices, int stacks, float4 separation)
         {
             static float3 meshGenerator(float x, float y, float z, float3 center, float radius, float3 centerDir)
             {
@@ -440,7 +441,10 @@ namespace Rendering
 
             var radius = 1f;
             var center = float3(1, 0, 0);
-            var radiusFixScale = .9f;
+            var radiusFixScale = .8f; // To fix near center points issue 
+            var holeXScale = 1 - separation.x - separation.z;
+            var holeYScale = 1 - separation.y - separation.w;
+
 
             var model = Surface(slices / 2, stacks / 2,
                 (x, y) => meshGenerator(2 * x, - 1 + y * radiusFixScale, 0, center, radius, float3(0, -1, 0)))
@@ -454,7 +458,37 @@ namespace Rendering
             model = model.ApplyTransforms(Transforms.Scale(1 / (model.BoundBox.topCorner.x == 0 ? 1 : model.BoundBox.topCorner.x),
                                                            1 / (model.BoundBox.topCorner.y == 0 ? 1 : model.BoundBox.topCorner.y), 
                                                            1 / (model.BoundBox.topCorner.z == 0 ? 1 : model.BoundBox.topCorner.z)));
-            return model;
+            model = model.FitIn(1 - separation.x - separation.z, 1 - separation.y - separation.w, 1);
+            model = model.ApplyTransforms(Transforms.Translate(separation.x, separation.w, 0));
+            var l = model.BoundBox.oppositeCorner;
+            var h = model.BoundBox.topCorner;
+
+            var upSurface        = Surface((int)ceil(slices * holeXScale), (int)ceil(stacks * separation.y), 
+                (x, y) => float3(l.x + x * (1 - separation.x - separation.z), h.y + y * separation.y, 0));
+            
+            var downSurface      = Surface((int)ceil(slices * holeXScale), (int)ceil(stacks * separation.w), 
+                (x, y) => float3(l.x + x * (1 - separation.x - separation.z), y * separation.w, 0));
+            
+            var leftSurface      = Surface((int)ceil(slices * separation.x), (int)ceil(stacks * holeYScale), 
+                (x, y) => float3(x * separation.x, l.y + y * (1 - separation.w - separation.y), 0));
+            
+            var rightSurface     = Surface((int)ceil(slices * separation.z), (int)ceil(stacks * holeYScale), 
+                (x, y) => float3(h.x + x * separation.z, l.y + y * (1 - separation.w - separation.y), 0));
+            
+            var upLeftSurface    = Surface((int)ceil(slices * separation.x), (int)ceil(stacks * separation.y),
+                (x, y) => float3(x * separation.x, h.y + y * separation.y, 0));
+            
+            var upRightSurface   = Surface((int)ceil(slices * separation.z), (int)ceil(stacks * separation.y),
+                (x, y) => float3(h.x + x * separation.z, h.y + y * separation.y, 0));
+            
+            var downLeftSurface  = Surface((int)ceil(slices * separation.x), (int)ceil(stacks * separation.w),
+                (x, y) => float3(x * separation.x, y * separation.w, 0));
+            
+            var downRightSurface = Surface((int)ceil(slices * separation.z), (int)ceil(stacks * separation.w),
+                (x, y) => float3(h.x + x * separation.z, y * separation.w, 0));
+            
+            var surface = upSurface + downSurface + leftSurface + rightSurface + upLeftSurface + upRightSurface + downLeftSurface + downRightSurface;
+            return model + surface;
         }
     }
 

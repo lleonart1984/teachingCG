@@ -336,9 +336,17 @@ namespace Renderer
             var bodyLength = BridgeLength * 1.1f;
 
             Func<float, float2> bazier = BodyFunction();
-            float transform(float x, float val) => x * (bazier(val * 2.99f)).y; // Multiply val for the max value that bazier is defined, the amount of parts
+            float transform(float x, float val) 
+            {
+                if (0f <= abs(x) && abs(x) <= .25f && .1f <= abs(val) && abs(val) <= .5f)
+                    return x;
+                return x * (bazier(val * 2.99f)).y;
+            }; // Multiply val for the max value that bazier is defined, the amount of parts
             
-            var body = MeshShapeGenerator<PositionNormal>.Box((int)(10 * MeshScalar),(int)(2 * MeshScalar), (int)(15 * MeshScalar)).ApplyTransforms(Transforms.Translate(0, 0, .5f))
+            var body = MeshShapeGenerator<PositionNormal>.Box((int)(10 * MeshScalar),(int)(3 * MeshScalar), (int)(15 * MeshScalar) 
+                                                              ,holeXZDown:true, sepXZDown:float4(.37f,.61f,.37f,.15f)
+                                                              )
+                                                .ApplyTransforms(Transforms.Translate(0, 0, .5f))
                                                 .Transform(p => new PositionNormal { Position = float3(transform(p.Position.x, p.Position.z), p.Position.y, p.Position.z) })
                                                 .ApplyTransforms(Transforms.Translate(0, 0, -.5f));
 
@@ -362,16 +370,12 @@ namespace Renderer
             var minY = c.Min(x => x.Position.y);
             var maxY = c.Max(x => x.Position.y);
 
-            //body = body.ApplyFilter(x => !(Math.Pow(x.x - dx, 2) + Math.Pow(x.z - dz, 2) <= Math.Pow(radius, 2) &&
-            //                             minY <= x.y && x.y <= maxY)); // TODO VER ESTO LUEGO
-
             var stringHub = MeshShapeGenerator<PositionNormal>.Box((int)(6 * MeshScalar)).ApplyTransforms(Transforms.Translate(0, -.5f, .5f),
                                                                                    Transforms.Scale(BridgeWidth, 1, 1.5f),
                                                                                    Transforms.Translate(0, 0, StringLength));
-            stringHub += MeshShapeGenerator<PositionNormal>.Box((int)(6 * MeshScalar)).ApplyTransforms(Transforms.Translate(0, -.5f, .5f),
-                                                                                Transforms.Scale(BridgeWidth * 3f, .5f, 1.5f),
-                                                                                Transforms.Translate(0, 0, StringLength));
-
+            stringHub +=    MeshShapeGenerator<PositionNormal>.Box((int)(6 * MeshScalar)).ApplyTransforms(Transforms.Translate(0, -.5f, .5f),
+                                                                                   Transforms.Scale(BridgeWidth * 3f, .5f, 1.5f),
+                                                                                   Transforms.Translate(0, 0, StringLength));
             return hole + body + stringHub;
         }
     
