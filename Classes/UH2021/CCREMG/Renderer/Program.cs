@@ -66,7 +66,7 @@ namespace Renderer
         static void Main(string[] args)
         {
             // Texture to output the image.
-            Texture2D texture = new Texture2D(512, 512);
+            Texture2D texture = new Texture2D(1024, 1024);
 
             RaycastingMesh(texture);
 
@@ -105,13 +105,28 @@ namespace Renderer
             return model;
         }
 
+        // static Mesh<PositionNormal> CreateTableModel()
+        // {
+        //     // var model = Manifold<PositionNormal>.Surface(5, 5, (u, v) => 2*float3(2 * u - 1, 0, 2 * v - 1)).Weld();
+        //     // model.ComputeNormals();
+        //     // return model;
+
+        //     CoffeeMakerModel<PositionNormal> CoffeeMaker = new CoffeeMakerModel<PositionNormal>();
+        //     Mesh<PositionNormal> model = CoffeeMaker.TableMesh();
+        //     model.ComputeNormals();
+        //     return model;
+        // }
+
         static void CreateMeshScene(Scene<PositionNormal> scene)
         {
-            // scene.Add(Raycasting.PlaneXZ.AttributesMap(a => new PositionNormal { Position = a, Normal = float3(0, 1, 0) }),
-            // Transforms.Identity);
+            scene.Add(Raycasting.PlaneXZ.AttributesMap(a => new PositionNormal { Position = a, Normal = float3(0, 1, 0) }),
+            Transforms.Identity);
 
-            var model = CreateCoffeeModel();
-            scene.Add(model.AsRaycast(RaycastingMeshMode.Grid), Transforms.Identity);
+            scene.Add(Raycasting.PlaneYZ.AttributesMap(a => new PositionNormal { Position = a, Normal = float3(-1, 0, 0) }),
+            mul(Transforms.Translate(10f, 0, 0), Transforms.Identity));
+
+            var coffee_maker = CreateCoffeeModel();
+            scene.Add(coffee_maker.AsRaycast(), Transforms.Identity);
 
         }
 
@@ -119,8 +134,8 @@ namespace Renderer
         {
             // Scene Setup
             float3 CameraPosition = float3(-12f, 6.6f, 0);
-            float3 LightPosition = float3(-12, 6.6f, -20);
-            float3 LightIntensity = float3(1, 1, 1) * 1000;
+            float3 LightPosition = float3(-15, 13f, 25);
+            float3 LightIntensity = float3(1, 1, 1) * 2500;
 
             // View and projection matrices
             float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(0, 4, 0), float3(0, 1, 0));
@@ -131,7 +146,8 @@ namespace Renderer
 
             BRDF[] brdfs =
             {
-                // Mixture(LambertBRDF(float3(1f, 1f, 1f)), BlinnBRDF(float3(7,7,7), 0), 0.3f), //table
+                Mixture(LambertBRDF(float3(1f, 1f, 0.8f)), BlinnBRDF(float3(1,1,1), 50), 0.2f), //table
+                LambertBRDF(float3(1f, 0.9f, 1f)), //), BlinnBRDF(float3(1,1,1), 50), 0.2f), //wall
                 Mixture(LambertBRDF(float3(1f, 1f, 1f)), BlinnBRDF(float3(1,1,1), 70), 0.3f), //coffee_maker
             };
 
