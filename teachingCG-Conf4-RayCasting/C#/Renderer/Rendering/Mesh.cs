@@ -100,6 +100,23 @@ namespace Rendering
             return Transform(id);
         }
 
+        /// <summary>
+        /// Returs a model with the points between (0,0,0) <= (x,y,z) <= (wwidth, height, deep)
+        /// </summary>
+        /// <param name="width"></param>
+        /// <param name="height"></param>
+        /// <param name="deep"></param>
+        /// <returns></returns>
+        public Mesh<V> FitIn(float width, float height, float deep)
+        {
+            //var model = this.ApplyTransforms(Transforms.Translate(-BoundBox.oppositeCorner));
+            //var scale = new float[] { width / (model.BoundBox.topCorner.x), height / (model.BoundBox.topCorner.y), deep / (model.BoundBox.topCorner.z) }.Min();
+            //model = model.ApplyTransforms(Transforms.Scale(scale, scale, scale));
+            //return model;
+            var s = Transforms.FitIn(BoundBox.oppositeCorner, BoundBox.topCorner, width, height, deep);
+            return this.Transform(s);
+        }
+
         #endregion
 
         /// <summary>
@@ -178,23 +195,6 @@ namespace Rendering
         {
             return new Mesh<V>(a.Vertices.Concat(b.Vertices).ToArray(),
                                a.Indices.Concat(b.Indices.Select(x => x + a.Vertices.Length)).ToArray());
-        }
-
-        /// <summary>
-        /// Returs a model with the points between (0,0,0) <= (x,y,z) <= (wwidth, height, deep)
-        /// </summary>
-        /// <param name="width"></param>
-        /// <param name="height"></param>
-        /// <param name="deep"></param>
-        /// <returns></returns>
-        public Mesh<V> FitIn(float width, float height, float deep)
-        {
-            //var model = this.ApplyTransforms(Transforms.Translate(-BoundBox.oppositeCorner));
-            //var scale = new float[] { width / (model.BoundBox.topCorner.x), height / (model.BoundBox.topCorner.y), deep / (model.BoundBox.topCorner.z) }.Min();
-            //model = model.ApplyTransforms(Transforms.Scale(scale, scale, scale));
-            //return model;
-            var s = Transforms.FitIn(BoundBox.oppositeCorner, BoundBox.topCorner, width, height, deep);
-            return this.Transform(s);
         }
 
     }
@@ -352,6 +352,21 @@ namespace Rendering
             // Update per-vertex normal using normal accumulation normalized.
             for (int i = 0; i < mesh.Vertices.Length; i++)
                 mesh.Vertices[i].Normal = normalize(normals[i]);
+        }
+ 
+        /// <summary>
+        /// Computes the Axis-aligned boundary box of the mesh using the vertex positions.
+        /// </summary>
+        public static AABB3D ComputeAABB<V>(this Mesh<V> mesh) where V : struct, IVertex<V>
+        {
+            float3 minimum = float3(float.MaxValue, float.MaxValue, float.MaxValue);
+            float3 maximum = float3(float.MinValue, float.MinValue, float.MinValue);
+            foreach (var v in mesh.Vertices)
+            {
+                minimum = min(minimum, v.Position);
+                maximum = max(maximum, v.Position);
+            }
+            return new AABB3D { Minimum = minimum, Maximum = maximum };
         }
 
     }
