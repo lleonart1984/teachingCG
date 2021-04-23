@@ -221,8 +221,8 @@ namespace Renderer
             indices[++j] = 11;
 
             indices[++j] = 0;
-            indices[++j] = 1;
             indices[++j] = 11;
+            indices[++j] = 1;
 
             indices[++j] = 1;
             indices[++j] = 11;
@@ -233,12 +233,12 @@ namespace Renderer
             indices[++j] = 9;
 
             indices[++j] = 1;
-            indices[++j] = 2;
             indices[++j] = 9;
+            indices[++j] = 2;
 
             indices[++j] = 2;
+            indices[++j] = 9;
             indices[++j] = 3;
-            indices[++j] = 9;
 
             indices[++j] = 3;
             indices[++j] = 9;
@@ -257,8 +257,8 @@ namespace Renderer
             indices[++j] = 4;
 
             indices[++j] = 4;
+            indices[++j] = 6;
             indices[++j] = 5;
-            indices[++j] = 6;
 
             return new Mesh<V>(vertices, indices);
         }
