@@ -15,6 +15,7 @@ using System.IO;
 using System.Drawing.Imaging;
 using Renderer;
 using static Renderer.Program;
+using System.Threading;
 
 namespace MainForm
 {
@@ -22,15 +23,28 @@ namespace MainForm
     {
         private Model _baseModel;
         private Model _model;
-        private Mesh<MyVertex> _baseModelMesh;
-        private Mesh<MyVertex> _modelMesh;
+        private Mesh<PositionNormal> _baseModelMesh;
+        private Mesh<PositionNormal> _modelMesh;
         private float3 _baseTranslation;
         private float3 _baseZoom;
         private float _maxScale;
         private float _minScale;
         private Model _wall;
-        private Raster<MyVertex, MyProjectedVertex> _raster;
-        private bool mesh = false;
+        private bool mesh = true;
+        private MyTexture2D _texture;
+
+        private float _currScale;
+        private float _currRotX;
+        private float _currRotY;
+        private float _currRotZ;
+        private float _currTraX;
+        private float _currTraY;
+        private float _currTraZ;
+
+
+        private Task drawingTask;
+        private CancellationTokenSource cts;
+        private CancellationToken cancelToken;
 
         public Form1()
         {
@@ -38,14 +52,12 @@ namespace MainForm
 
             imageFile.FileOk += ImageFile_FileOk;
 
-            //_baseModel = ShapeGenerator.Sphere(5000);
-            //_baseModel = ShapeGenerator.Box(5000);
             _baseModel = new Model();
-            _baseModelMesh = new Mesh<MyVertex>();
+            _baseModelMesh = new Mesh<PositionNormal>();
             SetGuitar();
             AddWalls();
             SetBaseTranslation();
-            _baseZoom = float3(10, 10, 10);
+            _baseZoom = float3(1, 1, 1);
 
             _model = _baseModel.ApplyTransforms(Transforms.Scale(_baseZoom), Transforms.Translate(_baseTranslation));
             _modelMesh = _baseModelMesh.ApplyTransforms(Transforms.Scale(_baseZoom), Transforms.Translate(_baseTranslation));
@@ -54,8 +66,29 @@ namespace MainForm
             _minScale = .5f;
             var stepSize = (_maxScale - _minScale) / (zoomBar.Maximum - zoomBar.Minimum);
             zoomBar.Value = (int)((1 - _minScale) / stepSize); // Setting zoomBar value to the value that represent scaling by 1
-            _raster = new Raster<MyVertex, MyProjectedVertex>(imagePbx.Width, imagePbx.Height);
             DrawModel();
+        }
+
+        private float4x4 WorldTransformation()
+        {
+            var stepSize = (_maxScale - _minScale) / (zoomBar.Maximum - zoomBar.Minimum);
+            var scalar = _minScale + stepSize * _currScale;
+
+            var worldTransformation = new List<float4x4>
+            {
+                Transforms.Translate(_baseTranslation + float3(_currTraX, _currTraY, _currTraZ)),
+                Transforms.Scale(_baseZoom * float3(scalar, scalar, scalar)),
+                Transforms.RotateX((_currRotX * two_pi) / (xRotation.Maximum - xRotation.Minimum)),
+                Transforms.RotateY((_currRotY * two_pi) / (yRotation.Maximum - yRotation.Minimum)),
+                Transforms.RotateZ((_currRotZ * two_pi) / (zRotation.Maximum - zRotation.Minimum))
+            };
+
+            var id = Transforms.Identity;
+            foreach (var item in worldTransformation)
+            {
+                id = mul(id, item);
+            }
+            return id;
         }
 
         private void SetGuitar()
@@ -69,13 +102,13 @@ namespace MainForm
 
         private void AddWalls()
         {
-            var builder = new WallsBuilder();
-            if (!mesh)
-            {
-                _wall = builder.Wall();
-                var wallWidth = _wall.BoundBox.topCorner.x - _wall.BoundBox.oppositeCorner.x;
-                _baseModel += _wall.ApplyTransforms(Transforms.Scale(2 / 3.0f, 1, 1), Transforms.Translate(-1 / 3.0f * wallWidth, 0, 0));
-            }
+            //var builder = new WallsBuilder();
+            //if (!mesh)
+            //{
+            //    _wall = builder.Wall();
+            //    var wallWidth = _wall.BoundBox.topCorner.x - _wall.BoundBox.oppositeCorner.x;
+            //    _baseModel += _wall.ApplyTransforms(Transforms.Scale(2 / 3.0f, 1, 1), Transforms.Translate(-1 / 3.0f * wallWidth, 0, 0));
+            //}
         }
 
         public void ClearImagePbx()
@@ -85,32 +118,55 @@ namespace MainForm
 
         public void DrawModel()
         {
-            ClearImagePbx();
+            if (drawingTask == null || drawingTask.IsCompleted)
+            {
+                cts = new CancellationTokenSource();
+                cancelToken = cts.Token;
+                drawingTask = Task.Run(DrawingModel, cancelToken);
+            }
+            else
+            {
+                cts.Cancel();
+                Task.WaitAll(drawingTask);
+                drawingTask = null;
+                DrawModel();
+            }
             
+        }
+
+        private void DrawingModel()
+        {
+            ClearImagePbx();
+
             if (imagePbx.Width == 0 || imagePbx.Height == 0)
                 return;
             Bitmap image = new Bitmap(imagePbx.Width, imagePbx.Height);
 
+            _texture = new MyTexture2D(imagePbx.Width, imagePbx.Height);
+            //int p = 0;
+            //_texture.PixelDrawed += (x, e) =>
+            //{
+            //    p++;
+            //    if (label1.InvokeRequired)
+            //    {
+            //        label1.Invoke(new Action(() => label1.Text = $"{p}"));
+            //        return;
+            //    }
+            //    label1.Text = $"{p}";
+            //};
+
             if (mesh)
             {
-                // Drawing Mesh NOT WORKING
-                var lineMesh = _modelMesh.FitIn(1, 1, 1).ConvertTo(Topology.Lines);
-                _raster.ClearRT(float4(0,0,0,0));
-                _raster.DrawMesh(lineMesh);
-                var target = _raster.RenderTarget;
-                for (int i = 0; i < target.Width; i++)
+                GuitarDrawer.DrawStep = 6;
+                GuitarDrawer.GuitarRaycast(_texture, WorldTransformation());
+                for (int i = 0; i < _texture.Width; i++)
                 {
-                    for (int j = 0; j < target.Height; j++)
+                    for (int j = 0; j < _texture.Height; j++)
                     {
-                        var colorVector = target.Read(i, j);
-                        image.SetPixel(i, j,
+                        var colorVector = _texture.Read(i, j);
+                        image.SetPixel(Math.Min(i, imagePbx.Width - 1), Math.Min(j, imagePbx.Height - 1),
                             Color.FromArgb(ColorComponent(colorVector.w), ColorComponent(colorVector.x), ColorComponent(colorVector.y), ColorComponent(colorVector.z))
-                            //length(colorVector) != 0 ? Color.White : Color.Red
                             );
-                        //if (length(colorVector) != 0)
-                        //{
-                        //    int a = 1;
-                        //}
                     }
                 }
             }
@@ -128,21 +184,19 @@ namespace MainForm
             }
             imagePbx.Image = image;
             imagePbx.Invalidate();
-        }
+        } 
 
         public void SaveModel()
         {
-
-
             var model = _model.ApplyFilter(x => x.y >= 0 && x.y <= imagePbx.Height);
             var top = model.BoundBox.topCorner;
             var low = model.BoundBox.oppositeCorner;
             var height = (int)(top.y - low.y);
             var width = (int)(top.x - low.x);
-            var texture = model.XY(width, height, new WallsBuilder().FloorColor);
+            var texture = model.XY(width, height, Color.Brown);
             
             // Save Mesh
-            texture = _raster.RenderTarget;
+            texture = _texture;
             height = texture.Height;
             width = texture.Width;
 
@@ -203,69 +257,17 @@ namespace MainForm
         {
             var stepSize = (_maxScale - _minScale) / (zoomBar.Maximum - zoomBar.Minimum);
             var scalar = _minScale + stepSize * zoomBar.Value;
+
+            _currScale = scalar;
+            _currRotX = xRotation.Value;
+            _currRotY = yRotation.Value;
+            _currRotZ = zRotation.Value;
+            _currTraX = (float)xTranslation.Value;
+            _currTraY = (float)yTranslation.Value;
+            _currTraZ = (float)zTranslation.Value;
+
             label1.Text = $"{xRotation.Value}, {yRotation.Value}, {zRotation.Value}, {scalar}";
-
-            var worldTransformation = new List<float4x4>
-            {
-                Transforms.Scale(_baseZoom * float3(scalar, scalar, scalar)),
-                Transforms.RotateX((xRotation.Value * two_pi) / (xRotation.Maximum - xRotation.Minimum)),
-                Transforms.RotateY((yRotation.Value * two_pi) / (yRotation.Maximum - yRotation.Minimum)),
-                Transforms.RotateZ((zRotation.Value * two_pi) / (zRotation.Maximum - zRotation.Minimum))
-            };
-
-            // WORLD TRANSFORMATIONS
-            _model = _baseModel.ApplyTransforms(worldTransformation.ToArray());
-            _modelMesh = _baseModelMesh.ApplyTransforms(worldTransformation.ToArray());
-
-            // Camera, Perspective
-            var cameraPos = float3(0,//-(_wall.BoundBox.topCorner.x - _wall.BoundBox.oppositeCorner.x) / 2,
-                                   20,
-                                   0//-(_wall.BoundBox.topCorner.z - _wall.BoundBox.oppositeCorner.z) / 2
-                                   );
-            var direction = float3(0, -1, 0);
-            var upDirection = float3(0, 0, 1);
-            
-            _model = _model.ApplyTransforms(Transforms.Translate(-_model.BoundBox.oppositeCorner));
-            _modelMesh = _modelMesh.ApplyTransforms(Transforms.Translate(-_modelMesh.BoundBox.oppositeCorner));
-
-            float4x4 viewMatrix = Transforms.LookAtLH(cameraPos, direction, upDirection);
-            float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4*2, (imagePbx.Image?.Height ?? 1) / (float?)imagePbx.Image?.Width ?? 1, 0.01f, 200);
-            //float4x4 projectionMatrix = Transforms.PerspectiveLH((imagePbx.Image?.Height ?? 1), (float?)imagePbx.Image?.Width ?? 1, 0.01f, 40);
-            
-            // RASTER CONFIG
-            // Define a vertex shader that projects a vertex into the NDC.
-            _raster.VertexShader = v =>
-            {
-                float4 hPosition = float4(v.Position, 1);
-                hPosition = mul(hPosition, viewMatrix);
-                //hPosition = mul(hPosition, projectionMatrix);
-                return new MyProjectedVertex { Homogeneous = hPosition };
-            };
-
-            // Define a pixel shader that colors using a constant value
-            _raster.PixelShader = p =>
-            {
-                return float4(p.Homogeneous.x / 1024.0f, p.Homogeneous.y / 512.0f, 1, 1);
-            };
-
-            var cameraPerspectiveTransformations = new List<float4x4>
-            {
-                viewMatrix,
-                //projectionMatrix
-            };
-
-            _model = _model.ApplyTransforms(cameraPerspectiveTransformations.ToArray());
-            //_modelMesh = _modelMesh.ApplyTransforms(cameraPerspectiveTransformations.ToArray());
-
-            var finalTransformations = new List<float4x4>
-            {
-                Transforms.Translate(_baseTranslation + float3((float)xTranslation.Value, (float)yTranslation.Value, (float)zTranslation.Value))
-            };
-
-           _model = _model.ApplyTransforms(finalTransformations.ToArray());
-           _modelMesh = _modelMesh.ApplyTransforms(finalTransformations.ToArray());
-
-            DrawModel();
+            Task.Run(DrawModel);
         }
 
         public void SetBaseTranslation() 
@@ -275,7 +277,6 @@ namespace MainForm
 
         private void imagePbx_SizeChanged(object sender, EventArgs e)
         {
-            _raster = new Raster<MyVertex, MyProjectedVertex>(imagePbx.Width, imagePbx.Height);
             SetBaseTranslation();
             UpdateModel(sender, e);
         }

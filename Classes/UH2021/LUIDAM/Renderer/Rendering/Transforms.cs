@@ -6,7 +6,7 @@ using static GMath.Gfx;
 
 namespace Rendering
 {
-	public static class Transforms
+ 	public static class Transforms
 	{
 		public static float4x4 Identity
         {

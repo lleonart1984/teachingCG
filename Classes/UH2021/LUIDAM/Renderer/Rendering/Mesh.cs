@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using static GMath.Gfx;
 
-namespace Renderer
+namespace Rendering
 {
     public class Mesh<V> : IEnumerable<V> where V : struct, IVertex<V>
     {
@@ -39,15 +39,14 @@ namespace Renderer
             this.Vertices = vertices;
             this.Indices = indices;
             this.Topology = topology;
-            
+         
             if (Vertices.Any())
                 BoundBox = (float3(Vertices.Max(x => x.Position.x), Vertices.Max(x => x.Position.y), Vertices.Max(x => x.Position.z)),
                             float3(Vertices.Min(x => x.Position.x), Vertices.Min(x => x.Position.y), Vertices.Min(x => x.Position.z)));
         }
 
-        public Mesh () : this(new V[] { }, new int[] { })
+        public Mesh() : this(new V[] { }, new int[] { })
         {
-
         }
 
         /// <summary>
@@ -61,109 +60,6 @@ namespace Renderer
             return new Mesh<V>(newVertices, newIndices, this.Topology);
         }
 
-        #region Mesh Vertices Transforms
-
-        public Mesh<T> Transform<T>(Func<V, T> transform) where T : struct, IVertex<T>
-        {
-            T[] newVertices = new T[Vertices.Length];
-
-            for (int i = 0; i < newVertices.Length; i++)
-                newVertices[i] = transform(Vertices[i]);
-
-            return new Mesh<T>(newVertices, Indices, Topology);
-        }
-
-        public Mesh<V> Transform(Func<V, V> transform)
-        {
-            return Transform<V>(transform);
-        }
-
-        public Mesh<V> Transform(float4x4 transform)
-        {
-            return Transform(v =>
-            {
-                float4 hP = float4(v.Position, 1);
-                hP = mul(hP, transform);
-                V newVertex = v;
-                newVertex.Position = hP.xyz / hP.w;
-                return newVertex;
-            });
-        }
-
-        public Mesh<V> ApplyTransforms(params float4x4[] transforms)
-        {
-            var id = Transforms.Identity;
-            foreach (var item in transforms)
-            {
-                id = mul(id, item);
-            }
-            return Transform(id);
-        }
-
-        #endregion
-
-        /// <summary>
-        /// Changes a mesh to another object with different topology. For instance, from a triangle mesh to a wireframe (lines).
-        /// </summary>
-        public Mesh<V> ConvertTo(Topology topology)
-        {
-            switch (topology)
-            {
-                case Topology.Triangles:
-                    switch (this.Topology)
-                    {
-                        case Topology.Triangles:
-                            return this.Clone(); // No necessary change
-                        case Topology.Lines:
-                            // This problem is NP.
-                            // Try to implement a greedy, that means, recognize the small triangle and so on...
-                            throw new NotImplementedException("Missing implementing line-to-triangle conversion.");
-                        case Topology.Points:
-                            throw new NotImplementedException("Missing implementing point-to-triangle conversion.");
-                    }
-                    break;
-                case Topology.Lines:
-                    switch (this.Topology)
-                    {
-                        case Topology.Points:
-                            // Get the wireframe from surface reconstruction
-                            return ConvertTo(Topology.Triangles).ConvertTo(Topology.Lines);
-                        case Topology.Lines:
-                            return this.Clone(); // nothing to do
-                        case Topology.Triangles:
-                            {
-                                // This is repeating edges for adjacent triangles.... use a hash table to prevent for double linking vertices.
-                                V[] newVertices = Vertices.Clone() as V[];
-                                int[] newIndices = new int[Indices.Length * 2];
-                                int index = 0;
-                                for (int i = 0; i < Indices.Length / 3; i++)
-                                {
-                                    newIndices[index++] = Indices[i * 3 + 0];
-                                    newIndices[index++] = Indices[i * 3 + 1];
-
-                                    newIndices[index++] = Indices[i * 3 + 1];
-                                    newIndices[index++] = Indices[i * 3 + 2];
-                                    
-                                    newIndices[index++] = Indices[i * 3 + 2];
-                                    newIndices[index++] = Indices[i * 3 + 0];
-                                }
-                                return new Mesh<V>(newVertices, newIndices, Topology.Lines);
-                            }
-                    }
-                    break;
-                case Topology.Points:
-                    {
-                        V[] newVertices = Vertices.Clone() as V[];
-                        int[] indices = new int[newVertices.Length];
-                        for (int i = 0; i < indices.Length; i++)
-                            indices[i] = i;
-                        return new Mesh<V>(newVertices, indices, Topology.Points);
-                    }
-            }
-
-            throw new ArgumentException("Wrong topology.");
-        }
-
         public IEnumerator<V> GetEnumerator()
         {
             return ((IEnumerable<V>)Vertices).GetEnumerator();
@@ -171,31 +67,16 @@ namespace Renderer
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return Vertices.GetEnumerator();
+            return GetEnumerator();
         }
 
-        public static Mesh<V> operator + (Mesh<V> a, Mesh<V> b)
+        public static Mesh<V> operator +(Mesh<V> a, Mesh<V> b)
         {
-            return new Mesh<V>(a.Vertices.Concat(b.Vertices).ToArray(), 
+            return new Mesh<V>(a.Vertices.Concat(b.Vertices).ToArray(),
                                a.Indices.Concat(b.Indices.Select(x => x + a.Vertices.Length)).ToArray());
         }
 
-        /// <summary>
-        /// Returs a model with the points between (0,0,0) <= (x,y,z) <= (wwidth, height, deep)
-        /// </summary>
-        /// <param name="width"></param>
-        /// <param name="height"></param>
-        /// <param name="deep"></param>
-        /// <returns></returns>
-        public Mesh<V> FitIn(float width, float height, float deep)
-        {
-            var toRender = this.ApplyTransforms(Transforms.Translate(-BoundBox.oppositeCorner));
-            toRender = toRender.ApplyTransforms(Transforms.Scale(width / toRender.BoundBox.topCorner.x, height / toRender.BoundBox.topCorner.y, deep / toRender.BoundBox.topCorner.z));
-            return toRender;
-        }
-
     }
-
 
     public static class MeshTools
     {
@@ -211,12 +92,12 @@ namespace Renderer
             return new Mesh<T>(newVertices, mesh.Indices, mesh.Topology);
         }
 
-        public static Mesh<V> Transform<V>(this Mesh<V> mesh, Func<V, V> transform) where V : struct, IVertex<V>
+        public static Mesh<V> Transform<V>(this Mesh<V> mesh, Func<V, V> transform) where V: struct, IVertex<V>
         {
             return Transform<V, V>(mesh, transform);
         }
 
-        public static Mesh<V> Transform<V>(this Mesh<V> mesh, float4x4 transform) where V : struct, IVertex<V>
+        public static Mesh<V> Transform<V>(this Mesh<V> mesh, float4x4 transform) where V: struct, IVertex<V>
         {
             return Transform<V>(mesh, v =>
             {
@@ -228,12 +109,13 @@ namespace Renderer
             });
         }
 
+
         #endregion
 
         /// <summary>
         /// Changes a mesh to another object with different topology. For instance, from a triangle mesh to a wireframe (lines).
         /// </summary>
-        public static Mesh<V> ConvertTo<V>(this Mesh<V> mesh, Topology topology) where V : struct, IVertex<V>
+        public static Mesh<V> ConvertTo<V>(this Mesh<V> mesh, Topology topology) where V:struct, IVertex<V>
         {
             switch (topology)
             {
@@ -291,7 +173,6 @@ namespace Renderer
 
             throw new ArgumentException("Wrong topology.");
         }
-
         /// <summary>
         /// Welds different vertices with positions close to each other using an epsilon decimation.
         /// </summary>
@@ -324,14 +205,17 @@ namespace Renderer
             return new Mesh<V>(newVertices.ToArray(), newIndices, mesh.Topology);
         }
 
-        public static void ComputeNormals<V>(this Mesh<V> mesh) where V : struct, INormalVertex<V>
+        /// <summary>
+        /// Computes the normals of the mesh vertices using the positions and the orientation of the triangles.
+        /// </summary>
+        public static void ComputeNormals<V>(this Mesh<V> mesh) where V:struct, INormalVertex<V>
         {
             if (mesh.Topology != Topology.Triangles)
                 return;
 
             float3[] normals = new float3[mesh.Vertices.Length];
 
-            for (int i = 0; i < mesh.Indices.Length / 3; i++)
+            for (int i=0; i<mesh.Indices.Length/3; i++)
             {
                 float3 p0 = mesh.Vertices[mesh.Indices[i * 3 + 0]].Position;
                 float3 p1 = mesh.Vertices[mesh.Indices[i * 3 + 1]].Position;
@@ -351,7 +235,22 @@ namespace Renderer
                 mesh.Vertices[i].Normal = normalize(normals[i]);
         }
 
+        /// <summary>
+        /// Computes the Axis-aligned boundary box of the mesh using the vertex positions.
+        /// </summary>
+        public static AABB3D ComputeAABB<V>(this Mesh<V> mesh) where V:struct, IVertex<V>
+        {
+            float3 minimum = float3(float.MaxValue, float.MaxValue, float.MaxValue);
+            float3 maximum = float3(float.MinValue, float.MinValue, float.MinValue);
+            foreach (var v in mesh.Vertices)
+            {
+                minimum = min(minimum, v.Position);
+                maximum = max(maximum, v.Position);
+            }
+            return new AABB3D { Minimum = minimum, Maximum = maximum };
+        }
     }
+
 
     /// <summary>
     /// Tool class to create different mesh from parametric methods.
@@ -396,9 +295,9 @@ namespace Renderer
             return Generative(slices, stacks, g, (v, t) => v + direction * t);
         }
 
-        public static Mesh<V> Revolution(int slices, int stacks, Func<float, float3> g, float3 axis, float angle = 2 * pi)
+        public static Mesh<V> Revolution(int slices, int stacks, Func<float, float3> g, float3 axis)
         {
-            return Generative(slices, stacks, g, (v, t) => mul(float4(v, 1), Transforms.Rotate(t * angle, axis)).xyz);
+            return Generative(slices, stacks, g, (v, t) => mul(float4(v, 1), Transforms.Rotate(t * 2 * pi, axis)).xyz);
         }
 
         public static Mesh<V> Lofted(int slices, int stacks, Func<float, float3> g1, Func<float, float3> g2)

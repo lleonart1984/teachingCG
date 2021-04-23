@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace Renderer
+namespace Rendering
 {
     public class Texture2D
     {
@@ -35,7 +35,7 @@ namespace Renderer
         /// <summary>
 		/// Writes a value in the texture at specific position.
 		/// </summary>
-		public void Write(int x, int y, float4 value)
+		public virtual void Write(int x, int y, float4 value)
         {
             data[y , x] = value;
         }
