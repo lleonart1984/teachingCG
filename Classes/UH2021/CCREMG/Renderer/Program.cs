@@ -96,15 +96,6 @@ namespace Renderer
             return (N, Lin, Lout) => lerp(f1(N, Lin, Lout), f2(N, Lin, Lout), alpha);
         }
 
-
-        static Mesh<PositionNormal> CreateCoffeeModel()
-        {
-            CoffeeMakerModel<PositionNormal> CoffeeMaker = new CoffeeMakerModel<PositionNormal>();
-            Mesh<PositionNormal> model = CoffeeMaker.GetMesh();
-            model.ComputeNormals();
-            return model;
-        }
-
         // static Mesh<PositionNormal> CreateTableModel()
         // {
         //     // var model = Manifold<PositionNormal>.Surface(5, 5, (u, v) => 2*float3(2 * u - 1, 0, 2 * v - 1)).Weld();
@@ -120,13 +111,22 @@ namespace Renderer
         static void CreateMeshScene(Scene<PositionNormal> scene)
         {
             scene.Add(Raycasting.PlaneXZ.AttributesMap(a => new PositionNormal { Position = a, Normal = float3(0, 1, 0) }),
-            Transforms.Identity);
+            Transforms.Identity); //Table
 
             scene.Add(Raycasting.PlaneYZ.AttributesMap(a => new PositionNormal { Position = a, Normal = float3(-1, 0, 0) }),
-            mul(Transforms.Translate(10f, 0, 0), Transforms.Identity));
+            mul(Transforms.Translate(10f, 0, 0), Transforms.Identity)); //Wall
 
-            var coffee_maker = CreateCoffeeModel();
-            scene.Add(coffee_maker.AsRaycast(), Transforms.Identity);
+
+            CoffeeMakerModel<PositionNormal> CoffeeMaker = new CoffeeMakerModel<PositionNormal>();
+            Mesh<PositionNormal> plastic_model = CoffeeMaker.GetPlasticMesh();
+            plastic_model.ComputeNormals();
+
+            Mesh<PositionNormal> metal_model = CoffeeMaker.GetMetalMesh();
+            metal_model.ComputeNormals();
+
+
+            scene.Add(plastic_model.AsRaycast(), Transforms.Identity);
+            scene.Add(metal_model.AsRaycast(), Transforms.Identity);
 
         }
 
@@ -147,8 +147,9 @@ namespace Renderer
             BRDF[] brdfs =
             {
                 Mixture(LambertBRDF(float3(1f, 1f, 0.8f)), BlinnBRDF(float3(1,1,1), 50), 0.2f), //table
-                LambertBRDF(float3(1f, 0.9f, 1f)), //), BlinnBRDF(float3(1,1,1), 50), 0.2f), //wall
-                Mixture(LambertBRDF(float3(1f, 1f, 1f)), BlinnBRDF(float3(1,1,1), 70), 0.3f), //coffee_maker
+                LambertBRDF(float3(0.86f, 0.76f, 0.75f)), //wall
+                LambertBRDF(float3(0.1f, 0.1f, 0.1f)), //coffee_maker_plastic
+                Mixture(LambertBRDF(float3(1f, 1f, 1f)), BlinnBRDF(float3(1,1,1), 70), 0.3f), //coffee_maker_metal
             };
 
             // Raycaster to trace rays and check for shadow rays.
