@@ -232,7 +232,7 @@ namespace Renderer
 
             for (int i = 0; i < StringWidths.Length; i++)
             {
-                var cylinder = MeshShapeGenerator<PositionNormal>.Cylinder((int)(10 * MeshScalar)).ApplyTransforms(Transforms.Translate(0, 0, .5f),
+                var cylinder = MeshShapeGenerator<PositionNormal>.Cylinder((int)(40 * MeshScalar)).ApplyTransforms(Transforms.Translate(0, 0, .5f),
                                                                                            Transforms.Scale(StringWidths[i], StringWidths[i], 1),
                                                                                            Transforms.Translate(-BridgeWidth / 2 + step * (i + 1), -StringBridgeSeparation, 0));
                 AddColorToMesh(StringColors[i], cylinder);
@@ -274,20 +274,37 @@ namespace Renderer
             var width = BridgeWidth * 1.3f;
             var height = BridgeHeight / 2.0f;
             var length = BridgeWidth * 2;
-
-            var basePiece = MeshShapeGenerator<PositionNormal>.Box((int)(4 * MeshScalar), (int)(2 * MeshScalar), (int)(6 * MeshScalar))
-                                                                .ApplyTransforms(Transforms.Translate(0, -.5f, -.5f),
-                                                                                 Transforms.Scale(width, height, length));
-            var xHoleScale = 3 / 16.0f;
+            var xHoleScale = 1/5.5f;
             var yHoleScale = 1;
             var zHoleScale = 3 / 4.0f;
             var holeDZ = -length * (1 - zHoleScale) / 2;
-            var hole1 = basePiece.ApplyTransforms(Transforms.Scale(xHoleScale, yHoleScale * 2f, zHoleScale),
-                                                  Transforms.Translate(width * xHoleScale, height / 2, holeDZ));
-            var hole2 = hole1.ApplyTransforms(Transforms.Translate(-2 * width * xHoleScale, 0, 0));
 
-            //basePiece -= hole1; //TODO VER ESTO LUEGO
-            //basePiece -= hole2;
+            var basePiece = MeshShapeGenerator<PositionNormal>.Box((int)(4 * MeshScalar), (int)(2 * MeshScalar), (int)(6 * MeshScalar))
+                                                              .ApplyTransforms(Transforms.Translate(0, 0, -.5f),
+                                                                               Transforms.Scale(width, height, length));
+
+            var baseBottom = basePiece.ApplyTransforms(Transforms.Scale(1, 1, (1 - zHoleScale) / 2),
+                                                       Transforms.Translate(0, 0, 0));
+
+            var baseTop = baseBottom.ApplyTransforms(Transforms.Translate(0, 0, -length * zHoleScale + holeDZ));
+
+            var middelXScale = xHoleScale*1.5f;
+            var baseMiddle = basePiece.ApplyTransforms(Transforms.Scale(middelXScale, 1, zHoleScale),
+                                                       Transforms.Translate(0, 0, holeDZ));
+
+            var scaleX = (1 - 3 * xHoleScale) / 2f ; // Last factor is to correct the image
+            var dx = width * (1 - xHoleScale) / 2;
+            var baseLeft = basePiece.ApplyTransforms(Transforms.Scale(xHoleScale, 1, zHoleScale * 1.1f),
+                                                     Transforms.Translate(dx , 0, holeDZ));
+            var baseRight = basePiece.ApplyTransforms(Transforms.Scale(xHoleScale, 1, zHoleScale * 1.1f),
+                                                      Transforms.Translate(-dx, 0, holeDZ));
+            basePiece =
+                baseTop
+                + baseBottom
+                + baseLeft
+                + baseMiddle
+                + baseRight
+                ;
 
             AddColorToMesh(HeadstockColor, basePiece);
 
@@ -297,33 +314,33 @@ namespace Renderer
             for (int i = 0; i < 6; i++)
             {
                 var xBaseCylinderScale = width * xHoleScale;
-
-                var baseCylinder = MeshShapeGenerator<PositionNormal>.Cylinder((int)(5 * MeshScalar)).ApplyTransforms(Transforms.RotateY(pi_over_4 * 2),
-                                                                                 Transforms.Scale(xBaseCylinderScale, height * yHoleScale * .25f, height * yHoleScale * .25f));
+                var yBaseCylinderScale = height * yHoleScale * .25f;
+                var baseCylinder = MeshShapeGenerator<PositionNormal>.Cylinder((int)(40 * MeshScalar)).ApplyTransforms(Transforms.RotateY(pi_over_4 * 2),
+                                                                                 Transforms.Scale(xBaseCylinderScale, yBaseCylinderScale, yBaseCylinderScale));
 
                 var zTranslate = ((i % 3)) * step - length - holeDZ + step / 2;
-                var yTranslate = -height / 2.0f;
+                var yTranslate = 0; //-height / 2.0f;
 
-                baseCylinder = baseCylinder.ApplyTransforms(Transforms.Translate((i < 3 ? 1 : -1) * 1f * (width * xHoleScale), yTranslate, zTranslate));
+                baseCylinder = baseCylinder.ApplyTransforms(Transforms.Translate((i < 3 ? 1 : -1) * 1f * (dx - width*xHoleScale), yTranslate, zTranslate));
 
                 AddColorToMesh(BaseCylinderColor, baseCylinder);
                 stringRollCylinders += baseCylinder;
 
-                var xPinScale = xBaseCylinderScale / 3;
-                var yPinScale = height * .2f;
+                var xPinScale = xBaseCylinderScale / 2;
+                var yPinScale = height * .4f;
 
-                var basePin = MeshShapeGenerator<PositionNormal>.Cylinder((int)(5 * MeshScalar)).ApplyTransforms(Transforms.RotateY(pi_over_4 * 2),
+                var basePin = MeshShapeGenerator<PositionNormal>.Cylinder((int)(40 * MeshScalar)).ApplyTransforms(Transforms.RotateY(pi_over_4 * 2),
                                                                                           Transforms.Scale(xPinScale, yPinScale, yPinScale));
 
                 var yHolderScale = height * 1.5f;
                 var xHolderScale = xPinScale / 4;
-                var headHolder = MeshShapeGenerator<PositionNormal>.Cylinder((int)(5 * MeshScalar)).ApplyTransforms(Transforms.RotateX(pi_over_4 * 2),
+                var headHolder = MeshShapeGenerator<PositionNormal>.Cylinder((int)(20 * MeshScalar)).ApplyTransforms(Transforms.RotateX(pi_over_4 * 2),
                                                                                Transforms.Translate(0, .5f, 0),
                                                                                Transforms.Scale(xHolderScale, yHolderScale, xHolderScale),
                                                                                Transforms.Translate((i < 3 ? 1 : -1) * xHolderScale, -yPinScale, -xHolderScale * 2));
 
-                var head = MeshShapeGenerator<PositionNormal>.Cylinder((int)(5 * MeshScalar)).ApplyTransforms(Transforms.RotateX(pi_over_4 * 2),
-                                                                         Transforms.Scale(1.1f * xHolderScale, 2 * yHolderScale / 6, 2 * yHolderScale / 3),
+                var head = MeshShapeGenerator<PositionNormal>.Cylinder((int)(40 * MeshScalar)).ApplyTransforms(Transforms.RotateX(pi_over_4 * 2),
+                                                                         Transforms.Scale(1.1f * xHolderScale, 2.5f * yHolderScale / 6, 2.5f * yHolderScale / 6),
                                                                          Transforms.RotateY((two_pi / 12 * i)),
                                                                          Transforms.Translate((i < 3 ? 1 : -1) * xHolderScale, -yPinScale + yHolderScale, -xHolderScale * 2));
 
@@ -353,7 +370,7 @@ namespace Renderer
                 return x * (bazier(val * 2.99f)).y;
             }; // Multiply val for the max value that bazier is defined, the amount of parts
             
-            var body = MeshShapeGenerator<PositionNormal>.Box((int)(10 * MeshScalar),(int)(3 * MeshScalar), (int)(15 * MeshScalar) 
+            var body = MeshShapeGenerator<PositionNormal>.Box((int)(15 * MeshScalar),(int)(15 * MeshScalar), (int)(15 * MeshScalar) 
                                                               ,holeXZDown:true, sepXZDown:float4(.37f,.61f,.37f,.15f)
                                                               )
                                                 .ApplyTransforms(Transforms.Translate(0, 0, .5f))
@@ -364,21 +381,13 @@ namespace Renderer
                                         Transforms.Scale(BodyWidth, BridgeHeight * 2, bodyLength),
                                         Transforms.Translate(0, BridgeHeight, BridgeLength - BridgeBodyDif));
 
-            var radius = BridgeWidth * 1.5f / 2;
+            var radius = BridgeWidth * 1.45f / 2;
             var dz = BridgeLength + radius - (BridgeLength / 4 * .2f);
-            var c = MeshShapeGenerator<PositionNormal>.Cylinder(100).ApplyTransforms(Transforms.RotateX(pi_over_4 * 2),
-                                                                                 Transforms.Scale(radius, 2, radius),
-                                                                                 Transforms.Translate(0, -.25f, dz));
-
-            var hole = MeshShapeGenerator<PositionNormal>.Cylinder((int)(100 * MeshScalar), thickness: BridgeWidth / 8, surface:true)
+            
+            var hole = MeshShapeGenerator<PositionNormal>.Cylinder((int)(200 * MeshScalar), thickness: BridgeWidth / 8, surface:true)
                                                    .ApplyTransforms(Transforms.RotateX(pi_over_4 * 2),
                                                                     Transforms.Scale(radius, 1, radius),
-                                                                    Transforms.Translate(0, 0, dz));
-
-            dz = (c.Max(x => x.Position.z) + c.Min(x => x.Position.z)) / 2;
-            var dx = (c.Max(x => x.Position.x) + c.Min(x => x.Position.x)) / 2;
-            var minY = c.Min(x => x.Position.y);
-            var maxY = c.Max(x => x.Position.y);
+                                                                    Transforms.Translate(0, -.6f, dz -.2f));
 
             var stringHub = MeshShapeGenerator<PositionNormal>.Box((int)(6 * MeshScalar)).ApplyTransforms(Transforms.Translate(0, -.5f, .5f),
                                                                                    Transforms.Scale(BridgeWidth, 1, 1.5f),
@@ -613,6 +622,8 @@ namespace Renderer
         }
         #endregion
 
+        #region Utils
+
         /// <summary>
         /// Guitar parametric shape function, defined between 0 and 3, 
         /// initial: (0,0) 
@@ -710,5 +721,7 @@ namespace Renderer
                 mesh.Vertices[i].Color = Color2Float3(color);
             }
         }
+        
+        #endregion
     }
 }
