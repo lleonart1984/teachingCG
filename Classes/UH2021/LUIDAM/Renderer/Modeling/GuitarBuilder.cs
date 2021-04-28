@@ -29,7 +29,7 @@ namespace Renderer
 
         public Color BridgeLowerColor => Color.FromArgb(65, 54, 52);
 
-        public Color BodyColor => Color.FromArgb(115, 73, 51);
+        public Color BodyColor => Color.FromArgb(232, 12, 128);
 
         public Color StringHubColor => Color.FromArgb(42, 31, 27);
 

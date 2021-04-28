@@ -19,8 +19,8 @@ namespace Renderer
 
         public float Depth { get { return 0.5f; } }
 
-        public Color WallColor { get; set; } = Color.FromArgb(108, 77, 49);
-        public Color FloorColor { get; set; } = Color.FromArgb(207, 151, 118);
+        public Color WallColor { get; set; } = Color.FromArgb(180, 90, 125);
+        public Color FloorColor { get; set; } = Color.FromArgb(113, 54, 82);
 
         public WallsBuilder()
         {
