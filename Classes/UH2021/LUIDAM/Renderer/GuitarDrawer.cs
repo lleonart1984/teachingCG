@@ -121,6 +121,7 @@ namespace Renderer
             var wall = Manifold<PositionNormal>.Surface(4, 4, (x, y) => float3(2 * x, 2 * y, 0));
             var wall2 = Manifold<PositionNormal>.Surface(4, 4, (x, y) => float3(2 * x, 2 * y, -0.01f));
             var floor = Manifold<PositionNormal>.Surface(4, 4, (x, z) => float3(2 * x, 0, 2 * z));
+            wall = (wall + wall2).ApplyTransforms(Transforms.Translate(0,0,1.06f));
             
             wall.ComputeNormals();
             floor.ComputeNormals();
