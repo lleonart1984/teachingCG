@@ -134,8 +134,8 @@ namespace Renderer
         {
             // Scene Setup
             float3 CameraPosition = float3(-12f, 6.6f, 0);
-            float3 LightPosition = float3(-15, 13f, 25);
-            float3 LightIntensity = float3(1, 1, 1) * 2500;
+            float3[] Lights = {float3(-15, 13f, 25), float3(-15, 13f, -15)};
+            float3 LightIntensity = float3(1, 1, 1) * 1500;
 
             // View and projection matrices
             float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(0, 4, 0), float3(0, 1, 0));
@@ -162,36 +162,42 @@ namespace Renderer
                 return HitResult.Stop;
             };
 
-            // Raycaster to trace rays and lit closest surfaces
-            Raytracer<MyRayPayload, PositionNormal> raycaster = new Raytracer<MyRayPayload, PositionNormal>();
-            raycaster.OnClosestHit += delegate (IRaycastContext context, PositionNormal attribute, ref MyRayPayload payload)
+            List<Raytracer<MyRayPayload, PositionNormal>> raycasters = new List<Raytracer<MyRayPayload, PositionNormal>>();
+            foreach(var LightPosition in Lights)
             {
-                // Move geometry attribute to world space
-                attribute = attribute.Transform(context.FromGeometryToWorld);
+                // Raycaster to trace rays and lit closest surfaces
+                Raytracer<MyRayPayload, PositionNormal> raycaster = new Raytracer<MyRayPayload, PositionNormal>();
+                raycaster.OnClosestHit += delegate (IRaycastContext context, PositionNormal attribute, ref MyRayPayload payload)
+                {
+                    // Move geometry attribute to world space
+                    attribute = attribute.Transform(context.FromGeometryToWorld);
 
-                float3 V = normalize(CameraPosition - attribute.Position);
-                float3 L = (LightPosition - attribute.Position);
-                float d = length(L);
-                L /= d; // normalize direction to light reusing distance to light
+                    float3 V = normalize(CameraPosition - attribute.Position);
+                    float3 L = (LightPosition - attribute.Position);
+                    float d = length(L);
+                    L /= d; // normalize direction to light reusing distance to light
 
-                float3 N = attribute.Normal;
+                    float3 N = attribute.Normal;
 
-                float lambertFactor = max(0, dot(N, L));
+                    float lambertFactor = max(0, dot(N, L));
 
-                // Check ray to light...
-                ShadowRayPayload shadow = new ShadowRayPayload();
-                shadower.Trace(scene,
-                    RayDescription.FromDir(attribute.Position + N * 0.001f, // Move an epsilon away from the surface to avoid self-shadowing 
-                    L), ref shadow);
+                    // Check ray to light...
+                    ShadowRayPayload shadow = new ShadowRayPayload();
+                    shadower.Trace(scene,
+                        RayDescription.FromDir(attribute.Position + N * 0.001f, // Move an epsilon away from the surface to avoid self-shadowing 
+                        L), ref shadow);
 
-                float3 Intensity = (shadow.Shadowed ? 0.0f : 1.0f) * LightIntensity / (d * d);
+                    float3 Intensity = (shadow.Shadowed ? 0.0f : 1.0f) * LightIntensity / (d * d);
 
-                payload.Color = brdfs[context.GeometryIndex](N, L, V) * Intensity * lambertFactor;
-            };
-            raycaster.OnMiss += delegate (IRaycastContext context, ref MyRayPayload payload)
-            {
-                payload.Color = float3(0, 0, 1); // Blue, as the sky.
-            };
+                    payload.Color = brdfs[context.GeometryIndex](N, L, V) * Intensity * lambertFactor;
+                };
+                raycaster.OnMiss += delegate (IRaycastContext context, ref MyRayPayload payload)
+                {
+                    payload.Color = float3(0, 0, 1); // Blue, as the sky.
+                };
+                raycasters.Add(raycaster);
+            }
+            
 
             /// Render all points of the screen
             for (int px = 0; px < texture.Width; px++)
@@ -206,8 +212,14 @@ namespace Renderer
                     RayDescription ray = RayDescription.FromScreen(px + 0.5f, py + 0.5f, texture.Width, texture.Height, inverse(viewMatrix), inverse(projectionMatrix), 0, 1000);
 
                     MyRayPayload coloring = new MyRayPayload();
+                    MyRayPayload aux = new MyRayPayload();
 
-                    raycaster.Trace(scene, ray, ref coloring);
+                    coloring.Color = float3(0, 0, 0);
+                    foreach(var raycaster in raycasters)
+                    {
+                        raycaster.Trace(scene, ray, ref aux);
+                        coloring.Color += aux.Color;
+                    }
 
                     texture.Write(px, py, float4(coloring.Color, 1));
                 }
