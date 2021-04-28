@@ -20,13 +20,15 @@ namespace Renderer
         {
             public float3 Position { get; set; }
             public float3 Normal { get; set; }
+            public float3 Color { get; set; }
 
             public PositionNormal Add(PositionNormal other)
             {
                 return new PositionNormal
                 {
                     Position = this.Position + other.Position,
-                    Normal = this.Normal + other.Normal
+                    Normal = this.Normal + other.Normal,
+                    Color = this.Color
                 };
             }
 
@@ -35,7 +37,8 @@ namespace Renderer
                 return new PositionNormal
                 {
                     Position = this.Position * s,
-                    Normal = this.Normal * s
+                    Normal = this.Normal * s,
+                    Color = this.Color
                 };
             }
 
@@ -50,7 +53,8 @@ namespace Renderer
                 return new PositionNormal
                 {
                     Position = p.xyz / p.w,
-                    Normal = n.xyz
+                    Normal = n.xyz,
+                    Color = this.Color
                 };
             }
         }
@@ -331,11 +335,24 @@ namespace Renderer
             // Texture to output the image.
             Texture2D texture = new Texture2D(512, 512);
 
+            var f1 = normalize(float3( 1, 0, 0));
+            var f2 = normalize(float3( 0, 1, 0));
+            var f3 = normalize(float3(-1, 1, 0));
+            var f4 = normalize(float3(-1,-1, 0));
+            var f5 = normalize(float3( 1,-1, 0));
+            Console.WriteLine(dot(f1,f2));
+            Console.WriteLine(dot(f1,f3));
+            Console.WriteLine(dot(f1,f4));
+            Console.WriteLine(dot(f1,f5));
+            Console.WriteLine(length(cross(f1, f2)));
+            Console.WriteLine(length(cross(f1, f3)));
+            Console.WriteLine(length(cross(f1, f4)));
+            Console.WriteLine(length(cross(f1, f5)));
             //SimpleRaycast(texture);
             //LitRaycast(texture);
             //RaycastingMesh(texture);
             //GuitarDrawer.GuitarRaycast(texture, Transforms.Identity);
-            GuitarDrawer.GuitarCSGRaycast(texture, Transforms.Identity);
+            //GuitarDrawer.GuitarCSGRaycast(texture, Transforms.Identity);
 
             stopwatch.Stop();
 

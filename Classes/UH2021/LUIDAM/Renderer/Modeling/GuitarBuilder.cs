@@ -29,7 +29,7 @@ namespace Renderer
 
         public Color BridgeLowerColor => Color.FromArgb(65, 54, 52);
 
-        public Color BodyColor => Color.FromArgb(202,110,1);
+        public Color BodyColor => Color.FromArgb(115, 73, 51);
 
         public Color StringHubColor => Color.FromArgb(42, 31, 27);
 
@@ -42,6 +42,8 @@ namespace Renderer
         public Color HoleColor => Color.FromArgb(94, 62, 23);
 
         public Color HeadstockColor => Color.FromArgb(85,43,21);
+
+        public Color BaseCylinderColor => Color.FromArgb(255, 255, 255);
 
         public float[] StringWidths => new float[] { .06f, .05f, .04f, .04f, .03f, .02f };
 
@@ -233,9 +235,9 @@ namespace Renderer
                 var cylinder = MeshShapeGenerator<PositionNormal>.Cylinder((int)(10 * MeshScalar)).ApplyTransforms(Transforms.Translate(0, 0, .5f),
                                                                                            Transforms.Scale(StringWidths[i], StringWidths[i], 1),
                                                                                            Transforms.Translate(-BridgeWidth / 2 + step * (i + 1), -StringBridgeSeparation, 0));
+                AddColorToMesh(StringColors[i], cylinder);
                 strings += cylinder;
             }
-
             return strings.ApplyTransforms(Transforms.Scale(1, 1, StringLength));
         }
     
@@ -247,6 +249,9 @@ namespace Renderer
             var bridge2 = MeshShapeGenerator<PositionNormal>.Cylinder((int)(50 * MeshScalar), angle:pi).ApplyTransforms(Transforms.Translate(0, 0, .5f),
                                                                                                 Transforms.Scale(BridgeWidth / 2, BridgeHeight / 2, 1),
                                                                                                 Transforms.Translate(0, .5f * BridgeHeight / 2, 0));
+
+            AddColorToMesh(BridgeUpperColor, bridge);
+            AddColorToMesh(BridgeLowerColor, bridge2);
 
             var baseBridge = bridge.Min(x => x.Position.z);
             var fretsAmount = 20;
@@ -260,7 +265,7 @@ namespace Renderer
                                                                                  Transforms.Translate(0, -.5f * BridgeHeight / 2, -baseBridge + step * i)); // This is not the correct fret spacing
                 frets += fret;
             }
-
+            AddColorToMesh(FretColor, frets);
             return (bridge + bridge2).ApplyTransforms(Transforms.Scale(1, 1, BridgeLength)) + frets;
         }
     
@@ -284,6 +289,8 @@ namespace Renderer
             //basePiece -= hole1; //TODO VER ESTO LUEGO
             //basePiece -= hole2;
 
+            AddColorToMesh(HeadstockColor, basePiece);
+
             var stringRollCylinders = new Mesh<PositionNormal>();
             var stringPins = new Mesh<PositionNormal>();
             var step = length * zHoleScale / 3.0f;
@@ -299,6 +306,7 @@ namespace Renderer
 
                 baseCylinder = baseCylinder.ApplyTransforms(Transforms.Translate((i < 3 ? 1 : -1) * 1f * (width * xHoleScale), yTranslate, zTranslate));
 
+                AddColorToMesh(BaseCylinderColor, baseCylinder);
                 stringRollCylinders += baseCylinder;
 
                 var xPinScale = xBaseCylinderScale / 3;
@@ -319,7 +327,9 @@ namespace Renderer
                                                                          Transforms.RotateY((two_pi / 12 * i)),
                                                                          Transforms.Translate((i < 3 ? 1 : -1) * xHolderScale, -yPinScale + yHolderScale, -xHolderScale * 2));
 
-
+                AddColorToMesh(HeadPinColor, head);
+                AddColorToMesh(PinColor, basePin);
+                AddColorToMesh(PinColor, headHolder);
                 var pin = basePin + headHolder + head;
 
                 pin = pin.ApplyTransforms(Transforms.Translate((i < 3 ? 1 : -1) * (width / 2 + xPinScale / 2), yTranslate, zTranslate));
@@ -376,6 +386,10 @@ namespace Renderer
             stringHub +=    MeshShapeGenerator<PositionNormal>.Box((int)(6 * MeshScalar)).ApplyTransforms(Transforms.Translate(0, -.5f, .5f),
                                                                                    Transforms.Scale(BridgeWidth * 3f, .5f, 1.5f),
                                                                                    Transforms.Translate(0, 0, StringLength));
+            AddColorToMesh(StringHubColor, stringHub);
+            AddColorToMesh(BodyColor, body);
+            AddColorToMesh(HoleColor, hole);
+
             return hole + body + stringHub;
         }
     
@@ -681,6 +695,19 @@ namespace Renderer
             foreach (var (geo, trans) in geometries)
             {
                 scene.Add(geo, mul(trans, CSGWorldTransformation));
+            }
+        }
+    
+        public static void AddColorToMesh(Color color, Mesh<PositionNormal> mesh)
+        {
+            static float3 Color2Float3(Color color)
+            {
+                return float3(color.R / 255.0f, color.B / 255.0f, color.G / 255.0f);
+            }
+
+            for (int i = 0; i < mesh.Vertices.Length; i++)
+            {
+                mesh.Vertices[i].Color = Color2Float3(color);
             }
         }
     }

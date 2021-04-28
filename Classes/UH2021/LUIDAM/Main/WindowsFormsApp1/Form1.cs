@@ -62,7 +62,7 @@ namespace MainForm
             _model = _baseModel.ApplyTransforms(Transforms.Scale(_baseZoom), Transforms.Translate(_baseTranslation));
             _modelMesh = _baseModelMesh.ApplyTransforms(Transforms.Scale(_baseZoom), Transforms.Translate(_baseTranslation));
 
-            _maxScale = 4.0f;
+            _maxScale = 8.0f;
             _minScale = .5f;
             var stepSize = (_maxScale - _minScale) / (zoomBar.Maximum - zoomBar.Minimum);
             zoomBar.Value = (int)((1 - _minScale) / stepSize); // Setting zoomBar value to the value that represent scaling by 1
@@ -72,7 +72,7 @@ namespace MainForm
         private float4x4 WorldTransformation()
         {
             var stepSize = (_maxScale - _minScale) / (zoomBar.Maximum - zoomBar.Minimum);
-            var scalar = _minScale + stepSize * _currScale;
+            var scalar = _minScale + stepSize * _currScale + .2f;
 
             var worldTransformation = new List<float4x4>
             {
@@ -127,9 +127,16 @@ namespace MainForm
             else
             {
                 cts.Cancel();
-                Task.WaitAll(drawingTask);
-                drawingTask = null;
-                DrawModel();
+                try
+                {
+                    Task.WaitAll(drawingTask);
+                    drawingTask = null;
+                    DrawModel();
+                }
+                catch (TaskCanceledException)
+                {
+
+                }
             }
             
         }
@@ -157,7 +164,7 @@ namespace MainForm
 
             if (mesh)
             {
-                GuitarDrawer.DrawStep = 6;
+                GuitarDrawer.DrawStep = 1;
                 GuitarDrawer.GuitarRaycast(_texture, WorldTransformation());
                 for (int i = 0; i < _texture.Width; i++)
                 {
@@ -272,7 +279,7 @@ namespace MainForm
 
         public void SetBaseTranslation() 
         {
-            _baseTranslation = float3(0, 0, 0);//float3(1.0f / 2.0f * imagePbx.Width, 1.0f / 2.0f * imagePbx.Height, 0);
+            _baseTranslation = float3(0, .3f, -.6f);//float3(1.0f / 2.0f * imagePbx.Width, 1.0f / 2.0f * imagePbx.Height, 0);
         }
 
         private void imagePbx_SizeChanged(object sender, EventArgs e)

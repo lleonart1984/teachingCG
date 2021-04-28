@@ -67,8 +67,8 @@ namespace Renderer
     public class GuitarDrawer
     {
         public static int DrawStep { get; set; } = 1;
-        public static int YGrid { get; set; } = 1;
-        public static int XGrid { get; set; } = 1;
+        public static int YGrid { get; set; } = 8;
+        public static int XGrid { get; set; } = 8;
 
         private static GuitarBuilder CreateCSGGuitar(float4x4 worldTransformation)
         {
@@ -116,16 +116,26 @@ namespace Renderer
             return model;
         }
 
+        public static Mesh<PositionNormal> CreateWalls()
+        {
+            var wall = Manifold<PositionNormal>.Surface(4, 4, (x, y) => float3(2 * x, 2 * y, 0));
+            var wall2 = Manifold<PositionNormal>.Surface(4, 4, (x, y) => float3(2 * x, 2 * y, -0.01f));
+            var floor = Manifold<PositionNormal>.Surface(4, 4, (x, z) => float3(2 * x, 0, 2 * z));
+            wall = (wall + wall2).ApplyTransforms(Transforms.Translate(0,0,1));
+            
+            wall.ComputeNormals();
+            floor.ComputeNormals();
+            GuitarBuilder.AddColorToMesh(new WallsBuilder().FloorColor, floor);
+            GuitarBuilder.AddColorToMesh(new WallsBuilder().WallColor, wall);
+            return wall + floor;
+        }
+
         public static void CreateGuitarMeshScene(Scene<PositionNormal> scene, float4x4 worldTransformation)
         {
             var model = CreateGuitarMesh();
             scene.Add(model.AsRaycast(), worldTransformation);
-            var wall = Manifold<PositionNormal>.Surface(4, 4, (x, y) => float3(2 * x, 2 * y, 0));
-            var floor = Manifold<PositionNormal>.Surface(4, 4, (x, z) => float3(2 * x, 0, 2 * z));
-            wall.ComputeNormals();
-            floor.ComputeNormals();
-            scene.Add(wall.AsRaycast(), mul(Transforms.Translate(0, 0, 1), worldTransformation));
-            scene.Add(floor.AsRaycast(), worldTransformation);
+            var model2 = CreateWalls();
+            scene.Add(model2.AsRaycast(), worldTransformation);
         }
 
         public static void GuitarCSGRaycast(Texture2D texture, float4x4 worldTransformation)
@@ -151,7 +161,8 @@ namespace Renderer
         {
             // Scene Setup
             float3 CameraPosition = float3(1f, 1f, -1f);
-            float3 LightPosition = float3(2f, 1f, -.5f);
+            var lightPositionWorld = mul(worldTransformation, float4x1(2.0f, 1f, -.8f, 0));
+            float3 LightPosition = float3(lightPositionWorld._m00, lightPositionWorld._m10, lightPositionWorld._m20);
             // View and projection matrices
             float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(1f, .5f, .5f), float3(0, 1, 0));
             float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 20);
@@ -191,8 +202,7 @@ namespace Renderer
                 shadower.Trace(scene,
                     RayDescription.FromTo(attribute.Position + attribute.Normal * 0.001f, // Move an epsilon away from the surface to avoid self-shadowing 
                     LightPosition), ref shadow);
-
-                payload.Color = shadow.Shadowed ? float3(.1f, .1f, .1f) : float3(1, 1, 1) * lambertFactor;
+                payload.Color = shadow.Shadowed ? float3(.1f, .1f, .1f) : attribute.Color * lambertFactor;
             };
             raycaster.OnMiss += delegate (IRaycastContext context, ref MyRayPayload payload)
             {
