@@ -159,12 +159,22 @@ namespace Renderer
 
         public static void GuitarRaycast(Texture2D texture, float4x4 worldTransformation)
         {
+            //// Scene Setup
+            //float3 target = float3(.95f, .55f, .5f);
+            //float3 CameraPosition = float3(.95f, .55f, 0f);
+            //CameraPosition += .01f * (CameraPosition - target);
+            //var lightPositionWorld = mul(worldTransformation, float4x1(1f, .55f, -.8f, 0));
+            //float3 LightPosition = float3(lightPositionWorld._m00, lightPositionWorld._m10, lightPositionWorld._m20);
+
+            //// View and projection matrices
+            //float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, target, float3(0, 1, 0));
+
             // Scene Setup
-            float3 CameraPosition = float3(1f, 1f, -1f);
+            float3 CameraPosition = float3(1.1f, 1f, -.75f);
             var lightPositionWorld = mul(worldTransformation, float4x1(2.0f, 1f, -.8f, 0));
             float3 LightPosition = float3(lightPositionWorld._m00, lightPositionWorld._m10, lightPositionWorld._m20);
             // View and projection matrices
-            float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(1f, .5f, .5f), float3(0, 1, 0));
+            float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(1.1f, .58f, .5f), float3(0, 1, 0));
             float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 20);
 
             Scene<PositionNormal> scene = new Scene<PositionNormal>();
@@ -202,7 +212,7 @@ namespace Renderer
                 shadower.Trace(scene,
                     RayDescription.FromTo(attribute.Position + attribute.Normal * 0.001f, // Move an epsilon away from the surface to avoid self-shadowing 
                     LightPosition), ref shadow);
-                payload.Color = shadow.Shadowed ? float3(.1f, .1f, .1f) : attribute.Color * lambertFactor;
+                payload.Color = shadow.Shadowed ? attribute.Color * .2f : attribute.Color * lambertFactor;
             };
             raycaster.OnMiss += delegate (IRaycastContext context, ref MyRayPayload payload)
             {

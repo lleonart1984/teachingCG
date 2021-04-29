@@ -39,7 +39,7 @@ namespace Renderer
 
         public Color FretColor => Color.SlateGray;
 
-        public Color HoleColor => Color.FromArgb(94, 62, 23);
+        public Color HoleColor => Color.FromArgb(85, 43, 21);
 
         public Color HeadstockColor => Color.FromArgb(85,43,21);
 
@@ -362,21 +362,24 @@ namespace Renderer
         {
             var bodyLength = BridgeLength * 1.1f;
 
-            Func<float, float2> bazier = BodyFunction();
-            float transform(float x, float val) 
-            {
-                if (0f <= abs(x) && abs(x) <= .25f && .1f <= abs(val) && abs(val) <= .5f)
-                    return x;
-                return x * (bazier(val * 2.99f)).y;
-            }; // Multiply val for the max value that bazier is defined, the amount of parts
-            
-            var body = MeshShapeGenerator<PositionNormal>.Box((int)(15 * MeshScalar),(int)(15 * MeshScalar), (int)(15 * MeshScalar) 
-                                                              ,holeXZDown:true, sepXZDown:float4(.37f,.61f,.37f,.15f)
-                                                              )
-                                                .ApplyTransforms(Transforms.Translate(0, 0, .5f))
-                                                .Transform<PositionNormal>(p => new PositionNormal { Position = float3(transform(p.Position.x, p.Position.z), p.Position.y, p.Position.z) })
-                                                .ApplyTransforms(Transforms.Translate(0, 0, -.5f));
+            //Func<float, float2> bazier = BodyFunction();
+            //float transform(float x, float val) 
+            //{
+            //    if (0f <= abs(x) && abs(x) <= .25f && .1f <= abs(val) && abs(val) <= .5f)
+            //        return x;
+            //    return x * (bazier(val * 2.99f)).y;
+            //}; // Multiply val for the max value that bazier is defined, the amount of parts
+            //var body = MeshShapeGenerator<PositionNormal>.Box((int)(15 * MeshScalar),(int)(15 * MeshScalar), (int)(15 * MeshScalar) 
+            //                                                  ,holeXZDown:true, sepXZDown:float4(.37f,.61f,.37f,.15f)
+            //                                                  )
+            //                                    .ApplyTransforms(Transforms.Translate(0, 0, .5f))
+            //                                    .Transform<PositionNormal>(p => new PositionNormal { Position = float3(transform(p.Position.x, p.Position.z), p.Position.y, p.Position.z) })
+            //                                    .ApplyTransforms(Transforms.Translate(0, 0, -.5f));
 
+            var body = GuitarBodyMesh((int)(30 * MeshScalar));
+            body = body.Transform(MyTransforms.ExpandInto(body.BoundBox.oppositeCorner, body.BoundBox.topCorner, 1, 1, 1))
+                       .Transform(Transforms.Translate(-.5f,-.5f,-.5f));
+            
             body = body.ApplyTransforms(Transforms.Translate(0, 0, .5f),
                                         Transforms.Scale(BodyWidth, BridgeHeight * 2, bodyLength),
                                         Transforms.Translate(0, BridgeHeight, BridgeLength - BridgeBodyDif));
@@ -633,7 +636,7 @@ namespace Renderer
         /// x >=0
         /// </summary>
         /// <returns></returns>
-        public Func<float, float2> BodyFunction()
+        public static Func<float, float2> BodyFunction()
         {
             var bazierPoints = new List<float2>
             {
@@ -660,7 +663,7 @@ namespace Renderer
         }
 
         // Chops the funcs evaluation in intervals of 1
-        public Func<float, float2> PartFunction(params Func<float, float2>[] funcs)
+        public static Func<float, float2> PartFunction(params Func<float, float2>[] funcs)
         {
             return t =>
             {
@@ -671,12 +674,12 @@ namespace Renderer
             };
         }
 
-        public Func<float, float2> BazierCurve(params float2[] points)
+        public static Func<float, float2> BazierCurve(params float2[] points)
         {
             return BazierCurve(points[0], points[1], points[2], points[3]);
         }
 
-        public Func<float, float2> BazierCurve(float2 p1, float2 p2, float2 p3, float2 p4)
+        public static Func<float, float2> BazierCurve(float2 p1, float2 p2, float2 p3, float2 p4)
         {
             return t => float2(
             (1 - t) * ((1 - t) * ((1 - t) * p1.x
@@ -721,7 +724,91 @@ namespace Renderer
                 mesh.Vertices[i].Color = Color2Float3(color);
             }
         }
-        
+
+        public static Mesh<PositionNormal> GuitarBodyMesh(int pointsLength)
+        {
+            float step = 3.0f / pointsLength;
+            float deep = 5f;
+            Mesh<PositionNormal> body = new Mesh<PositionNormal>();
+            var bz = BodyFunction();
+            
+            static float holeFunc(float x)
+            {
+                float centerX = .75f;
+                float radiusSqr = .3f * .3f;
+                var sqrtInside = radiusSqr - (x - centerX) * (x - centerX);
+                return sqrtInside < 0 ? .001f : sqrt(sqrtInside); // 0.001 returned because of weird bug in shading when both parts are joined. Without it, should be 0
+            }
+
+            var prevLRBZ = bz(step);
+            for (int i = 0; (i+1) * step < 3; i++)
+            {
+                var t0 = step * i;
+                var t1 = step * (i + 1);
+                var prev = bz(t0);
+                var curr = bz(t1);
+                float3 prevLL1Up = float3(0, deep, prev.x), prevUL1Up = float3( prev.y, deep, prev.x),
+                       prevLR1Up = float3(0, deep, curr.x), prevUR1Up = float3( curr.y, deep, curr.x);
+                float3 prevLL1Dw = float3(holeFunc(prev.x), 0, prev.x), prevUL1Dw = float3( prev.y, 0, prev.x),
+                       prevLR1Dw = float3(holeFunc(curr.x), 0, curr.x), prevUR1Dw = float3( curr.y, 0, curr.x);
+
+                float3 prevLL2Up = float3(0, deep, prev.x), prevUL2Up = float3(-prev.y , deep, prev.x),
+                       prevLR2Up = float3(0, deep, curr.x), prevUR2Up = float3(-curr.y , deep, curr.x);
+                float3 prevLL2Dw = float3(-holeFunc(prev.x), 0, prev.x), prevUL2Dw = float3(-prev.y, 0, prev.x),
+                       prevLR2Dw = float3(-holeFunc(curr.x), 0, curr.x), prevUR2Dw = float3(-curr.y, 0, curr.x);
+
+                var panel1 = 
+                    new Mesh<PositionNormal>(new PositionNormal[]
+                    {
+                        new PositionNormal()
+                        {
+                            Position = prevUL1Dw
+                        },
+                        new PositionNormal()
+                        {
+                            Position = prevUL1Up
+                        },
+                        new PositionNormal()
+                        {
+                            Position = prevUR1Dw
+                        },
+                        new PositionNormal()
+                        {
+                            Position = prevUR1Up
+                        },
+                        new PositionNormal()
+                        {
+                            Position = prevLL1Up
+                        },
+                        new PositionNormal()
+                        {
+                            Position = prevLR1Up
+                        },
+                        new PositionNormal()
+                        {
+                            Position = prevLL1Dw
+                        },
+                        new PositionNormal()
+                        {
+                            Position = prevLR1Dw
+                        },
+
+                    },
+                    new int[] 
+                    {
+                        0,1,2,
+                        1,3,2,
+                        1,4,3,
+                        4,5,3,
+                        0,6,2,
+                        6,7,2,
+                    });
+                var panel2 = panel1.Transform<PositionNormal>(x => new PositionNormal() { Position = float3(-x.Position.x - .0001f, x.Position.y, x.Position.z) });
+                body += panel1 + panel2;
+            }
+            return body;
+        }
+
         #endregion
     }
 }
