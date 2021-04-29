@@ -53,6 +53,11 @@ namespace Renderer
         struct MyRayPayload
         {
             public float3 Color;
+            public void ValidateColor(){
+                Color.x = Math.Min(Color.x, 255);
+                Color.y = Math.Min(Color.y, 255);
+                Color.z = Math.Min(Color.z, 255);
+            }
         }
 
         /// <summary>
@@ -134,7 +139,9 @@ namespace Renderer
         {
             // Scene Setup
             float3 CameraPosition = float3(-12f, 6.6f, 0);
-            float3[] Lights = {float3(-15, 13f, 25), float3(-15, 13f, -15)};
+            // float3(-15, 13f, 25), ligth in the right side
+            // float3(-15, 13f, 0), Light in the front
+            float3[] Lights = {float3(-15, 13f, 25), float3(-15, 5, -15)};
             float3 LightIntensity = float3(1, 1, 1) * 1500;
 
             // View and projection matrices
@@ -219,6 +226,7 @@ namespace Renderer
                     {
                         raycaster.Trace(scene, ray, ref aux);
                         coloring.Color += aux.Color;
+                        coloring.ValidateColor();
                     }
 
                     texture.Write(px, py, float4(coloring.Color, 1));
