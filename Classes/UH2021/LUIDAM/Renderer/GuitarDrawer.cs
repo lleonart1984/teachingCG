@@ -10,11 +10,12 @@ using System.Threading.Tasks;
 
 namespace Renderer
 {
+    public struct NoMaterial { }
 
     public static class RenderUtils
     {
         
-        public static void DrawArea<T>(int id, int x0, int y0, int xf, int yf, Raytracer<MyRayPayload, T> raycaster, Texture2D texture, float4x4 viewMatrix, float4x4 projectionMatrix, Scene<T> scene, int step = 1) where T : struct
+        public static void DrawArea<T, M>(int id, int x0, int y0, int xf, int yf, Raytracer<MyRayPayload, T, M> raycaster, Texture2D texture, float4x4 viewMatrix, float4x4 projectionMatrix, Scene<T, M> scene, int step = 1) where T : struct where M : struct
         {
             for (int px = x0; px < xf; px += step)
                 for (int py = y0; py < yf; py += step)
@@ -41,7 +42,7 @@ namespace Renderer
             Console.WriteLine($"Done {id}");
         }
 
-        public static void Draw<T>(Texture2D texture, Raytracer<MyRayPayload, T> raytracer, Scene<T> scene, float4x4 viewMatrix, float4x4 projectionMatrix, int rendStep = 1, int gridXDiv = 8, int gridYDiv = 8) where T : struct
+        public static void Draw<T, M>(Texture2D texture, Raytracer<MyRayPayload, T, M> raytracer, Scene<T, M> scene, float4x4 viewMatrix, float4x4 projectionMatrix, int rendStep = 1, int gridXDiv = 8, int gridYDiv = 8) where T : struct where M : struct
         {
             var start = new Stopwatch();
 
@@ -86,7 +87,7 @@ namespace Renderer
             return guitar;
         }
 
-        public static void CreateCSGGuitarScene(Scene<float3> scene, float4x4 worldTransformation)
+        public static void CreateCSGGuitarScene(Scene<float3, NoMaterial> scene, float4x4 worldTransformation)
         {
             var guitar = CreateCSGGuitar(worldTransformation);
             guitar.Guitar(scene);
@@ -130,26 +131,26 @@ namespace Renderer
             return wall + floor;
         }
 
-        public static void CreateGuitarMeshScene(Scene<PositionNormal> scene, float4x4 worldTransformation)
+        public static void CreateGuitarMeshScene(Scene<PositionNormal, NoMaterial> scene, float4x4 worldTransformation)
         {
             var model = CreateGuitarMesh();
-            scene.Add(model.AsRaycast(), worldTransformation);
+            scene.Add(model.AsRaycast(), new NoMaterial(), worldTransformation);
             var model2 = CreateWalls();
-            scene.Add(model2.AsRaycast(), worldTransformation);
+            scene.Add(model2.AsRaycast(), new NoMaterial(), worldTransformation);
         }
 
         public static void GuitarCSGRaycast(Texture2D texture, float4x4 worldTransformation)
         {
-            Raytracer<MyRayPayload, float3> raycaster = new Raytracer<MyRayPayload, float3>();
+            Raytracer<MyRayPayload, float3, NoMaterial> raycaster = new Raytracer<MyRayPayload, float3, NoMaterial>();
 
             // View and projection matrices
             float4x4 viewMatrix = Transforms.LookAtLH(float3(2, 1f, 4), float3(0, 0, 0), float3(0, 1, 0));
             float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 20);
 
-            Scene<float3> scene = new Scene<float3>();
+            Scene<float3, NoMaterial> scene = new Scene<float3, NoMaterial>();
             CreateCSGGuitarScene(scene, worldTransformation);
 
-            raycaster.OnClosestHit += delegate (IRaycastContext context, float3 attribute, ref MyRayPayload payload)
+            raycaster.OnClosestHit += delegate (IRaycastContext context, float3 attribute, NoMaterial material, ref MyRayPayload payload)
             {
                 payload.Color = attribute;
             };
@@ -177,12 +178,12 @@ namespace Renderer
             float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(1.1f, .58f, .5f), float3(0, 1, 0));
             float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 20);
 
-            Scene<PositionNormal> scene = new Scene<PositionNormal>();
+            Scene<PositionNormal, NoMaterial> scene = new Scene<PositionNormal, NoMaterial>();
             CreateGuitarMeshScene(scene, worldTransformation);
 
             // Raycaster to trace rays and check for shadow rays.
-            Raytracer<ShadowRayPayload, PositionNormal> shadower = new Raytracer<ShadowRayPayload, PositionNormal>();
-            shadower.OnAnyHit += delegate (IRaycastContext context, PositionNormal attribute, ref ShadowRayPayload payload)
+            Raytracer<ShadowRayPayload, PositionNormal, NoMaterial> shadower = new Raytracer<ShadowRayPayload, PositionNormal, NoMaterial>();
+            shadower.OnAnyHit += delegate (IRaycastContext context, PositionNormal attribute, NoMaterial material, ref ShadowRayPayload payload)
             {
                 // If any object is found in ray-path to the light, the ray is shadowed.
                 payload.Shadowed = true;
@@ -191,8 +192,8 @@ namespace Renderer
             };
 
             // Raycaster to trace rays and lit closest surfaces
-            Raytracer<MyRayPayload, PositionNormal> raycaster = new Raytracer<MyRayPayload, PositionNormal>();
-            raycaster.OnClosestHit += delegate (IRaycastContext context, PositionNormal attribute, ref MyRayPayload payload)
+            Raytracer<MyRayPayload, PositionNormal, NoMaterial> raycaster = new Raytracer<MyRayPayload, PositionNormal, NoMaterial>();
+            raycaster.OnClosestHit += delegate (IRaycastContext context, PositionNormal attribute, NoMaterial material, ref MyRayPayload payload)
             {
                 // Move geometry attribute to world space
                 attribute = attribute.Transform(context.FromGeometryToWorld);

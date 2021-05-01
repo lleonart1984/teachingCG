@@ -48,7 +48,7 @@ namespace Rendering
     /// <param name="attribute">The attribute at the hit position.</param>
     /// <param name="payload">The ray payload to be updated.</param>
     /// <returns></returns>
-    public delegate HitResult HitTest<P, A>(IRaycastContext context, A attribute, ref P payload) where P : struct where A : struct;
+    public delegate HitResult HitTest<P, A, M>(IRaycastContext context, A attribute, M material, ref P payload) where P : struct where A : struct where M : struct;
 
     /// <summary>
     /// Action to perform relative to a hit.
@@ -58,7 +58,7 @@ namespace Rendering
     /// <param name="attribute">The attribute at the hit position.</param>
     /// <param name="payload">The ray payload to be updated.</param>
     /// <returns></returns>
-    public delegate void HitAction<P, A>(IRaycastContext context, A attribute, ref P payload) where P : struct where A : struct;
+    public delegate void HitAction<P, A, M>(IRaycastContext context, A attribute, M material, ref P payload) where P : struct where A : struct where M : struct;
 
     /// <summary>
     /// Action to perform if a ray doesnt hit any surface.
@@ -69,7 +69,7 @@ namespace Rendering
     /// Represents a retained scene for further ray-tracing.
     /// </summary>
     /// <typeparam name="A">The geometry attribute result of an intersection</typeparam>
-    public class Scene<A> where   A : struct
+    public class Scene<A, M> where A : struct where M : struct
     {
         /// <summary>
         /// Internal object used to pack different geometry properties during raycast.
@@ -78,15 +78,17 @@ namespace Rendering
         {
             public IRaycastGeometry<A> Geometry;
             public float4x4 Transform;
+            public M Material;
             /// To add more information preprocessed per visual
             /// For instance, Wrapper geometry for early test, IDs, Masks,
         }
 
-        public void Add(IRaycastGeometry<A> geometry, float4x4 transform)
+        public void Add(IRaycastGeometry<A> geometry, M material, float4x4 transform)
         {
             instances.Add(new Visual
             {
                 Geometry = geometry,
+                Material = material,
                 Transform = transform,
             });
         }
@@ -98,11 +100,11 @@ namespace Rendering
     /// Represents a raytracer over several objects in a scene.
     /// The objects are accessed in a scene and the tracer has the logic for the closest hit case and any hit cases.
     /// </summary>
-    public class Raytracer<P, A> where P : struct where A : struct
+    public class Raytracer<P, A, M> where P : struct where A : struct where M : struct
     {
-        public event HitAction<P, A> OnClosestHit;
+        public event HitAction<P, A, M> OnClosestHit;
         public event MissAction<P> OnMiss;
-        public event HitTest<P, A> OnAnyHit;
+        public event HitTest<P, A, M> OnAnyHit;
 
         /// <summary>
         /// Represents the state of the algorithm for each geometry.
@@ -125,14 +127,14 @@ namespace Rendering
         /// <summary>
         /// Performs a trace of a ray through the scene. The payload object will be updated in events OnAnyHit and OnClosestHit.
         /// </summary>
-        public void Trace(Scene<A> scene, RayDescription ray, ref P payload)
+        public void Trace(Scene<A, M> scene, RayDescription ray, ref P payload)
         {
-            Scene<A>.Visual? closestVisual = null;
+            Scene<A, M>.Visual? closestVisual = null;
             A? closestAttribute = null;
             int? closestGeometryIndex = null;
             float closestDistance = ray.MaxT;
             bool stopped = false;
-            
+
             InternalRaycastingContext context = new InternalRaycastingContext();
 
             context.GlobalRay = ray;
@@ -142,12 +144,12 @@ namespace Rendering
                 context.FromGeometryToWorld = v.Transform;
                 context.FromWorldToGeometry = inverse(v.Transform);
                 context.LocalRay = ray.Transform(context.FromWorldToGeometry);
-                
+
                 foreach (var hitInfo in v.Geometry.Raycast(context.LocalRay))
                 {
                     context.CurrentT = hitInfo.T;
 
-                    var result = OnAnyHit == null ? HitResult.CheckClosest : OnAnyHit(context, hitInfo.Attribute, ref payload);
+                    var result = OnAnyHit == null ? HitResult.CheckClosest : OnAnyHit(context, hitInfo.Attribute, v.Material, ref payload);
 
                     if ((result & HitResult.CheckClosest) == HitResult.CheckClosest)
                     { // Check current attribute with closest one.
@@ -176,7 +178,7 @@ namespace Rendering
                 context.FromGeometryToWorld = closestVisual.Value.Transform;
                 context.FromWorldToGeometry = inverse(closestVisual.Value.Transform);
                 context.LocalRay = ray.Transform(context.FromWorldToGeometry);
-                OnClosestHit(context, closestAttribute.Value, ref payload);
+                OnClosestHit(context, closestAttribute.Value, closestVisual.Value.Material, ref payload);
             }
 
             if (!closestVisual.HasValue && OnMiss != null)
