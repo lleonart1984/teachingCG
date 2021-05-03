@@ -132,9 +132,9 @@ namespace Renderer
         public static void CreateGuitarMeshScene(Scene<T, MyMaterial<T>> scene, float4x4 worldTransformation)
         {
             var model = CreateGuitarMesh();
-            scene.Add(model.AsRaycast(), LoadMaterialFromFile("guitar_texture_raw", 32, 0.9f), worldTransformation);
+            scene.Add(model.AsRaycast(), LoadMaterialFromFile("guitar_texture.material", 32, 0.9f), worldTransformation);
             var model2 = CreateWalls();
-            scene.Add(model2.AsRaycast(), LoadMaterialFromFile("guitar_texture_raw", 32, 0.9f), worldTransformation);
+            scene.Add(model2.AsRaycast(), LoadMaterialFromFile("guitar_texture.material", 32, 0.9f), worldTransformation);
         }
 
         public static void GuitarCSGRaycast(Texture2D texture, float4x4 worldTransformation)
