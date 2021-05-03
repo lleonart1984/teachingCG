@@ -9,6 +9,7 @@ using GMath;
 using System.Drawing;
 using static Renderer.Program;
 using Renderer;
+using System.IO;
 using Renderer.CSG;
 
 namespace Renderer
@@ -420,7 +421,7 @@ namespace Renderer
         public float3 boxUpper = float3(.5f, .5f, .5f);
         public float cylinderRadius = .5f;
 
-        public void BridgeStrings(Scene<float3, NoMaterial> scene)
+        public void BridgeStrings(Scene<float3, Material> scene)
         {
             var strings = new List<(IRaycastGeometry<float3>, float4x4)>();
             var step = BridgeWidth / (StringWidths.Length + 1);
@@ -440,7 +441,7 @@ namespace Renderer
             AddToScene(scene, strings);
         }
 
-        public void Bridge(Scene<float3, NoMaterial> scene)
+        public void Bridge(Scene<float3, Material> scene)
         {
             var parts = new List<(IRaycastGeometry<float3>, float4x4)>();
 
@@ -480,7 +481,7 @@ namespace Renderer
             AddToScene(scene, parts);
         }
 
-        public void Headstock(Scene<float3, NoMaterial> scene)
+        public void Headstock(Scene<float3, Material> scene)
         {
             var width = BridgeWidth * 1.3f;
             var height = BridgeHeight / 2.0f;
@@ -568,7 +569,7 @@ namespace Renderer
             AddToScene(scene, parts);
         }
 
-        public void MainBody(Scene<float3, NoMaterial> scene)
+        public void MainBody(Scene<float3, Material> scene)
         {
             var parts = new List<(IRaycastGeometry<float3>, float4x4)>();
             
@@ -616,7 +617,7 @@ namespace Renderer
             AddToScene(scene, parts);
         }
 
-        public void Guitar(Scene<float3, NoMaterial> scene)
+        public void Guitar(Scene<float3, Material> scene)
         {
             BridgeStrings(scene);
             Bridge(scene);
@@ -704,11 +705,11 @@ namespace Renderer
             return transform;
         }
 
-        public void AddToScene(Scene<float3, NoMaterial> scene, IEnumerable<(IRaycastGeometry<float3>, float4x4)> geometries)
+        public void AddToScene(Scene<float3, Material> scene, IEnumerable<(IRaycastGeometry<float3>, float4x4)> geometries)
         {
             foreach (var (geo, trans) in geometries)
             {
-                scene.Add(geo, new NoMaterial(), mul(trans, CSGWorldTransformation));
+                scene.Add(geo, new Material(), mul(trans, CSGWorldTransformation));
             }
         }
     

@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 
 namespace Renderer
 {
-    public struct NoMaterial { }
 
     public static class RenderUtils
     {
@@ -87,7 +86,7 @@ namespace Renderer
             return guitar;
         }
 
-        public static void CreateCSGGuitarScene(Scene<float3, NoMaterial> scene, float4x4 worldTransformation)
+        public static void CreateCSGGuitarScene(Scene<float3, Material> scene, float4x4 worldTransformation)
         {
             var guitar = CreateCSGGuitar(worldTransformation);
             guitar.Guitar(scene);
@@ -131,26 +130,26 @@ namespace Renderer
             return wall + floor;
         }
 
-        public static void CreateGuitarMeshScene(Scene<PositionNormal, NoMaterial> scene, float4x4 worldTransformation)
+        public static void CreateGuitarMeshScene(Scene<PositionNormalCoordinate, Material> scene, float4x4 worldTransformation)
         {
-            var model = CreateGuitarMesh();
-            scene.Add(model.AsRaycast(), new NoMaterial(), worldTransformation);
-            var model2 = CreateWalls();
-            scene.Add(model2.AsRaycast(), new NoMaterial(), worldTransformation);
+            var model = Map(CreateGuitarMesh());
+            scene.Add(model.AsRaycast(), Renderer.Program.CreateMaterialFromRawText("C:/Users/ND/Documents/Graficos/Luiso-Wata-2/teachingCG/Classes/UH2021/LUIDAM/Renderer/guitar_texture_raw", 32, 0.9f), worldTransformation);
+            var model2 = Map(CreateWalls());
+            scene.Add(model2.AsRaycast(), Renderer.Program.CreateMaterialFromRawText("C:/Users/ND/Documents/Graficos/Luiso-Wata-2/teachingCG/Classes/UH2021/LUIDAM/Renderer/guitar_texture_raw", 32, 0.9f), worldTransformation);
         }
 
         public static void GuitarCSGRaycast(Texture2D texture, float4x4 worldTransformation)
         {
-            Raytracer<MyRayPayload, float3, NoMaterial> raycaster = new Raytracer<MyRayPayload, float3, NoMaterial>();
+            Raytracer<MyRayPayload, float3, Material> raycaster = new Raytracer<MyRayPayload, float3, Material>();
 
             // View and projection matrices
             float4x4 viewMatrix = Transforms.LookAtLH(float3(2, 1f, 4), float3(0, 0, 0), float3(0, 1, 0));
             float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 20);
 
-            Scene<float3, NoMaterial> scene = new Scene<float3, NoMaterial>();
+            Scene<float3, Material> scene = new Scene<float3, Material>();
             CreateCSGGuitarScene(scene, worldTransformation);
 
-            raycaster.OnClosestHit += delegate (IRaycastContext context, float3 attribute, NoMaterial material, ref MyRayPayload payload)
+            raycaster.OnClosestHit += delegate (IRaycastContext context, float3 attribute, Material material, ref MyRayPayload payload)
             {
                 payload.Color = attribute;
             };
@@ -174,16 +173,17 @@ namespace Renderer
             float3 CameraPosition = float3(1.1f, 1f, -.75f);
             var lightPositionWorld = mul(worldTransformation, float4x1(2.0f, 1f, -.8f, 0));
             float3 LightPosition = float3(lightPositionWorld._m00, lightPositionWorld._m10, lightPositionWorld._m20);
+            float3 LightIntensity = float3(1, 1, 1) * 1;
             // View and projection matrices
             float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(1.1f, .58f, .5f), float3(0, 1, 0));
             float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 20);
 
-            Scene<PositionNormal, NoMaterial> scene = new Scene<PositionNormal, NoMaterial>();
+            Scene<PositionNormalCoordinate, Material> scene = new Scene<PositionNormalCoordinate, Material>();
             CreateGuitarMeshScene(scene, worldTransformation);
 
             // Raycaster to trace rays and check for shadow rays.
-            Raytracer<ShadowRayPayload, PositionNormal, NoMaterial> shadower = new Raytracer<ShadowRayPayload, PositionNormal, NoMaterial>();
-            shadower.OnAnyHit += delegate (IRaycastContext context, PositionNormal attribute, NoMaterial material, ref ShadowRayPayload payload)
+            Raytracer<ShadowRayPayload, PositionNormalCoordinate, Material> shadower = new Raytracer<ShadowRayPayload, PositionNormalCoordinate, Material>();
+            shadower.OnAnyHit += delegate (IRaycastContext context, PositionNormalCoordinate attribute, Material material, ref ShadowRayPayload payload)
             {
                 // If any object is found in ray-path to the light, the ray is shadowed.
                 payload.Shadowed = true;
@@ -192,28 +192,30 @@ namespace Renderer
             };
 
             // Raycaster to trace rays and lit closest surfaces
-            Raytracer<MyRayPayload, PositionNormal, NoMaterial> raycaster = new Raytracer<MyRayPayload, PositionNormal, NoMaterial>();
-            raycaster.OnClosestHit += delegate (IRaycastContext context, PositionNormal attribute, NoMaterial material, ref MyRayPayload payload)
+            Raytracer<MyRayPayload, PositionNormalCoordinate, Program.Material> raycaster = new Raytracer<MyRayPayload, PositionNormalCoordinate, Renderer.Program.Material>();
+            raycaster.OnClosestHit += delegate (IRaycastContext context, PositionNormalCoordinate attribute, Material material, ref MyRayPayload payload)
             {
                 // Move geometry attribute to world space
                 attribute = attribute.Transform(context.FromGeometryToWorld);
 
                 float3 V = normalize(CameraPosition - attribute.Position);
-                float3 L = normalize(LightPosition - attribute.Position);
-                var l = dot(attribute.Normal, L);
-                if (l < 0)
-                {
-                    l = -l;
-                    attribute.Normal *= -1;
-                }
-                float lambertFactor = max(0, l);
+                float3 L = (LightPosition - attribute.Position);
+                float d = length(L);
+                L /= d; // normalize direction to light reusing distance to light
+
+                attribute.Normal = normalize(attribute.Normal);
+
+                float lambertFactor = max(0, dot(attribute.Normal, L));
 
                 // Check ray to light...
                 ShadowRayPayload shadow = new ShadowRayPayload();
                 shadower.Trace(scene,
-                    RayDescription.FromTo(attribute.Position + attribute.Normal * 0.001f, // Move an epsilon away from the surface to avoid self-shadowing 
-                    LightPosition), ref shadow);
-                payload.Color = shadow.Shadowed ? attribute.Color * .2f : attribute.Color * lambertFactor;
+                    RayDescription.FromDir(attribute.Position + attribute.Normal * 0.001f, // Move an epsilon away from the surface to avoid self-shadowing 
+                    L), ref shadow);
+
+                float3 Intensity = (shadow.Shadowed ? 0.2f : 1.0f) * LightIntensity / (d * d);
+
+                payload.Color = material.EvalBRDF(attribute, V, L) * Intensity * lambertFactor;
             };
             raycaster.OnMiss += delegate (IRaycastContext context, ref MyRayPayload payload)
             {

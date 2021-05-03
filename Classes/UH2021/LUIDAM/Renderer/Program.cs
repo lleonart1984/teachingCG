@@ -2,6 +2,7 @@
 using Rendering;
 using System;
 using System.Diagnostics;
+using System.IO;
 using static GMath.Gfx;
 
 namespace Renderer
@@ -103,6 +104,22 @@ namespace Renderer
             }
         }
 
+        public static Mesh<PositionNormalCoordinate> Map(Mesh<PositionNormal> target)
+        {
+            return new Mesh<PositionNormalCoordinate>(Map(target.Vertices), target.Indices, target.Topology);
+        }
+
+        public static PositionNormalCoordinate[] Map(PositionNormal[] target)
+        {
+            PositionNormalCoordinate[] ret = new PositionNormalCoordinate[target.Length];
+            for (int i = 0; i < target.Length; i++) ret[i] = Map(target[i]);
+            return ret;
+        }
+        public static PositionNormalCoordinate Map(PositionNormal target)
+        {
+            return new PositionNormalCoordinate { Position = target.Position, Normal = target.Normal, Coordinates = float2(target.Position.x, target.Position.z) };
+        }
+
         public struct Material
         {
             public Texture2D Diffuse;
@@ -125,7 +142,7 @@ namespace Renderer
 
         #region Textures
 
-        static void CreateRaycastScene(Scene<PositionNormalCoordinate, Material> scene)
+        static void CreateRaycastScene(Scene<PositionNormalCoordinate, Material> scene, Material mat)
         {
             Texture2D ballTexture = new Texture2D(1, 1);
             ballTexture.Write(0, 0, float4(1, 1, 0, 1)); // yellow color
@@ -138,7 +155,7 @@ namespace Renderer
 
             // Adding elements of the scene
             scene.Add(Raycasting.UnitarySphere.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(atan2(a.z, a.x) * 0.5f / pi + 0.5f, a.y), Normal = normalize(a) }),
-                new Material { Diffuse = ballTexture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat } },
+                mat,
                 Transforms.Translate(0, 1, 0));
             scene.Add(Raycasting.PlaneXZ.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(a.x, a.z), Normal = float3(0, 1, 0) }),
                 new Material { Diffuse = planeTexture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat } },
@@ -214,7 +231,7 @@ namespace Renderer
             }, Transforms.Translate(0, 0.5f, 0));
         }
 
-        static void RaycastingMeshTexture(Texture2D texture)
+        static void RaycastingMeshTexture(Texture2D texture, Material mat)
         {
             // Scene Setup
             float3 CameraPosition = float3(3, 2f, 4);
@@ -227,7 +244,7 @@ namespace Renderer
 
             Scene<PositionNormalCoordinate, Material> scene = new Scene<PositionNormalCoordinate, Material>();
             //CreateMeshScene(scene);
-            CreateRaycastScene(scene);
+            CreateRaycastScene(scene, mat);
 
             // Raycaster to trace rays and check for shadow rays.
             Raytracer<ShadowRayPayload, PositionNormalCoordinate, Material> shadower = new Raytracer<ShadowRayPayload, PositionNormalCoordinate, Material>();
@@ -560,6 +577,32 @@ namespace Renderer
                 }
         }
 
+        public static Material CreateMaterialFromRawText(string dir, int size, float glossyness, bool rotate = false)
+        {
+            string str = File.ReadAllText(dir);
+            string[] splitted = str.Split(' ');
+            string[] clean = new string[size * size * 3];
+            int count = 0;
+            foreach (string var in splitted)
+                if (var.Length > 0)
+                    clean[count++] = var;
+            Texture2D item = new Texture2D(size, size);
+            count = 0;
+            for (int i = 0; i < size; i++)
+                for (int j = 0; j < size; j++)
+                {
+                    float4 temp = new float4();
+                    temp.x = (float)int.Parse(clean[count++]);
+                    temp.y = (float)int.Parse(clean[count++]);
+                    temp.z = (float)int.Parse(clean[count++]);
+                    if (!rotate)
+                        item.Write(i, j, temp);
+                    else
+                        item.Write(j, i, temp);
+                }
+            return new Material { Diffuse = item, Glossyness = glossyness, TextureSampler = new Sampler { Wrap = WrapMode.Repeat } };
+        }
+
         static void Main(string[] args)
         {
             Stopwatch stopwatch = new Stopwatch();
@@ -585,8 +628,9 @@ namespace Renderer
             //SimpleRaycast(texture);
             //LitRaycast(texture);
             //RaycastingMesh(texture);
-            RaycastingMeshTexture(texture);
-            //GuitarDrawer.GuitarRaycast(texture, Transforms.Identity);
+            //Material mat = CreateMaterialFromRawText("C:/Users/ND/Documents/Graficos/Luiso-Wata-2/teachingCG/Classes/UH2021/LUIDAM/Renderer/guitar_texture_raw", 32);
+            //RaycastingMeshTexture(texture, mat);
+            GuitarDrawer.GuitarRaycast(texture, Transforms.Identity);
             //GuitarDrawer.GuitarCSGRaycast(texture, Transforms.Identity);
 
             stopwatch.Stop();
