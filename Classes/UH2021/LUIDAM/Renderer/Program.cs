@@ -104,22 +104,6 @@ namespace Renderer
             }
         }
 
-        public static Mesh<PositionNormalCoordinate> Map(Mesh<PositionNormal> target)
-        {
-            return new Mesh<PositionNormalCoordinate>(Map(target.Vertices), target.Indices, target.Topology);
-        }
-
-        public static PositionNormalCoordinate[] Map(PositionNormal[] target)
-        {
-            PositionNormalCoordinate[] ret = new PositionNormalCoordinate[target.Length];
-            for (int i = 0; i < target.Length; i++) ret[i] = Map(target[i]);
-            return ret;
-        }
-        public static PositionNormalCoordinate Map(PositionNormal target)
-        {
-            return new PositionNormalCoordinate { Position = target.Position, Normal = target.Normal, Coordinates = float2(target.Position.x, target.Position.z) };
-        }
-
         public struct Material
         {
             public Texture2D Diffuse;
@@ -495,7 +479,6 @@ namespace Renderer
             scene.Add(egg.AsRaycast(RaycastingMeshMode.Grid), new Material(), Transforms.Translate(0, 0.5f, 0));
         }
 
-
         static void RaycastingMesh (Texture2D texture)
         {
             // Scene Setup
@@ -577,32 +560,6 @@ namespace Renderer
                 }
         }
 
-        public static Material CreateMaterialFromRawText(string dir, int size, float glossyness, bool rotate = false)
-        {
-            string str = File.ReadAllText(dir);
-            string[] splitted = str.Split(' ');
-            string[] clean = new string[size * size * 3];
-            int count = 0;
-            foreach (string var in splitted)
-                if (var.Length > 0)
-                    clean[count++] = var;
-            Texture2D item = new Texture2D(size, size);
-            count = 0;
-            for (int i = 0; i < size; i++)
-                for (int j = 0; j < size; j++)
-                {
-                    float4 temp = new float4();
-                    temp.x = (float)int.Parse(clean[count++]);
-                    temp.y = (float)int.Parse(clean[count++]);
-                    temp.z = (float)int.Parse(clean[count++]);
-                    if (!rotate)
-                        item.Write(i, j, temp);
-                    else
-                        item.Write(j, i, temp);
-                }
-            return new Material { Diffuse = item, Glossyness = glossyness, TextureSampler = new Sampler { Wrap = WrapMode.Repeat } };
-        }
-
         static void Main(string[] args)
         {
             Stopwatch stopwatch = new Stopwatch();
@@ -628,9 +585,9 @@ namespace Renderer
             //SimpleRaycast(texture);
             //LitRaycast(texture);
             //RaycastingMesh(texture);
-            //Material mat = CreateMaterialFromRawText("C:/Users/ND/Documents/Graficos/Luiso-Wata-2/teachingCG/Classes/UH2021/LUIDAM/Renderer/guitar_texture_raw", 32);
+            //Material mat = CreateMaterialFromRawText(guitar_texture_raw", 32);
             //RaycastingMeshTexture(texture, mat);
-            GuitarDrawer.GuitarRaycast(texture, Transforms.Identity);
+            GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaycast(texture, Transforms.Identity);
             //GuitarDrawer.GuitarCSGRaycast(texture, Transforms.Identity);
 
             stopwatch.Stop();

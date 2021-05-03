@@ -23,8 +23,8 @@ namespace MainForm
     {
         private Model _baseModel;
         private Model _model;
-        private Mesh<PositionNormal> _baseModelMesh;
-        private Mesh<PositionNormal> _modelMesh;
+        private Mesh<MyPositionNormalCoordinate> _baseModelMesh;
+        private Mesh<MyPositionNormalCoordinate> _modelMesh;
         private float3 _baseTranslation;
         private float3 _baseZoom;
         private float _maxScale;
@@ -53,7 +53,7 @@ namespace MainForm
             imageFile.FileOk += ImageFile_FileOk;
 
             _baseModel = new Model();
-            _baseModelMesh = new Mesh<PositionNormal>();
+            _baseModelMesh = new Mesh<MyPositionNormalCoordinate>();
             SetGuitar();
             AddWalls();
             SetBaseTranslation();
@@ -93,7 +93,7 @@ namespace MainForm
 
         private void SetGuitar()
         {
-            var generator = new GuitarBuilder();
+            var generator = new GuitarBuilder<MyPositionNormalCoordinate>();
             if (mesh)
                 _baseModelMesh = generator.GuitarMesh();
             else
@@ -164,8 +164,8 @@ namespace MainForm
 
             if (mesh)
             {
-                GuitarDrawer.DrawStep = 1;
-                GuitarDrawer.GuitarRaycast(_texture, WorldTransformation());
+                GuitarDrawer<MyPositionNormalCoordinate>.DrawStep = 5;
+                GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaycast(_texture, WorldTransformation());
                 for (int i = 0; i < _texture.Width; i++)
                 {
                     for (int j = 0; j < _texture.Height; j++)

@@ -14,7 +14,7 @@ using Renderer.CSG;
 
 namespace Renderer
 {
-    public class GuitarBuilder
+    public class GuitarBuilder<T> where T : struct, IVertex<T>, INormalVertex<T>, ICoordinatesVertex<T>, IColorable
     {
         public float MeshScalar = 1f;
 
@@ -226,14 +226,14 @@ namespace Renderer
 
         #region Mesh
 
-        public Mesh<PositionNormal> BridgeStringMesh()
+        public Mesh<T> BridgeStringMesh() 
         {
-            var strings = new Mesh<PositionNormal>();
+            var strings = new Mesh<T>();
             var step = BridgeWidth / (StringWidths.Length + 1);
 
             for (int i = 0; i < StringWidths.Length; i++)
             {
-                var cylinder = MeshShapeGenerator<PositionNormal>.Cylinder((int)(40 * MeshScalar)).ApplyTransforms(Transforms.Translate(0, 0, .5f),
+                var cylinder = MeshShapeGenerator<T>.Cylinder((int)(40 * MeshScalar)).ApplyTransforms(Transforms.Translate(0, 0, .5f),
                                                                                            Transforms.Scale(StringWidths[i], StringWidths[i], 1),
                                                                                            Transforms.Translate(-BridgeWidth / 2 + step * (i + 1), -StringBridgeSeparation, 0));
                 AddColorToMesh(StringColors[i], cylinder);
@@ -242,12 +242,12 @@ namespace Renderer
             return strings.ApplyTransforms(Transforms.Scale(1, 1, StringLength));
         }
     
-        public Mesh<PositionNormal> BridgeMesh()
+        public Mesh<T> BridgeMesh()
         {
-            var bridge = MeshShapeGenerator<PositionNormal>.Box((int)(MeshScalar * 2), (int)(MeshScalar * 2), (int)(MeshScalar * 5),faceYZDown:false)
+            var bridge = MeshShapeGenerator<T>.Box((int)(MeshScalar * 2), (int)(MeshScalar * 2), (int)(MeshScalar * 5),faceYZDown:false)
                 .ApplyTransforms(Transforms.Translate(0, 0, .5f),
                                  Transforms.Scale(BridgeWidth, BridgeHeight / 2, 1)); // Remove face facing the cylinder
-            var bridge2 = MeshShapeGenerator<PositionNormal>.Cylinder((int)(50 * MeshScalar), angle:pi).ApplyTransforms(Transforms.Translate(0, 0, .5f),
+            var bridge2 = MeshShapeGenerator<T>.Cylinder((int)(50 * MeshScalar), angle:pi).ApplyTransforms(Transforms.Translate(0, 0, .5f),
                                                                                                 Transforms.Scale(BridgeWidth / 2, BridgeHeight / 2, 1),
                                                                                                 Transforms.Translate(0, .5f * BridgeHeight / 2, 0));
 
@@ -257,10 +257,10 @@ namespace Renderer
             var baseBridge = bridge.Min(x => x.Position.z);
             var fretsAmount = 20;
             var step = BridgeLength / fretsAmount;
-            var frets = new Mesh<PositionNormal>();
+            var frets = new Mesh<T>();
             for (int i = 0; i < fretsAmount; i++) // Frets
             {
-                var fret = MeshShapeGenerator<PositionNormal>.Box((int)(3 * MeshScalar)).ApplyTransforms(Transforms.Translate(0, 0, .5f),
+                var fret = MeshShapeGenerator<T>.Box((int)(3 * MeshScalar)).ApplyTransforms(Transforms.Translate(0, 0, .5f),
                                                                                  Transforms.Scale(BridgeWidth, 1, BridgeWidth / 30),
                                                                                  Transforms.Scale(1, i == 0 ? StringBridgeSeparation : BridgeWidth / 30, 1),
                                                                                  Transforms.Translate(0, -.5f * BridgeHeight / 2, -baseBridge + step * i)); // This is not the correct fret spacing
@@ -270,7 +270,7 @@ namespace Renderer
             return (bridge + bridge2).ApplyTransforms(Transforms.Scale(1, 1, BridgeLength)) + frets;
         }
     
-        public Mesh<PositionNormal> HeadstockMesh()
+        public Mesh<T> HeadstockMesh()
         {
             var width = BridgeWidth * 1.3f;
             var height = BridgeHeight / 2.0f;
@@ -280,7 +280,7 @@ namespace Renderer
             var zHoleScale = 3 / 4.0f;
             var holeDZ = -length * (1 - zHoleScale) / 2;
 
-            var basePiece = MeshShapeGenerator<PositionNormal>.Box((int)(4 * MeshScalar), (int)(2 * MeshScalar), (int)(6 * MeshScalar))
+            var basePiece = MeshShapeGenerator<T>.Box((int)(4 * MeshScalar), (int)(2 * MeshScalar), (int)(6 * MeshScalar))
                                                               .ApplyTransforms(Transforms.Translate(0, 0, -.5f),
                                                                                Transforms.Scale(width, height, length));
 
@@ -309,14 +309,14 @@ namespace Renderer
 
             AddColorToMesh(HeadstockColor, basePiece);
 
-            var stringRollCylinders = new Mesh<PositionNormal>();
-            var stringPins = new Mesh<PositionNormal>();
+            var stringRollCylinders = new Mesh<T>();
+            var stringPins = new Mesh<T>();
             var step = length * zHoleScale / 3.0f;
             for (int i = 0; i < 6; i++)
             {
                 var xBaseCylinderScale = width * xHoleScale;
                 var yBaseCylinderScale = height * yHoleScale * .25f;
-                var baseCylinder = MeshShapeGenerator<PositionNormal>.Cylinder((int)(40 * MeshScalar)).ApplyTransforms(Transforms.RotateY(pi_over_4 * 2),
+                var baseCylinder = MeshShapeGenerator<T>.Cylinder((int)(40 * MeshScalar)).ApplyTransforms(Transforms.RotateY(pi_over_4 * 2),
                                                                                  Transforms.Scale(xBaseCylinderScale, yBaseCylinderScale, yBaseCylinderScale));
 
                 var zTranslate = ((i % 3)) * step - length - holeDZ + step / 2;
@@ -330,17 +330,17 @@ namespace Renderer
                 var xPinScale = xBaseCylinderScale / 2;
                 var yPinScale = height * .4f;
 
-                var basePin = MeshShapeGenerator<PositionNormal>.Cylinder((int)(40 * MeshScalar)).ApplyTransforms(Transforms.RotateY(pi_over_4 * 2),
+                var basePin = MeshShapeGenerator<T>.Cylinder((int)(40 * MeshScalar)).ApplyTransforms(Transforms.RotateY(pi_over_4 * 2),
                                                                                           Transforms.Scale(xPinScale, yPinScale, yPinScale));
 
                 var yHolderScale = height * 1.5f;
                 var xHolderScale = xPinScale / 4;
-                var headHolder = MeshShapeGenerator<PositionNormal>.Cylinder((int)(20 * MeshScalar)).ApplyTransforms(Transforms.RotateX(pi_over_4 * 2),
+                var headHolder = MeshShapeGenerator<T>.Cylinder((int)(20 * MeshScalar)).ApplyTransforms(Transforms.RotateX(pi_over_4 * 2),
                                                                                Transforms.Translate(0, .5f, 0),
                                                                                Transforms.Scale(xHolderScale, yHolderScale, xHolderScale),
                                                                                Transforms.Translate((i < 3 ? 1 : -1) * xHolderScale, -yPinScale, -xHolderScale * 2));
 
-                var head = MeshShapeGenerator<PositionNormal>.Cylinder((int)(40 * MeshScalar)).ApplyTransforms(Transforms.RotateX(pi_over_4 * 2),
+                var head = MeshShapeGenerator<T>.Cylinder((int)(40 * MeshScalar)).ApplyTransforms(Transforms.RotateX(pi_over_4 * 2),
                                                                          Transforms.Scale(1.1f * xHolderScale, 2.5f * yHolderScale / 6, 2.5f * yHolderScale / 6),
                                                                          Transforms.RotateY((two_pi / 12 * i)),
                                                                          Transforms.Translate((i < 3 ? 1 : -1) * xHolderScale, -yPinScale + yHolderScale, -xHolderScale * 2));
@@ -359,7 +359,7 @@ namespace Renderer
             return basePiece;
         }
     
-        public Mesh<PositionNormal> MainBodyMesh()
+        public Mesh<T> MainBodyMesh()
         {
             var bodyLength = BridgeLength * 1.1f;
 
@@ -370,11 +370,11 @@ namespace Renderer
             //        return x;
             //    return x * (bazier(val * 2.99f)).y;
             //}; // Multiply val for the max value that bazier is defined, the amount of parts
-            //var body = MeshShapeGenerator<PositionNormal>.Box((int)(15 * MeshScalar),(int)(15 * MeshScalar), (int)(15 * MeshScalar) 
+            //var body = MeshShapeGenerator<T>.Box((int)(15 * MeshScalar),(int)(15 * MeshScalar), (int)(15 * MeshScalar) 
             //                                                  ,holeXZDown:true, sepXZDown:float4(.37f,.61f,.37f,.15f)
             //                                                  )
             //                                    .ApplyTransforms(Transforms.Translate(0, 0, .5f))
-            //                                    .Transform<PositionNormal>(p => new PositionNormal { Position = float3(transform(p.Position.x, p.Position.z), p.Position.y, p.Position.z) })
+            //                                    .Transform<T>(p => new T { Position = float3(transform(p.Position.x, p.Position.z), p.Position.y, p.Position.z) })
             //                                    .ApplyTransforms(Transforms.Translate(0, 0, -.5f));
 
             var body = GuitarBodyMesh((int)(30 * MeshScalar));
@@ -388,15 +388,15 @@ namespace Renderer
             var radius = BridgeWidth * 1.45f / 2;
             var dz = BridgeLength + radius - (BridgeLength / 4 * .2f);
             
-            var hole = MeshShapeGenerator<PositionNormal>.Cylinder((int)(200 * MeshScalar), thickness: BridgeWidth / 8, surface:true)
+            var hole = MeshShapeGenerator<T>.Cylinder((int)(200 * MeshScalar), thickness: BridgeWidth / 8, surface:true)
                                                    .ApplyTransforms(Transforms.RotateX(pi_over_4 * 2),
                                                                     Transforms.Scale(radius, 1, radius),
                                                                     Transforms.Translate(0, -.6f, dz -.2f));
 
-            var stringHub = MeshShapeGenerator<PositionNormal>.Box((int)(6 * MeshScalar)).ApplyTransforms(Transforms.Translate(0, -.5f, .5f),
+            var stringHub = MeshShapeGenerator<T>.Box((int)(6 * MeshScalar)).ApplyTransforms(Transforms.Translate(0, -.5f, .5f),
                                                                                    Transforms.Scale(BridgeWidth, 1, 1.5f),
                                                                                    Transforms.Translate(0, 0, StringLength));
-            stringHub +=    MeshShapeGenerator<PositionNormal>.Box((int)(6 * MeshScalar)).ApplyTransforms(Transforms.Translate(0, -.5f, .5f),
+            stringHub +=    MeshShapeGenerator<T>.Box((int)(6 * MeshScalar)).ApplyTransforms(Transforms.Translate(0, -.5f, .5f),
                                                                                    Transforms.Scale(BridgeWidth * 3f, .5f, 1.5f),
                                                                                    Transforms.Translate(0, 0, StringLength));
             AddColorToMesh(StringHubColor, stringHub);
@@ -406,7 +406,7 @@ namespace Renderer
             return hole + body + stringHub;
         }
     
-        public Mesh<PositionNormal> GuitarMesh()
+        public Mesh<T> GuitarMesh()
         {
             var body = MainBodyMesh() + BridgeMesh();
             return body + BridgeStringMesh() + HeadstockMesh();
@@ -421,7 +421,7 @@ namespace Renderer
         public float3 boxUpper = float3(.5f, .5f, .5f);
         public float cylinderRadius = .5f;
 
-        public void BridgeStrings(Scene<float3, Material> scene)
+        public void BridgeStrings(Scene<float3, NoMaterial> scene)
         {
             var strings = new List<(IRaycastGeometry<float3>, float4x4)>();
             var step = BridgeWidth / (StringWidths.Length + 1);
@@ -441,7 +441,7 @@ namespace Renderer
             AddToScene(scene, strings);
         }
 
-        public void Bridge(Scene<float3, Material> scene)
+        public void Bridge(Scene<float3, NoMaterial> scene)
         {
             var parts = new List<(IRaycastGeometry<float3>, float4x4)>();
 
@@ -481,7 +481,7 @@ namespace Renderer
             AddToScene(scene, parts);
         }
 
-        public void Headstock(Scene<float3, Material> scene)
+        public void Headstock(Scene<float3, NoMaterial> scene)
         {
             var width = BridgeWidth * 1.3f;
             var height = BridgeHeight / 2.0f;
@@ -569,7 +569,7 @@ namespace Renderer
             AddToScene(scene, parts);
         }
 
-        public void MainBody(Scene<float3, Material> scene)
+        public void MainBody(Scene<float3, NoMaterial> scene)
         {
             var parts = new List<(IRaycastGeometry<float3>, float4x4)>();
             
@@ -617,7 +617,7 @@ namespace Renderer
             AddToScene(scene, parts);
         }
 
-        public void Guitar(Scene<float3, Material> scene)
+        public void Guitar(Scene<float3, NoMaterial> scene)
         {
             BridgeStrings(scene);
             Bridge(scene);
@@ -705,15 +705,15 @@ namespace Renderer
             return transform;
         }
 
-        public void AddToScene(Scene<float3, Material> scene, IEnumerable<(IRaycastGeometry<float3>, float4x4)> geometries)
+        public void AddToScene(Scene<float3, NoMaterial> scene, IEnumerable<(IRaycastGeometry<float3>, float4x4)> geometries)
         {
             foreach (var (geo, trans) in geometries)
             {
-                scene.Add(geo, new Material(), mul(trans, CSGWorldTransformation));
+                scene.Add(geo, new NoMaterial(), mul(trans, CSGWorldTransformation));
             }
         }
     
-        public static void AddColorToMesh(Color color, Mesh<PositionNormal> mesh)
+        public static void AddColorToMesh(Color color, Mesh<T> mesh)
         {
             static float3 Color2Float3(Color color)
             {
@@ -722,15 +722,15 @@ namespace Renderer
 
             for (int i = 0; i < mesh.Vertices.Length; i++)
             {
-                mesh.Vertices[i].Color = Color2Float3(color);
+                mesh.Vertices[i].SetColor(color);
             }
         }
 
-        public static Mesh<PositionNormal> GuitarBodyMesh(int pointsLength)
+        public static Mesh<T> GuitarBodyMesh(int pointsLength)
         {
             float step = 3.0f / pointsLength;
             float deep = 5f;
-            Mesh<PositionNormal> body = new Mesh<PositionNormal>();
+            Mesh<T> body = new Mesh<T>();
             var bz = BodyFunction();
             
             static float holeFunc(float x)
@@ -759,37 +759,37 @@ namespace Renderer
                        prevLR2Dw = float3(-holeFunc(curr.x), 0, curr.x), prevUR2Dw = float3(-curr.y, 0, curr.x);
 
                 var panel1 = 
-                    new Mesh<PositionNormal>(new PositionNormal[]
+                    new Mesh<T>(new T[]
                     {
-                        new PositionNormal()
+                        new T()
                         {
                             Position = prevUL1Dw
                         },
-                        new PositionNormal()
+                        new T()
                         {
                             Position = prevUL1Up
                         },
-                        new PositionNormal()
+                        new T()
                         {
                             Position = prevUR1Dw
                         },
-                        new PositionNormal()
+                        new T()
                         {
                             Position = prevUR1Up
                         },
-                        new PositionNormal()
+                        new T()
                         {
                             Position = prevLL1Up
                         },
-                        new PositionNormal()
+                        new T()
                         {
                             Position = prevLR1Up
                         },
-                        new PositionNormal()
+                        new T()
                         {
                             Position = prevLL1Dw
                         },
-                        new PositionNormal()
+                        new T()
                         {
                             Position = prevLR1Dw
                         },
@@ -804,7 +804,7 @@ namespace Renderer
                         0,6,2,
                         6,7,2,
                     });
-                var panel2 = panel1.Transform<PositionNormal>(x => new PositionNormal() { Position = float3(-x.Position.x - .0001f, x.Position.y, x.Position.z) });
+                var panel2 = panel1.Transform<T>(x => new T() { Position = float3(-x.Position.x - .0001f, x.Position.y, x.Position.z) });
                 body += panel1 + panel2;
             }
             return body;
