@@ -862,6 +862,7 @@ namespace Renderer
                 body += panel1 + panel2;
             }
             body.SetMaterial(new GuitarBuilder<T>().GuitarBodyFrontMaterial); // TODO Set the materials properly
+            body = MaterialsUtils.MapPlane(body);
             return body;
         }
 
