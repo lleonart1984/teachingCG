@@ -51,8 +51,7 @@ namespace Rendering
             this.Vertices = vertices;
             this.Indices = indices;
             this.Topology = topology;
-            this.Materials = new IMaterial[0];
-            this.MaterialsSeparators = new int[0];
+            this.SetMaterial(default);
 
             if (Vertices.Any())
                 BoundBox = (float3(Vertices.Max(x => x.Position.x), Vertices.Max(x => x.Position.y), Vertices.Max(x => x.Position.z)),
@@ -61,7 +60,7 @@ namespace Rendering
 
         public Mesh (V[] vertices, int[] indices, IMaterial material, Topology topology = Topology.Triangles) : this(vertices, indices, topology)
         {
-            SetMaterial(material);
+            this.SetMaterial(material);
         }
 
         public Mesh() : this(new V[] { }, new int[] { }, default)
@@ -92,26 +91,6 @@ namespace Rendering
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
-        }
-
-        public IMaterial GetVertexMaterial(int vertexIndex)
-        {
-            for (int i = 0; i < MaterialsSeparators.Length; i++)
-            {
-                if (MaterialsSeparators[i] <= vertexIndex)
-                    return Materials[i];
-            }
-            throw new IndexOutOfRangeException();
-        }
-
-        /// <summary>
-        /// Applies the given material to all vertex in Mesh
-        /// </summary>
-        /// <param name="material"></param>
-        public void SetMaterial(IMaterial material)
-        {
-            Materials = new IMaterial[] { material };
-            MaterialsSeparators = new int[] { Vertices.Length - 1 };
         }
 
         public static Mesh<V> operator +(Mesh<V> a, Mesh<V> b)

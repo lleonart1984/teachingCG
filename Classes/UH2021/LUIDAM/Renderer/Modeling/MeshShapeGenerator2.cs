@@ -20,7 +20,7 @@ namespace Renderer.Modeling
             {
                 XYDownMat = XYUpMat = XZUpMat = XZDownMat = YZDownMat = YZUpMat = allMat;
             }
-            var box = new Mesh<T>(new T[] { }, new int[] { });
+            Mesh<T> box = null;
             foreach (var (dirX, dirY, trans) in new (float3 dirX, float3 dirY, float3 trans)[] 
             { 
                 (float3(1, 0, 0), float3(0,1,0), float3(0, 0, 0)), 
@@ -112,8 +112,11 @@ namespace Renderer.Modeling
                     face = face.ApplyTransforms(Transforms.Translate(trans));
                 }
                 face.SetMaterial(material);
-                material?.MapPlane(face);
-                box += face;
+                face = MaterialsUtils.MapPlane(face);
+                if (box == null)
+                    box = face;
+                else
+                    box += face;
             }
             return box.Transform(Transforms.Translate(-.5f, -.5f, -.5f));
         }
@@ -127,7 +130,7 @@ namespace Renderer.Modeling
         public static Mesh<T> Cylinder(int points, float thickness=0, float angle = 2 * pi, bool surface = false, IMaterial upFaceMat = default, IMaterial downFaceMat = default, IMaterial cylinderMat = default)
         {
             var ss = (int)ceil(sqrt(points));
-            var baseCylOuter = new Mesh<T>();
+            Mesh<T> baseCylOuter = null;
             var face1 = MyManifold<T>.Revolution(ss, ss, x => float3(1 * x, 0, 0), float3(0, 0, 1), angle).Transform(Transforms.Translate(0,0,.5f));
             var face2 = MyManifold<T>.Revolution(ss, ss, x => float3(1 * x, 0, 0), float3(0, 0, 1), angle).Transform(Transforms.Translate(0,0,-.5f));
             if (thickness != 0)
@@ -139,17 +142,21 @@ namespace Renderer.Modeling
             var baseCyl = MyManifold<T>.Revolution(ss, ss, x => float3(1, 0, x), float3(0,0,1), angle).Transform(Transforms.Translate(0,0,-.5f));
             face1.SetMaterial(upFaceMat);
             face2.SetMaterial(downFaceMat);
-            upFaceMat?.MapPlane(face1);
-            downFaceMat?.MapPlane(face2);
+            face1 = MaterialsUtils.MapPlane(face1);
+            face2 = MaterialsUtils.MapPlane(face2);
             baseCyl.SetMaterial(cylinderMat);
-            baseCylOuter.SetMaterial(cylinderMat);
-            cylinderMat?.MapCylinder(baseCyl);
-            cylinderMat?.MapCylinder(baseCylOuter);
+            baseCylOuter?.SetMaterial(cylinderMat);
+            baseCyl = MaterialsUtils.MapCylinderCoordinates(baseCyl);
+            if (baseCylOuter != null)
+                baseCylOuter = MaterialsUtils.MapCylinderCoordinates(baseCylOuter);
             if (surface)
             {
                 return face1;
             }
-            return baseCyl + face1 + face2 + baseCylOuter;
+            if (baseCylOuter != null)
+                return baseCyl + face1 + face2 + baseCylOuter;
+            else
+                return baseCyl + face1 + face2;
         }
     
     }

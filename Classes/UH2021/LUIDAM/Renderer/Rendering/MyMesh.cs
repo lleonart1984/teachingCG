@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using Renderer;
 
 namespace Rendering
 {
@@ -33,7 +34,62 @@ namespace Rendering
             return mesh.Transform(s);
         }
 
+        /// <summary>
+        /// Applies the given material to all vertex in Mesh
+        /// </summary>
+        /// <param name="material"></param>
+        public static void SetMaterial<V>(this Mesh<V> mesh, IMaterial material) where V : struct, IVertex<V>
+        {
+            mesh.Materials = new IMaterial[] { material };
+            mesh.MaterialsSeparators = new int[] { mesh.Vertices.Length };
+        }
 
+        /// <summary>
+        /// Get the material corresponding to the vertex in <paramref name="vertexIndex"/>
+        /// </summary>
+        /// <typeparam name="V"></typeparam>
+        /// <param name="mesh"></param>
+        /// <param name="vertexIndex"></param>
+        /// <returns></returns>
+        public static IMaterial GetVertexMaterial<V>(this Mesh<V> mesh, int vertexIndex) where V : struct, IVertex<V>
+        {
+            for (int i = 0; i < mesh.MaterialsSeparators.Length; i++)
+            {
+                if (mesh.MaterialsSeparators[i] <= vertexIndex)
+                    return mesh.Materials[i];
+            }
+            throw new IndexOutOfRangeException();
+        }
+
+        /// <summary>
+        /// Extract submeshes from <paramref name="mesh"/> that has the same materials. 
+        /// </summary>
+        /// <typeparam name="V"></typeparam>
+        /// <param name="mesh"></param>
+        /// <returns></returns>
+        public static IEnumerable<Mesh<V>> MaterialDecompose<V>(this Mesh<V> mesh) where V : struct, IVertex<V>
+        {
+            List<Mesh<V>> meshMaterials = new List<Mesh<V>>();
+            int initVertexIndex = 0;
+            int initIndex = 0;
+            int topologyIndexPerVertex = mesh.Topology == Topology.Triangles ? 3 : mesh.Topology == Topology.Lines ? 2 : mesh.Topology == Topology.Points ? 1 : throw new NotImplementedException(); 
+            for (int i = 0; i < mesh.MaterialsSeparators.Length; i++)
+            {
+                var lastMaterialIndex = mesh.MaterialsSeparators[i];
+                var indexAmount = mesh.Indices.Where(x => initVertexIndex <= x && x < lastMaterialIndex).Count();
+                var vertexAmount = lastMaterialIndex - initVertexIndex;
+                var indexes = new int[indexAmount];
+                var vertex = new V[vertexAmount];
+
+                Array.Copy(mesh.Indices, initIndex, indexes, 0, indexes.Length);
+                Array.Copy(mesh.Vertices, initVertexIndex, vertex, 0, vertex.Length);
+                indexes = indexes.Select(x => x - initVertexIndex).ToArray();
+                meshMaterials.Add(new Mesh<V>(vertex, indexes, mesh.Materials[i]));
+                initVertexIndex += vertexAmount;
+                initIndex += indexAmount;
+            }
+            return meshMaterials;
+        }
     }
 
     public class MyManifold<V> where V : struct, IVertex<V>

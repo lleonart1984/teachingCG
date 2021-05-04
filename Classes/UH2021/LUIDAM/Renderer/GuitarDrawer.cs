@@ -108,7 +108,7 @@ namespace Renderer
             model = model.ApplyTransforms(Transforms.Identity
                                          ,Transforms.Translate(1, 0, .8f)
                                          )
-                            .Weld();
+                            ;
 
             model.ComputeNormals();
             
@@ -122,19 +122,37 @@ namespace Renderer
             var floor = Manifold<T>.Surface(4, 4, (x, z) => float3(2 * x, 0, 2 * z));
             wall = (wall + wall2).ApplyTransforms(Transforms.Translate(0,0,1.06f));
             
+            var wallBuilder = new WallsBuilder<T>();
+            GuitarBuilder<T>.AddColorToMesh(wallBuilder.FloorColor, floor);
+            GuitarBuilder<T>.AddColorToMesh(wallBuilder.WallColor, wall);
+
+            wall = wallBuilder.WallMesh();
+            floor = wallBuilder.FloorMesh();
+
             wall.ComputeNormals();
             floor.ComputeNormals();
-            GuitarBuilder<T>.AddColorToMesh(new WallsBuilder().FloorColor, floor);
-            GuitarBuilder<T>.AddColorToMesh(new WallsBuilder().WallColor, wall);
+            
             return wall + floor;
         }
 
         public static void CreateGuitarMeshScene(Scene<T, MyMaterial<T>> scene, float4x4 worldTransformation)
         {
             var model = CreateGuitarMesh();
-            scene.Add(model.AsRaycast(), LoadMaterialFromFile("guitar_texture.material", 32, 0.9f), worldTransformation);
+            var meshes = MyMeshTools.MaterialDecompose(model);
+            var mat = LoadMaterialFromFile("guitar_texture.material", 32, 0.9f);
+            foreach (var mesh in meshes)
+            {
+                scene.Add(mesh.AsRaycast(), (MyMaterial<T>)mesh.Materials[0], worldTransformation);
+            }
+            //scene.Add(model.AsRaycast(), LoadMaterialFromFile("guitar_texture.material", 32, 0.9f), worldTransformation);
+            
             var model2 = CreateWalls();
-            scene.Add(model2.AsRaycast(), LoadMaterialFromFile("guitar_texture.material", 32, 0.9f), worldTransformation);
+            var meshes2 = MyMeshTools.MaterialDecompose(model2);
+            foreach (var mesh in meshes2)
+            {
+                scene.Add(mesh.AsRaycast(), (MyMaterial<T>)mesh.Materials[0], worldTransformation);
+            }
+            //scene.Add(model2.AsRaycast(), LoadMaterialFromFile("guitar_texture.material", 32, 0.9f), worldTransformation);
         }
 
         public static void GuitarCSGRaycast(Texture2D texture, float4x4 worldTransformation)

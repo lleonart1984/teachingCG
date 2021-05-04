@@ -77,38 +77,31 @@ namespace Renderer
 
         public float3 EvalBRDF(T surfel, float3 wout, float3 win)
         {
+            if (Diffuse == null) // TODO Remove ONLY FOR TESTING
+            {
+                Diffuse = new Texture2D(2, 2);
+                Diffuse.Write(0, 0, float4(1, 0, 0, 1));
+                Diffuse.Write(0, 1, float4(0, 1, 0, 1));
+                Diffuse.Write(1, 0, float4(0, 0, 1, 1));
+                Diffuse.Write(1, 1, float4(0, 1, 1, 1));
+                TextureSampler = new Sampler { Wrap = WrapMode.Repeat };
+                //var c = GuitarDrawer<MyPositionNormalCoordinate>.LoadMaterialFromFile("guitar_texture.material", 32, 0.9f);
+                //Diffuse = c.Diffuse;
+                //Glossyness = c.Glossyness;
+                //TextureSampler = c.TextureSampler;
+                //Specular = c.Specular;
+                //SpecularPower = c.SpecularPower;
+            }
             float3 diffuse = Diffuse.Sample(TextureSampler, surfel.Coordinates).xyz / pi;
             float3 H = normalize(win + wout);
             float3 specular = Specular * pow(max(0, dot(H, surfel.Normal)), SpecularPower) * (SpecularPower + 2) / two_pi;
             return diffuse * (1 - Glossyness) + specular * Glossyness;
         }
 
-        public void MapCylinder<T1>(Mesh<T1> baseCyl) where T1 : struct, IVertex<T1>, ICoordinatesVertex<T1> // TODO
-        {
-            for (int i = 0; i < baseCyl.Vertices.Length; i++)
-            {
-                baseCyl.Vertices[i].Coordinates = float2(5, 5);
-            }
-        }
-
-        public void MapPlane<T1>(Mesh<T1> face) where T1 : struct, IVertex<T1>, ICoordinatesVertex<T1> // TODO
-        {
-            for (int i = 0; i < face.Vertices.Length; i++)
-            {
-                face.Vertices[i].Coordinates = float2(5, 5);
-            }
-        }
     }
 
     public struct NoMaterial : IMaterial
     {
-        public void MapCylinder<T>(Mesh<T> baseCyl) where T : struct, IVertex<T>, ICoordinatesVertex<T>
-        {
-        }
-
-        public void MapPlane<T>(Mesh<T> face) where T : struct, IVertex<T>, ICoordinatesVertex<T>
-        {
-        }
     }
 
     #endregion
@@ -123,6 +116,45 @@ namespace Renderer
     public struct MyShadowRayPayload
     {
         public bool Shadowed;
+    }
+
+    #endregion
+
+    #region Utils
+
+    public static class MaterialsUtils
+    {
+        /// <summary>
+        /// Maps the Mesh vertexes representing a truncated plane in its original axis without transformations to the material
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="face"></param>
+        public static Mesh<T> MapPlane<T>(Mesh<T> face) where T : struct, IVertex<T>, ICoordinatesVertex<T> // TODO
+        {
+            // FOR TESTING ONLY 
+            var clone = face.Clone();
+            for (int i = 0; i < clone.Vertices.Length; i++)
+            {
+                clone.Vertices[i].Coordinates = float2(clone.Vertices[i].Position.x, clone.Vertices[i].Position.y);
+            }
+            return clone;
+        }
+
+        /// <summary>
+        /// Maps the Mesh vertexes representing a truncated cylinder to the material
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="face"></param>
+        public static Mesh<T> MapCylinderCoordinates<T>(Mesh<T> baseCyl) where T : struct, IVertex<T>, ICoordinatesVertex<T> // TODO
+        {
+            // FOR TESTING ONLY 
+            var clone = baseCyl.Clone();
+            for (int i = 0; i < clone.Vertices.Length; i++)
+            {
+                clone.Vertices[i].Coordinates = float2(clone.Vertices[i].Position.x, clone.Vertices[i].Position.y);
+            }
+            return clone;
+        }
     }
 
     #endregion

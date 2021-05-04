@@ -38,18 +38,18 @@ namespace Renderer
        
         #region Materials
 
-        public IMaterial BridgeMaterial => default; // TODO
-        public IMaterial FretMaterial => default; // TODO
-        public IMaterial[] StringMaterials => new IMaterial[] { default, default, default, default, default, default }; // TODO
-        public IMaterial StringCylinderMaterial => default; // TODO
-        public IMaterial BasePinMaterial => default; // TODO
-        public IMaterial HeadPinMaterial => default; // TODO
-        public IMaterial GuitarHoleMaterial => default; // TODO
-        public IMaterial StringHubMaterial => default; // TODO
-        public IMaterial HeadstockMaterial => default; // TODO
-        public IMaterial GuitarBodyFrontMaterial => default; // TODO
-        public IMaterial GuitarBodyBackMaterial => default; // TODO
-        public IMaterial GuitarBodySidesMaterial => default; // TODO
+        public MyMaterial<T> BridgeMaterial => default; // TODO
+        public MyMaterial<T> FretMaterial => default; // TODO
+        public MyMaterial<T>[] StringMaterials => new MyMaterial<T>[] { default, default, default, default, default, default }; // TODO
+        public MyMaterial<T> StringCylinderMaterial => default; // TODO
+        public MyMaterial<T> BasePinMaterial => default; // TODO
+        public MyMaterial<T> HeadPinMaterial => default; // TODO
+        public MyMaterial<T> GuitarHoleMaterial => default; // TODO
+        public MyMaterial<T> StringHubMaterial => default; // TODO
+        public MyMaterial<T> HeadstockMaterial => default; // TODO
+        public MyMaterial<T> GuitarBodyFrontMaterial => default; // TODO
+        public MyMaterial<T> GuitarBodyBackMaterial => default; // TODO
+        public MyMaterial<T> GuitarBodySidesMaterial => default; // TODO
         
         #endregion
 
@@ -254,16 +254,21 @@ namespace Renderer
 
         public Mesh<T> BridgeStringMesh() 
         {
-            var strings = new Mesh<T>();
+            Mesh<T> strings = null;
             var step = BridgeWidth / (StringWidths.Length + 1);
 
             for (int i = 0; i < StringWidths.Length; i++)
             {
-                var cylinder = MeshShapeGenerator<T>.Cylinder((int)(40 * MeshScalar)).ApplyTransforms(Transforms.Translate(0, 0, .5f),
+                var material = StringMaterials[i];
+                var cylinder = MeshShapeGenerator<T>.Cylinder((int)(40 * MeshScalar),upFaceMat:material, downFaceMat:material, cylinderMat:material)
+                                                                          .ApplyTransforms(Transforms.Translate(0, 0, .5f),
                                                                                            Transforms.Scale(StringWidths[i], StringWidths[i], 1),
                                                                                            Transforms.Translate(-BridgeWidth / 2 + step * (i + 1), -StringBridgeSeparation, 0));
                 AddColorToMesh(StringColors[i], cylinder);
-                strings += cylinder;
+                if (strings == null)
+                    strings = cylinder;
+                else
+                    strings += cylinder;
             }
             return strings.ApplyTransforms(Transforms.Scale(1, 1, StringLength));
         }
@@ -287,14 +292,17 @@ namespace Renderer
             var baseBridge = bridge.Min(x => x.Position.z);
             var fretsAmount = 20;
             var step = BridgeLength / fretsAmount;
-            var frets = new Mesh<T>();
+            Mesh<T> frets = null;
             for (int i = 0; i < fretsAmount; i++) // Frets
             {
                 var fret = MeshShapeGenerator<T>.Box((int)(3 * MeshScalar), FretMaterial).ApplyTransforms(Transforms.Translate(0, 0, .5f),
                                                                                             Transforms.Scale(BridgeWidth, 1, BridgeWidth / 30),
                                                                                             Transforms.Scale(1, i == 0 ? StringBridgeSeparation : BridgeWidth / 30, 1),
                                                                                             Transforms.Translate(0, -.5f * BridgeHeight / 2, -baseBridge + step * i)); // This is not the correct fret spacing
-                frets += fret;
+                if (frets == null)
+                    frets = fret;
+                else
+                    frets += fret;
             }
             AddColorToMesh(FretColor, frets);
             return (bridge + bridge2).ApplyTransforms(Transforms.Scale(1, 1, BridgeLength)) + frets;
@@ -339,8 +347,8 @@ namespace Renderer
 
             AddColorToMesh(HeadstockColor, basePiece);
 
-            var stringRollCylinders = new Mesh<T>();
-            var stringPins = new Mesh<T>();
+            Mesh<T> stringRollCylinders = null;
+            Mesh<T> stringPins = null;
             var step = length * zHoleScale / 3.0f;
             for (int i = 0; i < 6; i++)
             {
@@ -357,7 +365,10 @@ namespace Renderer
                 baseCylinder = baseCylinder.ApplyTransforms(Transforms.Translate((i < 3 ? 1 : -1) * 1f * (dx - width*xHoleScale), yTranslate, zTranslate));
 
                 AddColorToMesh(BaseCylinderColor, baseCylinder);
-                stringRollCylinders += baseCylinder;
+                if (stringRollCylinders == null)
+                    stringRollCylinders = baseCylinder;
+                else
+                    stringRollCylinders += baseCylinder;
 
                 var xPinScale = xBaseCylinderScale / 2;
                 var yPinScale = height * .4f;
@@ -392,7 +403,10 @@ namespace Renderer
 
                 pin = pin.ApplyTransforms(Transforms.Translate((i < 3 ? 1 : -1) * (width / 2 + xPinScale / 2), yTranslate, zTranslate));
 
-                stringPins += pin;
+                if (stringPins == null)
+                    stringPins = pin;
+                else
+                    stringPins += pin;
             }
 
             basePiece += stringRollCylinders + stringPins;
