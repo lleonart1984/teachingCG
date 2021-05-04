@@ -4,6 +4,7 @@ using Rendering;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 
 namespace Renderer
 {
@@ -63,7 +64,7 @@ namespace Renderer
 
     #region Materials
 
-    public struct MyMaterial<T> where T : struct, INormalVertex<T>, ICoordinatesVertex<T> 
+    public struct MyMaterial<T> : IMaterial where T : struct, INormalVertex<T>, ICoordinatesVertex<T> 
     {
         public Texture2D Diffuse;
 
@@ -81,17 +82,39 @@ namespace Renderer
             float3 specular = Specular * pow(max(0, dot(H, surfel.Normal)), SpecularPower) * (SpecularPower + 2) / two_pi;
             return diffuse * (1 - Glossyness) + specular * Glossyness;
         }
+
+        public void MapCylinder<T1>(Mesh<T1> baseCyl) where T1 : struct, IVertex<T1>, ICoordinatesVertex<T1> // TODO
+        {
+            for (int i = 0; i < baseCyl.Vertices.Length; i++)
+            {
+                baseCyl.Vertices[i].Coordinates = float2(5, 5);
+            }
+        }
+
+        public void MapPlane<T1>(Mesh<T1> face) where T1 : struct, IVertex<T1>, ICoordinatesVertex<T1> // TODO
+        {
+            for (int i = 0; i < face.Vertices.Length; i++)
+            {
+                face.Vertices[i].Coordinates = float2(5, 5);
+            }
+        }
     }
 
-    public struct NoMaterial
+    public struct NoMaterial : IMaterial
     {
+        public void MapCylinder<T>(Mesh<T> baseCyl) where T : struct, IVertex<T>, ICoordinatesVertex<T>
+        {
+        }
 
+        public void MapPlane<T>(Mesh<T> face) where T : struct, IVertex<T>, ICoordinatesVertex<T>
+        {
+        }
     }
 
     #endregion
 
     #region RayPayloads
-    
+
     public struct DefaultRayPayload
     {
         public float3 Color;

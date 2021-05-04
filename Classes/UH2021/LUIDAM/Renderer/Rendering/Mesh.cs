@@ -1,4 +1,5 @@
 ﻿using GMath;
+using Renderer;
 using Rendering;
 using System;
 using System.Collections;
@@ -32,6 +33,17 @@ namespace Rendering
         public Topology Topology { get; private set; }
 
         /// <summary>
+        /// Gets or sets the Mesh material
+        /// </summary>
+        public IMaterial[] Materials { get; set; }
+
+        /// <summary>
+        /// Index that separates vertex Materials in case of union
+        /// MaterialsSeparators[i] = last position + 1 of material i
+        /// </summary>
+        public int[] MaterialsSeparators { get; set; }
+
+        /// <summary>
         /// Creates a mesh object using vertices, indices and the desired topology.
         /// </summary>
         public Mesh (V[] vertices, int[] indices, Topology topology = Topology.Triangles)
@@ -39,13 +51,20 @@ namespace Rendering
             this.Vertices = vertices;
             this.Indices = indices;
             this.Topology = topology;
-         
+            this.Materials = new IMaterial[0];
+            this.MaterialsSeparators = new int[0];
+
             if (Vertices.Any())
                 BoundBox = (float3(Vertices.Max(x => x.Position.x), Vertices.Max(x => x.Position.y), Vertices.Max(x => x.Position.z)),
                             float3(Vertices.Min(x => x.Position.x), Vertices.Min(x => x.Position.y), Vertices.Min(x => x.Position.z)));
         }
 
-        public Mesh() : this(new V[] { }, new int[] { })
+        public Mesh (V[] vertices, int[] indices, IMaterial material, Topology topology = Topology.Triangles) : this(vertices, indices, topology)
+        {
+            SetMaterial(material);
+        }
+
+        public Mesh() : this(new V[] { }, new int[] { }, default)
         {
         }
 
@@ -57,7 +76,12 @@ namespace Rendering
         {
             V[] newVertices = Vertices.Clone() as V[];
             int[] newIndices = Indices.Clone() as int[];
-            return new Mesh<V>(newVertices, newIndices, this.Topology);
+            IMaterial[] newMaterials = Materials.Clone() as IMaterial[];
+            int[] newMaterialSeparators = MaterialsSeparators.Clone() as int[];
+            var mesh = new Mesh<V>(newVertices, newIndices, this.Topology);
+            mesh.Materials = newMaterials;
+            mesh.MaterialsSeparators = newMaterialSeparators;
+            return mesh;
         }
 
         public IEnumerator<V> GetEnumerator()
@@ -70,10 +94,35 @@ namespace Rendering
             return GetEnumerator();
         }
 
+        public IMaterial GetVertexMaterial(int vertexIndex)
+        {
+            for (int i = 0; i < MaterialsSeparators.Length; i++)
+            {
+                if (MaterialsSeparators[i] <= vertexIndex)
+                    return Materials[i];
+            }
+            throw new IndexOutOfRangeException();
+        }
+
+        /// <summary>
+        /// Applies the given material to all vertex in Mesh
+        /// </summary>
+        /// <param name="material"></param>
+        public void SetMaterial(IMaterial material)
+        {
+            Materials = new IMaterial[] { material };
+            MaterialsSeparators = new int[] { Vertices.Length - 1 };
+        }
+
         public static Mesh<V> operator +(Mesh<V> a, Mesh<V> b)
         {
-            return new Mesh<V>(a.Vertices.Concat(b.Vertices).ToArray(),
-                               a.Indices.Concat(b.Indices.Select(x => x + a.Vertices.Length)).ToArray());
+            var mesh = new Mesh<V>(a.Vertices.Concat(b.Vertices).ToArray(),
+                                   a.Indices.Concat(b.Indices.Select(x => x + a.Vertices.Length)).ToArray());
+            var newMaterials = a.Materials.Concat(b.Materials).ToArray();
+            var newMaterialsSeparator = a.MaterialsSeparators.Concat(b.MaterialsSeparators.Select(x => x + a.Vertices.Length)).ToArray();
+            mesh.Materials = newMaterials;
+            mesh.MaterialsSeparators = newMaterialsSeparator;
+            return mesh;
         }
 
     }
@@ -89,7 +138,10 @@ namespace Rendering
             for (int i = 0; i < newVertices.Length; i++)
                 newVertices[i] = transform(mesh.Vertices[i]);
 
-            return new Mesh<T>(newVertices, mesh.Indices, mesh.Topology);
+            var mesh2 = new Mesh<T>(newVertices, mesh.Indices, mesh.Topology);
+            mesh2.Materials = mesh.Materials.Clone() as IMaterial[];
+            mesh2.MaterialsSeparators = mesh.MaterialsSeparators.Clone() as int[];
+            return mesh2;
         }
 
         public static Mesh<V> Transform<V>(this Mesh<V> mesh, Func<V, V> transform) where V: struct, IVertex<V>

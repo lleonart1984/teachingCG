@@ -48,10 +48,10 @@ namespace Renderer
             return wall;
         }
     
-        public Mesh<PositionNormal> WallMesh()
+        public Mesh<MyPositionNormalCoordinate> WallMesh()
         {
-            var wall = MeshShapeGenerator<PositionNormal>.Box(30, 30, 2, true, false, false, false, false, false);
-            var floor = MeshShapeGenerator<PositionNormal>.Box(30, 2, 30, false, false, false, true, false, false);
+            var wall = MeshShapeGenerator<MyPositionNormalCoordinate>.Box(30, 30, 2, true, false, false, false, false, false);
+            var floor = MeshShapeGenerator<MyPositionNormalCoordinate>.Box(30, 2, 30, false, false, false, true, false, false);
 
             return (wall + floor);
         }
