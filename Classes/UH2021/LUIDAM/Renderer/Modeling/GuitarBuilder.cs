@@ -38,18 +38,18 @@ namespace Renderer
        
         #region Materials
 
-        public MyMaterial<T> BridgeMaterial => default; // TODO
-        public MyMaterial<T> FretMaterial => default; // TODO
-        public MyMaterial<T>[] StringMaterials => new MyMaterial<T>[] { default, default, default, default, default, default }; // TODO
-        public MyMaterial<T> StringCylinderMaterial => default; // TODO
-        public MyMaterial<T> BasePinMaterial => default; // TODO
-        public MyMaterial<T> HeadPinMaterial => default; // TODO
-        public MyMaterial<T> GuitarHoleMaterial => default; // TODO
-        public MyMaterial<T> StringHubMaterial => default; // TODO
-        public MyMaterial<T> HeadstockMaterial => default; // TODO
-        public MyMaterial<T> GuitarBodyFrontMaterial => default; // TODO
-        public MyMaterial<T> GuitarBodyBackMaterial => default; // TODO
-        public MyMaterial<T> GuitarBodySidesMaterial => default; // TODO
+        public MyMaterial<T> BridgeMaterial => GuitarDrawer<T>.LoadMaterialFromFile("bridge_texture.material", 32, 0.95f); // TODO
+        public MyMaterial<T> FretMaterial => GuitarDrawer<T>.LoadMaterialFromFile("pin_texture.material", 32, 0.89f); // TODO
+        public MyMaterial<T>[] StringMaterials => new MyMaterial<T>[] { FretMaterial, FretMaterial, FretMaterial, StringCylinderMaterial, StringCylinderMaterial, StringCylinderMaterial}; // TODO
+        public MyMaterial<T> StringCylinderMaterial => GuitarDrawer<T>.LoadMaterialFromFile("pin_head_texture.material", 32, 0.95f); // TODO
+        public MyMaterial<T> BasePinMaterial => GuitarDrawer<T>.LoadMaterialFromFile("pin_texture.material", 32, 0.95f); // TODO
+        public MyMaterial<T> HeadPinMaterial => GuitarDrawer<T>.LoadMaterialFromFile("pin_head_texture.material", 32, 0.95f); // TODO
+        public MyMaterial<T> GuitarHoleMaterial => GuitarDrawer<T>.LoadMaterialFromFile("circle_texture.material", 32, 0.95f); // TODO
+        public MyMaterial<T> StringHubMaterial => GuitarDrawer<T>.LoadMaterialFromFile("bridge_texture.material", 32, 0.95f); // TODO
+        public MyMaterial<T> HeadstockMaterial => GuitarDrawer<T>.LoadMaterialFromFile("bridge_texture.material", 32, 0.98f); // TODO
+        public MyMaterial<T> GuitarBodyFrontMaterial => GuitarDrawer<T>.LoadMaterialFromFile("guitar_texture.material", 32, 0.9f); // TODO
+        public MyMaterial<T> GuitarBodyBackMaterial => GuitarDrawer<T>.LoadMaterialFromFile("guitar_texture.material", 32, 0.95f); // TODO
+        public MyMaterial<T> GuitarBodySidesMaterial => GuitarDrawer<T>.LoadMaterialFromFile("bridge_texture.material", 32, 0.975f); // TODO
         
         #endregion
 

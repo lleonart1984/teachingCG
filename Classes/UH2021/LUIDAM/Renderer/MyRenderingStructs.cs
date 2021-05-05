@@ -132,12 +132,22 @@ namespace Renderer
         public static Mesh<T> MapPlane<T>(Mesh<T> face) where T : struct, IVertex<T>, ICoordinatesVertex<T> // TODO
         {
             // FOR TESTING ONLY 
+            var ret = face.Clone();
             var clone = face.Clone();
+            if (Math.Abs(clone.BoundBox.topCorner.x) < 0.00001 && Math.Abs(clone.BoundBox.oppositeCorner.x) < 0.00001)
+            {
+                clone.Transform(Transforms.RotateY(pi / 2));
+            }
+            else if (Math.Abs(clone.BoundBox.topCorner.y) < 0.00001 && Math.Abs(clone.BoundBox.oppositeCorner.y) < 0.00001)
+            {
+                clone.Transform(Transforms.RotateX(pi / 2));
+            }
+            clone.Transform(MyTransforms.ExpandInto(clone.BoundBox.oppositeCorner, clone.BoundBox.topCorner, 1.0f, 1.0f, 1.0f));
             for (int i = 0; i < clone.Vertices.Length; i++)
             {
-                clone.Vertices[i].Coordinates = float2(clone.Vertices[i].Position.x, clone.Vertices[i].Position.y);
+                ret.Vertices[i].Coordinates = float2(Math.Abs(clone.Vertices[i].Position.x), Math.Abs(clone.Vertices[i].Position.y));
             }
-            return clone;
+            return ret;
         }
 
         /// <summary>

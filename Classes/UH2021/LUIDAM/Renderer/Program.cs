@@ -648,9 +648,10 @@ namespace Renderer
             //SimpleRaycast(texture);
             //LitRaycast(texture);
             //RaycastingMesh(texture);
-            //Material mat = CreateMaterialFromRawText("guitar_texture_raw", 32);
-            RaycastingMeshTexture(texture, new Material {  });
-            //GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaycast(texture, Transforms.Identity);
+            //Material mat = CreateMaterialFromRawText(guitar_texture_raw", 32);
+            //RaycastingMeshTexture(texture, mat);
+            //GuitarDrawer<MyPositionNormalCoordinate>.DrawStep = 4;
+            GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaycast(texture, Transforms.Identity);
             //GuitarDrawer.GuitarCSGRaycast(texture, Transforms.Identity);
 
             texture.Save("test.rbm");
