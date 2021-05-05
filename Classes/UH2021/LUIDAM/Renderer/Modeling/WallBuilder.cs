@@ -9,7 +9,7 @@ using static Renderer.Program;
 
 namespace Renderer
 {
-    class WallsBuilder<T> where T : struct, IVertex<T>, INormalVertex<T>, ICoordinatesVertex<T>
+    class WallsBuilder<T> where T : struct, IVertex<T>, INormalVertex<T>, ICoordinatesVertex<T>, IColorable, ITransformable<T>
     {
         #region Scalars
 
@@ -33,9 +33,9 @@ namespace Renderer
 
         #region Materials
 
-        public MyMaterial<T> WallMaterial => default; //TODO
+        public MyMaterial<T> WallMaterial => GuitarDrawer<T>.LoadMaterialFromFile("wall_texture.material", 32, 0.9f); //TODO
 
-        public MyMaterial<T> FloorMaterial => default; // TODO
+        public MyMaterial<T> FloorMaterial => GuitarDrawer<T>.LoadMaterialFromFile("floor_texture.material", 32, 0.9f); // TODO
 
         #endregion
 
