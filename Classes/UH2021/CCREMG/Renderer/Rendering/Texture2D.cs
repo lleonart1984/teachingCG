@@ -173,9 +173,7 @@ namespace Rendering
             BinaryReader binaryReader = new BinaryReader(fileStream);
             int width = binaryReader.ReadInt32();
             int height = binaryReader.ReadInt32();
-
-            Console.WriteLine("{0} {1}", width, height);
-
+            
             Texture2D texture = new Texture2D(width, height);
 
             for(int py = 0; py < height; py++)
@@ -186,37 +184,39 @@ namespace Rendering
                     float z = binaryReader.ReadSingle();
                     float w = binaryReader.ReadSingle();
 
-                    texture[py, px] = new float4(x, y, z, w);
+                    texture[px, py] = new float4(x, y, z, w);
                 }
             binaryReader.Close();
 
             return texture;
         }
 
-        // public static Texture2D LoadTextureFromJPG(string fileName)
-        // {
-        //     Stream fileStream = System.IO.File.Open(fileName, System.IO.FileMode.Open);
-        //     Bitmap bmp = new Bitmap(3, 4);
+        public static Texture2D LoadTextureFromJPG(string fileName)
+        {
+            Stream fileStream = System.IO.File.Open(fileName, System.IO.FileMode.Open);
+            Image image = Image.FromStream(fileStream);
 
-        //     int width = bmp.Width;
-        //     int height = bmp.Height;
+            Bitmap bmp = new Bitmap(image);
 
-        //     Texture2D texture = new Texture2D(width, height);
+            int width = bmp.Width;
+            int height = bmp.Height;
 
-        //     for(int py = 0; py < height; py++)
-        //         for (int px = 0; px < width; px++)
-        //         {
-        //             Color color = bmp.GetPixel(px, py);
+            Texture2D texture = new Texture2D(width, height);
 
-        //             float r = color.R;
-        //             float g = color.G;
-        //             float b = color.B;
-        //             float a = color.A;
+            for(int py = 0; py < height; py++)
+                for (int px = 0; px < width; px++)
+                {
+                    Color color = bmp.GetPixel(px, py);
 
-        //             texture[py, px] = new float4(r, g, b, a);
-        //         }
+                    float r = color.R;
+                    float g = color.G;
+                    float b = color.B;
+                    float a = color.A;
 
-        //     return texture;
-        // }
+                    texture[px, py] = new float4(r/255, g/255, b/255, a/255);
+                }
+
+            return texture;
+        }
     }
 }
