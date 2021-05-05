@@ -103,44 +103,22 @@ namespace Renderer
             Console.WriteLine("Done.");
         }
 
-
-        public delegate float3 BRDF(float3 N, float3 Lin, float3 Lout);
-
-        static BRDF LambertBRDF(float3 diffuse)
-        {
-            return (N, Lin, Lout) => diffuse / pi;
-        }
-
-        static BRDF BlinnBRDF(float3 specular, float power)
-        {
-            return (N, Lin, Lout) =>
-            {
-                float3 H = normalize(Lin + Lout);
-                return specular * pow(max(0, dot(H, N)), power) * (power + 2) / two_pi;
-            };
-        }
-
-        static BRDF Mixture(BRDF f1, BRDF f2, float alpha)
-        {
-            return (N, Lin, Lout) => lerp(f1(N, Lin, Lout), f2(N, Lin, Lout), alpha);
-        }
-
         static void CreateMeshScene(Scene<PositionNormalCoordinate, Material> scene)
         {
-            string rugose_texture_t = "texture.rbm";
+            string rugose_texture_t = "texture.jpg";
 
-            // Texture2D rugose_texture = Texture2DFunctions.LoadTextureFromRBM(rugose_texture_t);
+            Texture2D rugose_texture = Texture2DFunctions.LoadTextureFromJPG(rugose_texture_t);
 
-            Texture2D planeTexture = new Texture2D(2, 2);
-            planeTexture.Write(0, 0, float4(1, 0, 0, 1)); // red cell
-            planeTexture.Write(0, 1, float4(1, 1, 0, 1)); // yellow cell
-            planeTexture.Write(1, 0, float4(0, 1, 0, 1)); // green cell
-            planeTexture.Write(1, 1, float4(0, 0, 1, 1)); // blue cell
+            Texture2D tableTexture = new Texture2D(1, 1);
+            tableTexture.Write(0, 0, float4(1f, 1f, 0.8f, 1));
 
-            scene.Add(Raycasting.PlaneXZ.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(a.x, a.z), Normal = float3(0, 1, 0) }), new Material { Diffuse = planeTexture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat } },
+            scene.Add(Raycasting.PlaneXZ.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(a.x, a.z), Normal = float3(0, 1, 0) }), new Material { Diffuse = tableTexture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat }, Specular = float3(1,1,1), SpecularPower = 50, Glossyness = 0.2f },
             Transforms.Identity); //Table
 
-            scene.Add(Raycasting.PlaneYZ.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(a.y, a.z), Normal = float3(-1, 0, 0) }), new Material { Diffuse = planeTexture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat } },
+            Texture2D wallTexture = new Texture2D(1, 1);
+            wallTexture.Write(0, 0, float4(0.86f, 0.76f, 0.75f, 1));
+
+            scene.Add(Raycasting.PlaneYZ.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(a.y, a.z), Normal = float3(-1, 0, 0) }), new Material { Diffuse = wallTexture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat } },
             mul(Transforms.Translate(10f, 0, 0), Transforms.Identity)); //Wall
 
 
@@ -151,10 +129,14 @@ namespace Renderer
             Mesh<PositionNormalCoordinate> metal_model = CoffeeMaker.GetMetalMesh();
             metal_model.ComputeNormals();
 
+            Texture2D plasticTexture = new Texture2D(1, 1);
+            plasticTexture.Write(0, 0, float4(0.1f, 0.1f, 0.1f, 1));
 
+            Texture2D metalTexture = new Texture2D(1, 1);
+            metalTexture.Write(0, 0, float4(1f, 1f, 1f, 1));
 
-            scene.Add(plastic_model.AsRaycast(), new Material { Diffuse = planeTexture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat } }, Transforms.Identity);
-            scene.Add(metal_model.AsRaycast(), new Material { Diffuse = planeTexture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat } }, Transforms.Identity);
+            scene.Add(plastic_model.AsRaycast(), new Material { Diffuse = plasticTexture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat } }, Transforms.Identity);
+            scene.Add(metal_model.AsRaycast(), new Material { Diffuse = rugose_texture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat }, Specular = float3(0.5f,0.5f,0.5f), SpecularPower = 1f, Glossyness = 0.95f}, Transforms.Identity);
 
         }
 
@@ -164,7 +146,7 @@ namespace Renderer
             float3 CameraPosition = float3(-12f, 6.6f, 0);
             // float3(-15, 13f, 25), ligth in the right side
             // float3(-15, 13f, 0), Light in the front
-            float3[] Lights = {float3(-15, 13f, 25), float3(-15, 13f, -15)};
+            float3[] Lights = {float3(-15, 13f, 25), float3(-15, 17f, -15)};
             float3 LightIntensity = float3(1, 1, 1) * 1500;
 
             // View and projection matrices
@@ -173,14 +155,6 @@ namespace Renderer
 
             Scene<PositionNormalCoordinate, Material> scene = new Scene<PositionNormalCoordinate, Material>();
             CreateMeshScene(scene);
-
-            BRDF[] brdfs =
-            {
-                Mixture(LambertBRDF(float3(1f, 1f, 0.8f)), BlinnBRDF(float3(1,1,1), 50), 0.2f), //table
-                LambertBRDF(float3(0.86f, 0.76f, 0.75f)), //wall
-                LambertBRDF(float3(0.1f, 0.1f, 0.1f)), //coffee_maker_plastic
-                Mixture(LambertBRDF(float3(1f, 1f, 1f)), BlinnBRDF(float3(1,1,1), 70), 0.3f), //coffee_maker_metal
-            };
 
             // Raycaster to trace rays and check for shadow rays.
             Raytracer<ShadowRayPayload, PositionNormalCoordinate, Material> shadower = new Raytracer<ShadowRayPayload, PositionNormalCoordinate, Material>();
@@ -219,7 +193,6 @@ namespace Renderer
 
                     float3 Intensity = (shadow.Shadowed ? 0.0f : 1.0f) * LightIntensity / (d * d);
 
-                    // payload.Color = brdfs[context.GeometryIndex](N, L, V) * Intensity * lambertFactor;
                     payload.Color = material.EvalBRDF(attribute, V, L) * Intensity * lambertFactor;
                 };
                 raycaster.OnMiss += delegate (IRaycastContext context, ref MyRayPayload payload)
