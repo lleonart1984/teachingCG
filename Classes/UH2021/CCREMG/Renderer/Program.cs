@@ -8,30 +8,34 @@ namespace Renderer
 {
     class Program
     {
-        struct PositionNormal : INormalVertex<PositionNormal>
+        public struct PositionNormalCoordinate : INormalVertex<PositionNormalCoordinate>, ICoordinatesVertex<PositionNormalCoordinate>
         {
             public float3 Position { get; set; }
             public float3 Normal { get; set; }
 
-            public PositionNormal Add(PositionNormal other)
+            public float2 Coordinates { get; set; }
+
+            public PositionNormalCoordinate Add(PositionNormalCoordinate other)
             {
-                return new PositionNormal
+                return new PositionNormalCoordinate
                 {
                     Position = this.Position + other.Position,
-                    Normal = this.Normal + other.Normal
+                    Normal = this.Normal + other.Normal,
+                    Coordinates = this.Coordinates + other.Coordinates
                 };
             }
 
-            public PositionNormal Mul(float s)
+            public PositionNormalCoordinate Mul(float s)
             {
-                return new PositionNormal
+                return new PositionNormalCoordinate
                 {
                     Position = this.Position * s,
-                    Normal = this.Normal * s
+                    Normal = this.Normal * s,
+                    Coordinates = this.Coordinates * s
                 };
             }
 
-            public PositionNormal Transform(float4x4 matrix)
+            public PositionNormalCoordinate Transform(float4x4 matrix)
             {
                 float4 p = float4(Position, 1);
                 p = mul(p, matrix);
@@ -39,14 +43,34 @@ namespace Renderer
                 float4 n = float4(Normal, 0);
                 n = mul(n, matrix);
 
-                return new PositionNormal
+                return new PositionNormalCoordinate
                 {
                     Position = p.xyz / p.w,
-                    Normal = n.xyz
+                    Normal = n.xyz,
+                    Coordinates = Coordinates
                 };
             }
         }
 
+        public struct Material
+        {
+            public Texture2D Diffuse;
+
+            public float3 Specular;
+            public float SpecularPower;
+
+            public float Glossyness;
+
+            public Sampler TextureSampler;
+
+            public float3 EvalBRDF(PositionNormalCoordinate surfel, float3 wout, float3 win)
+            {
+                float3 diffuse = Diffuse.Sample(TextureSampler, surfel.Coordinates).xyz / pi;
+                float3 H = normalize(win + wout);
+                float3 specular = Specular * pow(max(0, dot(H, surfel.Normal)), SpecularPower) * (SpecularPower + 2) / two_pi;
+                return diffuse * (1 - Glossyness) + specular * Glossyness;
+            }
+        }
         /// <summary>
         /// Payload used to pick a color from a hit intersection
         /// </summary>
@@ -101,37 +125,36 @@ namespace Renderer
             return (N, Lin, Lout) => lerp(f1(N, Lin, Lout), f2(N, Lin, Lout), alpha);
         }
 
-        // static Mesh<PositionNormal> CreateTableModel()
-        // {
-        //     // var model = Manifold<PositionNormal>.Surface(5, 5, (u, v) => 2*float3(2 * u - 1, 0, 2 * v - 1)).Weld();
-        //     // model.ComputeNormals();
-        //     // return model;
-
-        //     CoffeeMakerModel<PositionNormal> CoffeeMaker = new CoffeeMakerModel<PositionNormal>();
-        //     Mesh<PositionNormal> model = CoffeeMaker.TableMesh();
-        //     model.ComputeNormals();
-        //     return model;
-        // }
-
-        static void CreateMeshScene(Scene<PositionNormal> scene)
+        static void CreateMeshScene(Scene<PositionNormalCoordinate, Material> scene)
         {
-            scene.Add(Raycasting.PlaneXZ.AttributesMap(a => new PositionNormal { Position = a, Normal = float3(0, 1, 0) }),
+            string rugose_texture_t = "texture.rbm";
+
+            // Texture2D rugose_texture = Texture2DFunctions.LoadTextureFromRBM(rugose_texture_t);
+
+            Texture2D planeTexture = new Texture2D(2, 2);
+            planeTexture.Write(0, 0, float4(1, 0, 0, 1)); // red cell
+            planeTexture.Write(0, 1, float4(1, 1, 0, 1)); // yellow cell
+            planeTexture.Write(1, 0, float4(0, 1, 0, 1)); // green cell
+            planeTexture.Write(1, 1, float4(0, 0, 1, 1)); // blue cell
+
+            scene.Add(Raycasting.PlaneXZ.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(a.x, a.z), Normal = float3(0, 1, 0) }), new Material { Diffuse = planeTexture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat } },
             Transforms.Identity); //Table
 
-            scene.Add(Raycasting.PlaneYZ.AttributesMap(a => new PositionNormal { Position = a, Normal = float3(-1, 0, 0) }),
+            scene.Add(Raycasting.PlaneYZ.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(a.y, a.z), Normal = float3(-1, 0, 0) }), new Material { Diffuse = planeTexture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat } },
             mul(Transforms.Translate(10f, 0, 0), Transforms.Identity)); //Wall
 
 
-            CoffeeMakerModel<PositionNormal> CoffeeMaker = new CoffeeMakerModel<PositionNormal>();
-            Mesh<PositionNormal> plastic_model = CoffeeMaker.GetPlasticMesh();
+            CoffeeMakerModel<PositionNormalCoordinate> CoffeeMaker = new CoffeeMakerModel<PositionNormalCoordinate>();
+            Mesh<PositionNormalCoordinate> plastic_model = CoffeeMaker.GetPlasticMesh();
             plastic_model.ComputeNormals();
 
-            Mesh<PositionNormal> metal_model = CoffeeMaker.GetMetalMesh();
+            Mesh<PositionNormalCoordinate> metal_model = CoffeeMaker.GetMetalMesh();
             metal_model.ComputeNormals();
 
 
-            scene.Add(plastic_model.AsRaycast(), Transforms.Identity);
-            scene.Add(metal_model.AsRaycast(), Transforms.Identity);
+
+            scene.Add(plastic_model.AsRaycast(), new Material { Diffuse = planeTexture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat } }, Transforms.Identity);
+            scene.Add(metal_model.AsRaycast(), new Material { Diffuse = planeTexture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat } }, Transforms.Identity);
 
         }
 
@@ -141,14 +164,14 @@ namespace Renderer
             float3 CameraPosition = float3(-12f, 6.6f, 0);
             // float3(-15, 13f, 25), ligth in the right side
             // float3(-15, 13f, 0), Light in the front
-            float3[] Lights = {float3(-15, 13f, 25), float3(-15, 5, -15)};
+            float3[] Lights = {float3(-15, 13f, 25), float3(-15, 13f, -15)};
             float3 LightIntensity = float3(1, 1, 1) * 1500;
 
             // View and projection matrices
             float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(0, 4, 0), float3(0, 1, 0));
             float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 20);
 
-            Scene<PositionNormal> scene = new Scene<PositionNormal>();
+            Scene<PositionNormalCoordinate, Material> scene = new Scene<PositionNormalCoordinate, Material>();
             CreateMeshScene(scene);
 
             BRDF[] brdfs =
@@ -160,8 +183,8 @@ namespace Renderer
             };
 
             // Raycaster to trace rays and check for shadow rays.
-            Raytracer<ShadowRayPayload, PositionNormal> shadower = new Raytracer<ShadowRayPayload, PositionNormal>();
-            shadower.OnAnyHit += delegate (IRaycastContext context, PositionNormal attribute, ref ShadowRayPayload payload)
+            Raytracer<ShadowRayPayload, PositionNormalCoordinate, Material> shadower = new Raytracer<ShadowRayPayload, PositionNormalCoordinate, Material>();
+            shadower.OnAnyHit += delegate (IRaycastContext context, PositionNormalCoordinate attribute, Material material, ref ShadowRayPayload payload)
             {
                 // If any object is found in ray-path to the light, the ray is shadowed.
                 payload.Shadowed = true;
@@ -169,12 +192,12 @@ namespace Renderer
                 return HitResult.Stop;
             };
 
-            List<Raytracer<MyRayPayload, PositionNormal>> raycasters = new List<Raytracer<MyRayPayload, PositionNormal>>();
+            List<Raytracer<MyRayPayload, PositionNormalCoordinate, Material>> raycasters = new List<Raytracer<MyRayPayload, PositionNormalCoordinate, Material>>();
             foreach(var LightPosition in Lights)
             {
                 // Raycaster to trace rays and lit closest surfaces
-                Raytracer<MyRayPayload, PositionNormal> raycaster = new Raytracer<MyRayPayload, PositionNormal>();
-                raycaster.OnClosestHit += delegate (IRaycastContext context, PositionNormal attribute, ref MyRayPayload payload)
+                Raytracer<MyRayPayload, PositionNormalCoordinate, Material> raycaster = new Raytracer<MyRayPayload, PositionNormalCoordinate, Material>();
+                raycaster.OnClosestHit += delegate (IRaycastContext context, PositionNormalCoordinate attribute, Material material, ref MyRayPayload payload)
                 {
                     // Move geometry attribute to world space
                     attribute = attribute.Transform(context.FromGeometryToWorld);
@@ -196,7 +219,8 @@ namespace Renderer
 
                     float3 Intensity = (shadow.Shadowed ? 0.0f : 1.0f) * LightIntensity / (d * d);
 
-                    payload.Color = brdfs[context.GeometryIndex](N, L, V) * Intensity * lambertFactor;
+                    // payload.Color = brdfs[context.GeometryIndex](N, L, V) * Intensity * lambertFactor;
+                    payload.Color = material.EvalBRDF(attribute, V, L) * Intensity * lambertFactor;
                 };
                 raycaster.OnMiss += delegate (IRaycastContext context, ref MyRayPayload payload)
                 {

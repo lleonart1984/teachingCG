@@ -7,7 +7,7 @@ using static GMath.Gfx;
 
 namespace Renderer
 {
-    public class CoffeeMakerModel<V> where V: struct, IVertex<V>
+    public class CoffeeMakerModel<V> where V: struct, ICoordinatesVertex<V>
     {
         private static int sides = 10;
         private static float h_base = 3;
@@ -33,15 +33,15 @@ namespace Renderer
                 else
                     handlePoints2.Add(handlePoints[i]);
             }
-            Mesh<V> handle_mesh = CoffeMakerSection_Mesh(handlePoints1, handlePoints2);
+            Mesh<V> handle_mesh = CoffeMakerSection_Mesh(handlePoints2, handlePoints1);
 
-            handle_mesh = handle_mesh.Add_Mesh(AsaLateralMesh(handlePoints1));
-            handle_mesh = handle_mesh.Add_Mesh(AsaLateralMesh(handlePoints2));
+            handle_mesh = handle_mesh.Add_Mesh(AsaLateralMesh(handlePoints1, 0));
+            handle_mesh = handle_mesh.Add_Mesh(AsaLateralMesh(handlePoints2, 1));
 
             List<float3> buttonCositaPoints = PoliedroXZ(sides, float3(0, altura_cosita, 0), 0.3f);
             List<float3> topCositaPoints = PoliedroXZ(sides, float3(0, altura_cosita + h_cosita, 0), 0.4f);
             Mesh<V> cosita_mesh = CoffeMakerSection_Mesh(buttonCositaPoints, topCositaPoints);
-            Mesh<V> top_cosita_mesh = Mesh_Poliedro(topCositaPoints, float3(0, altura_cosita + h_cosita, 0));
+            Mesh<V> top_cosita_mesh = Mesh_Poliedro(topCositaPoints, float3(0, altura_cosita + h_cosita, 0), 0);
             cosita_mesh = cosita_mesh.Add_Mesh(top_cosita_mesh);
 
             Mesh<V> up_mesh = handle_mesh.Add_Mesh(cosita_mesh);
@@ -58,7 +58,7 @@ namespace Renderer
             List<float3> buttonBasePoints = PoliedroXZ(sides, float3(0, 0, 0), 2);
             List<float3> topBasePoints = PoliedroXZ(sides, float3(0, altura_base + h_base, 0), 1.3f);
             Mesh<V> coffee_base_mesh = CoffeMakerSection_Mesh(buttonBasePoints, topBasePoints);
-            Mesh<V> base_mesh = Mesh_Poliedro(buttonBasePoints, float3(0, 0, 0));
+            Mesh<V> base_mesh = Mesh_Poliedro(buttonBasePoints, float3(0, 0, 0), 1);
 
             List<float3> buttonUnionPoints = PoliedroXZ(sides * 10, float3(0, altura_union, 0), 1.35f);
             List<float3> topUnionPoints = PoliedroXZ(sides * 10, float3(0, altura_union + h_union, 0), 1.35f);
@@ -81,30 +81,39 @@ namespace Renderer
             return r_model;
         }
 
-        private static Mesh<V> Mesh_Poliedro(List<float3> poli, float3 center)
+        private static Mesh<V> Mesh_Poliedro(List<float3> poli, float3 center, int normal_side = 0)
         {
             V[] vertices = new V[poli.Count + 1];
-            int[] indices = new int[3 * poli.Count];
+            int[] indices = new int[3 * (poli.Count - 1)];
 
-            vertices[0] = new V{Position = center};
+            vertices[0] = new V{Position = center, Coordinates = float2(0.5f, 0.5f)};
+
+            float radio = Gfx.length(center - poli[0]);
+            radio *= 2f;
 
             int j = 0;
             int i = 1;
             for(; i < poli.Count; i++)
             {
-                vertices[i] = new V{Position = poli[i - 1]};
+                vertices[i] = new V{Position = poli[i - 1], Coordinates = float2((poli[i - 1].x - center.x) / radio + 0.5f, (poli[i - 1].z - center.z) / radio + 0.5f)};
 
-                indices[j] = 0;
-                indices[j+1] = i;
-                indices[j+2] = i + 1;
+                if(normal_side == 0)
+                {
+                    indices[j] = 0;
+                    indices[j+1] = i + 1;
+                    indices[j+2] = i;
+                }
+
+                if(normal_side == 1)
+                {
+                    indices[j] = 0 ;
+                    indices[j+1] = i;
+                    indices[j+2] = i + 1;
+                }
 
                 j = j + 3;
             }
-            vertices[i] = new V{Position = poli[i - 1]};
-
-            indices[j] = 0;
-            indices[j+1] = i;
-            indices[j+2] = (i + 1) % poli.Count;
+            vertices[i] = new V{Position = poli[i - 1], Coordinates = float2((poli[i - 1].x - center.x) / radio + 0.5f, (poli[i - 1].z - center.z) / radio + 0.5f)};
 
             return new Mesh<V>(vertices, indices);
         }
@@ -112,14 +121,23 @@ namespace Renderer
         private static Mesh<V> CoffeMakerSection_Mesh(List<float3> baseF, List<float3> topF)
         {
             V[] vertices = new V[baseF.Count + topF.Count];
-            int[] indices = new int[baseF.Count * 3 * 2];
+            int[] indices = new int[(baseF.Count - 1) * 3 * 2];
+
+            float[] side_len = new float[baseF.Count];
+            float total_length = 0f;
+            for(int i = 0; i < side_len.Length - 1; i++)
+            {
+                side_len[i] = total_length;
+                total_length += Gfx.length(baseF[i] - baseF[i + 1]);
+            }
+            side_len[side_len.Length - 1] = total_length;
 
             int j = 0;
             int k = 0;
             for(int i = 0; i < baseF.Count - 1; i++)
             {
-                vertices[j] = new V{Position = baseF[i]};
-                vertices[j+1] = new V{Position = topF[i]};
+                vertices[j] = new V{Position = baseF[i], Coordinates = float2(side_len[i] / total_length, 0f)};
+                vertices[j+1] = new V{Position = topF[i], Coordinates = float2(side_len[i] / total_length, 1f)};
 
                 indices[k] = j;
                 indices[k+1] = j + 1;
@@ -132,15 +150,8 @@ namespace Renderer
                 k += 6;
             }
 
-            vertices[j] = new V{Position = baseF[baseF.Count - 1]};
-            vertices[j+1] = new V{Position = topF[topF.Count - 1]};
-
-            indices[k] = j;
-            indices[k+1] = j + 1;
-            indices[k+2] = 0;
-            indices[k+3] = j + 1;
-            indices[k+4] = 0;
-            indices[k+5] = 1;
+            vertices[j] = new V{Position = baseF[baseF.Count - 1], Coordinates = float2(1f, 0f)};
+            vertices[j+1] = new V{Position = topF[topF.Count - 1], Coordinates = float2(1f, 1f)};
 
             return new Mesh<V>(vertices, indices);
         }
@@ -149,20 +160,23 @@ namespace Renderer
         {
             int n = baseF.Count;
 
-            float3 a = (topF[n - 1] + baseF[n - 1]) / 2;
-            float3 b = (topF[0] + baseF[0]) / 2;
+            float3 a = (topF[n - 2] + baseF[n - 2]) / 2;
+            float3 b = (topF[n - 1] + baseF[n - 1]) / 2;
             float3 q = (b + a) / 2;
-            float3 p = Find(topF[n - 1], topF[0], r, d);
+            float3 p = Find(topF[n - 2], topF[n - 1], r, d);
 
             V[] vertices = new V[baseF.Count + topF.Count + 4];
-            int[] indices = new int[baseF.Count * 3 * 2 + 12];
+            int[] indices = new int[(baseF.Count - 1) * 3 * 2 + 12];
+
+            float side_len = Gfx.length(baseF[0] - baseF[1]);
+            float side_len_total = (baseF.Count - 1) * side_len;
 
             int j = 0;
             int k = 0;
-            for(int i = 0; i < baseF.Count - 1; i++)
+            for(int i = 0; i < baseF.Count - 2; i++)
             {
-                vertices[j] = new V{Position = baseF[i]};
-                vertices[j+1] = new V{Position = topF[i]};
+                vertices[j] = new V{Position = baseF[i], Coordinates = float2(side_len * i / side_len_total, 0f)};
+                vertices[j+1] = new V{Position = topF[i], Coordinates = float2(side_len * i / side_len_total, 1f)};
 
                 indices[k] = j;
                 indices[k+1] = j + 1;
@@ -175,41 +189,45 @@ namespace Renderer
                 k += 6;
             }
 
-            vertices[j] = new V{Position = baseF[baseF.Count - 1]};
-            vertices[j+1] = new V{Position = topF[topF.Count - 1]};
-            vertices[j+2] = new V{Position = a};
+            vertices[j] = new V{Position = baseF[baseF.Count - 2], Coordinates = float2(side_len * (baseF.Count - 2) / side_len_total, 0f)};
+            vertices[j+1] = new V{Position = topF[topF.Count - 2], Coordinates = float2(side_len * (topF.Count - 2) / side_len_total, 1f)};
+            vertices[j+2] = new V{Position = a, Coordinates = float2(side_len * (baseF.Count - 2) / side_len_total, 0.5f)};
+
+            vertices[j+3] = new V{Position = baseF[baseF.Count - 1], Coordinates = float2(1f, 0f)};
+            vertices[j+4] = new V{Position = topF[topF.Count - 1], Coordinates = float2(1f, 1f)};
+            vertices[j+5] = new V{Position = b, Coordinates = float2(1f, 0.5f)};
+
+            vertices[j+6] = new V{Position = q, Coordinates = float2(side_len * (baseF.Count - 2 + 0.5f) / side_len_total, 0.5f)};
+            vertices[j+7] = new V{Position = p, Coordinates = float2(side_len * (baseF.Count - 2 + 0.5f) / side_len_total, 1f)};
 
             indices[k] = j;
             indices[k+1] = j + 2;
-            indices[k+2] = 0;
-            indices[k+3] = j + 2;
-            indices[k+4] = 0;
-            indices[k+5] = j + 3;
+            indices[k+2] = j + 3;
+            indices[k+3] = j + 3;
+            indices[k+4] = j + 2;
+            indices[k+5] = j + 5;
 
-            vertices[j+3] = new V{Position = b};
-            vertices[j+4] = new V{Position = p};
-            vertices[j+5] = new V{Position = q};
 
             k += 6;
             indices[k] = j + 1;
-            indices[k+1] = j + 2;
-            indices[k+2] = j + 5;
-            indices[k+3] = j + 5;
-            indices[k+4] = j + 3;
-            indices[k+5] = 1;
+            indices[k+1] = j + 6;
+            indices[k+2] = j + 2;
+            indices[k+3] = j + 6;
+            indices[k+4] = j + 1;
+            indices[k+5] = j + 7;
 
             k += 6;
-            indices[k] = j + 1;
+            indices[k] = j + 6;
             indices[k+1] = j + 4;
             indices[k+2] = j + 5;
-            indices[k+3] = j + 5;
+            indices[k+3] = j + 7;
             indices[k+4] = j + 4;
-            indices[k+5] = 1;
+            indices[k+5] = j + 6;
 
             return new Mesh<V>(vertices, indices);
         }
 
-        private static Mesh<V> AsaLateralMesh(List<float3>asa)
+        private static Mesh<V> AsaLateralMesh(List<float3>asa, int normal_side = 0)
         {
             int n = asa.Count;
             V[] vertices = new V[n];
@@ -221,53 +239,127 @@ namespace Renderer
                 vertices[i] = new V{Position = asa[i]};
 
             }
-            indices[j] = 0;
-            indices[++j] = 13;
-            indices[++j] = 12;
 
-            indices[++j] = 0;
-            indices[++j] = 12;
-            indices[++j] = 11;
+            float length = 1f;
+            float width = 1f;
 
-            indices[++j] = 0;
-            indices[++j] = 11;
-            indices[++j] = 1;
+            vertices[0].Coordinates = float2(0, 0); //0
+            vertices[1].Coordinates = float2(0, width/3); //1
+            vertices[2].Coordinates = float2(0, 2 * width / 3); //2
+            vertices[3].Coordinates = float2(length/4, width); //3
+            vertices[4].Coordinates = float2(length, width/3); //4
+            vertices[5].Coordinates = float2(5 * length / 6, width / 6); //5
+            vertices[6].Coordinates = float2(4 * length / 6,  width/3); //6
+            vertices[7].Coordinates = float2(length/2, width/2); //7
+            vertices[8].Coordinates = float2(length/4, 2 * width/3); //8
+            vertices[9].Coordinates = float2(length/5, 3 * width/5); //9
+            vertices[10].Coordinates = float2(length/4, 2 * width/5); //10
+            vertices[11].Coordinates = float2(length/5, width/5); //11
+            vertices[12].Coordinates = float2(length/4, width/6); //12
+            vertices[13].Coordinates = float2(length/4, -1 * width/8); //13
+            vertices[14].Coordinates = float2(0, 0); //14
 
-            indices[++j] = 1;
-            indices[++j] = 11;
-            indices[++j] = 10;
+            if(normal_side == 0)
+            {
+                indices[j] = 0;
+                indices[++j] = 13;
+                indices[++j] = 12;
 
-            indices[++j] = 1;
-            indices[++j] = 10;
-            indices[++j] = 9;
+                indices[++j] = 0;
+                indices[++j] = 12;
+                indices[++j] = 11;
 
-            indices[++j] = 1;
-            indices[++j] = 9;
-            indices[++j] = 2;
+                indices[++j] = 0;
+                indices[++j] = 11;
+                indices[++j] = 1;
 
-            indices[++j] = 2;
-            indices[++j] = 9;
-            indices[++j] = 3;
+                indices[++j] = 1;
+                indices[++j] = 11;
+                indices[++j] = 10;
 
-            indices[++j] = 3;
-            indices[++j] = 9;
-            indices[++j] = 8;
+                indices[++j] = 1;
+                indices[++j] = 10;
+                indices[++j] = 9;
 
-            indices[++j] = 3;
-            indices[++j] = 8;
-            indices[++j] = 7;
+                indices[++j] = 1;
+                indices[++j] = 9;
+                indices[++j] = 2;
 
-            indices[++j] = 3;
-            indices[++j] = 7;
-            indices[++j] = 6;
+                indices[++j] = 2;
+                indices[++j] = 9;
+                indices[++j] = 3;
 
-            indices[++j] = 3;
-            indices[++j] = 6;
-            indices[++j] = 4;
+                indices[++j] = 3;
+                indices[++j] = 9;
+                indices[++j] = 8;
 
-            indices[++j] = 4;
-            indices[++j] = 6;
-            indices[++j] = 5;
+                indices[++j] = 3;
+                indices[++j] = 8;
+                indices[++j] = 7;
+
+                indices[++j] = 3;
+                indices[++j] = 7;
+                indices[++j] = 6;
+
+                indices[++j] = 3;
+                indices[++j] = 6;
+                indices[++j] = 4;
+
+                indices[++j] = 4;
+                indices[++j] = 6;
+                indices[++j] = 5;
+            }
+
+            if(normal_side == 1)
+            {
+                indices[j] = 0;
+                indices[++j] = 12;
+                indices[++j] = 13;
+
+                indices[++j] = 0;
+                indices[++j] = 11;
+                indices[++j] = 12;
+
+                indices[++j] = 0;
+                indices[++j] = 1;
+                indices[++j] = 11;
+
+                indices[++j] = 1;
+                indices[++j] = 10;
+                indices[++j] = 11;
+
+                indices[++j] = 1;
+                indices[++j] = 9;
+                indices[++j] = 10;
+
+                indices[++j] = 1;
+                indices[++j] = 2;
+                indices[++j] = 9;
+
+                indices[++j] = 2;
+                indices[++j] = 3;
+                indices[++j] = 9;
+
+                indices[++j] = 3;
+                indices[++j] = 8;
+                indices[++j] = 9;
+
+                indices[++j] = 3;
+                indices[++j] = 7;
+                indices[++j] = 8;
+
+                indices[++j] = 3;
+                indices[++j] = 6;
+                indices[++j] = 7;
+
+                indices[++j] = 3;
+                indices[++j] = 4;
+                indices[++j] = 6;
+
+                indices[++j] = 4;
+                indices[++j] = 5;
+                indices[++j] = 6;
+            }
 
             return new Mesh<V>(vertices, indices);
         }
@@ -314,6 +406,7 @@ namespace Renderer
             {
                 points.Add(centre + float3(radio * (float)Math.Cos(i), 0, radio * (float)Math.Sin(i)));
             }
+            points.Add(points[0]);
 
             return points;
         }
@@ -336,6 +429,7 @@ namespace Renderer
             points.Add(float3(length/5, 0, width/5)); //11
             points.Add(float3(length/4, 0, width/6)); //12
             points.Add(float3(length/4, 0, -1 * width/8)); //13
+            points.Add(float3(0, 0, 0)); //14
 
             int l = points.Count;
             for(int i = 0; i < l; i++)
