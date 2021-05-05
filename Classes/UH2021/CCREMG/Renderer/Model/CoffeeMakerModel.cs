@@ -136,8 +136,8 @@ namespace Renderer
             int k = 0;
             for(int i = 0; i < baseF.Count - 1; i++)
             {
-                vertices[j] = new V{Position = baseF[i], Coordinates = float2(side_len[i] / total_length, 0f)};
-                vertices[j+1] = new V{Position = topF[i], Coordinates = float2(side_len[i] / total_length, 1f)};
+                vertices[j] = new V{Position = baseF[i], Coordinates = float2(1f, side_len[i] / total_length)};
+                vertices[j+1] = new V{Position = topF[i], Coordinates = float2(0f, side_len[i] / total_length)};
 
                 indices[k] = j;
                 indices[k+1] = j + 1;
@@ -150,8 +150,8 @@ namespace Renderer
                 k += 6;
             }
 
-            vertices[j] = new V{Position = baseF[baseF.Count - 1], Coordinates = float2(1f, 0f)};
-            vertices[j+1] = new V{Position = topF[topF.Count - 1], Coordinates = float2(1f, 1f)};
+            vertices[j] = new V{Position = baseF[baseF.Count - 1], Coordinates = float2(1f, 1f)};
+            vertices[j+1] = new V{Position = topF[topF.Count - 1], Coordinates = float2(0f, 1f)};
 
             return new Mesh<V>(vertices, indices);
         }
@@ -175,8 +175,8 @@ namespace Renderer
             int k = 0;
             for(int i = 0; i < baseF.Count - 2; i++)
             {
-                vertices[j] = new V{Position = baseF[i], Coordinates = float2(side_len * i / side_len_total, 0f)};
-                vertices[j+1] = new V{Position = topF[i], Coordinates = float2(side_len * i / side_len_total, 1f)};
+                vertices[j] = new V{Position = baseF[i], Coordinates = float2(1f, side_len * i / side_len_total)};
+                vertices[j+1] = new V{Position = topF[i], Coordinates = float2(0f, side_len * i / side_len_total)};
 
                 indices[k] = j;
                 indices[k+1] = j + 1;
@@ -189,16 +189,16 @@ namespace Renderer
                 k += 6;
             }
 
-            vertices[j] = new V{Position = baseF[baseF.Count - 2], Coordinates = float2(side_len * (baseF.Count - 2) / side_len_total, 0f)};
-            vertices[j+1] = new V{Position = topF[topF.Count - 2], Coordinates = float2(side_len * (topF.Count - 2) / side_len_total, 1f)};
-            vertices[j+2] = new V{Position = a, Coordinates = float2(side_len * (baseF.Count - 2) / side_len_total, 0.5f)};
+            vertices[j] = new V{Position = baseF[baseF.Count - 2], Coordinates = float2(1f, side_len * (baseF.Count - 2) / side_len_total)};
+            vertices[j+1] = new V{Position = topF[topF.Count - 2], Coordinates = float2(0f, side_len * (topF.Count - 2) / side_len_total)};
+            vertices[j+2] = new V{Position = a, Coordinates = float2(0.5f, side_len * (baseF.Count - 2) / side_len_total)};
 
-            vertices[j+3] = new V{Position = baseF[baseF.Count - 1], Coordinates = float2(1f, 0f)};
-            vertices[j+4] = new V{Position = topF[topF.Count - 1], Coordinates = float2(1f, 1f)};
-            vertices[j+5] = new V{Position = b, Coordinates = float2(1f, 0.5f)};
+            vertices[j+3] = new V{Position = baseF[baseF.Count - 1], Coordinates = float2(1f, 1f)};
+            vertices[j+4] = new V{Position = topF[topF.Count - 1], Coordinates = float2(0f, 1f)};
+            vertices[j+5] = new V{Position = b, Coordinates = float2(0.5f, 1f)};
 
-            vertices[j+6] = new V{Position = q, Coordinates = float2(side_len * (baseF.Count - 2 + 0.5f) / side_len_total, 0.5f)};
-            vertices[j+7] = new V{Position = p, Coordinates = float2(side_len * (baseF.Count - 2 + 0.5f) / side_len_total, 1f)};
+            vertices[j+6] = new V{Position = q, Coordinates = float2(0.5f, side_len * (baseF.Count - 2 + 0.5f) / side_len_total)};
+            vertices[j+7] = new V{Position = p, Coordinates = float2(0f, side_len * (baseF.Count - 2 + 0.5f) / side_len_total)};
 
             indices[k] = j;
             indices[k+1] = j + 2;
