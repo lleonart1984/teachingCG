@@ -44,7 +44,7 @@ namespace Renderer
         public MyMaterial<T> StringCylinderMaterial => GuitarDrawer<T>.LoadMaterialFromFile("pin_head_texture.material", 32, 0.95f); // TODO
         public MyMaterial<T> BasePinMaterial => GuitarDrawer<T>.LoadMaterialFromFile("pin_texture.material", 32, 0.95f); // TODO
         public MyMaterial<T> HeadPinMaterial => GuitarDrawer<T>.LoadMaterialFromFile("pin_head_texture.material", 32, 0.95f); // TODO
-        public MyMaterial<T> GuitarHoleMaterial => default; // TODO
+        public MyMaterial<T> GuitarHoleMaterial => GuitarDrawer<T>.LoadMaterialFromFile("circle_texture.material", 32, 0.95f); // TODO
         public MyMaterial<T> StringHubMaterial => GuitarDrawer<T>.LoadMaterialFromFile("bridge_texture.material", 32, 0.95f); // TODO
         public MyMaterial<T> HeadstockMaterial => GuitarDrawer<T>.LoadMaterialFromFile("bridge_texture.material", 32, 0.98f); // TODO
         public MyMaterial<T> GuitarBodyFrontMaterial => GuitarDrawer<T>.LoadMaterialFromFile("guitar_texture.material", 32, 0.9f); // TODO
