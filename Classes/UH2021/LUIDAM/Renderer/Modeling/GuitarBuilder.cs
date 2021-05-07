@@ -38,18 +38,18 @@ namespace Renderer
        
         #region Materials
 
-        public MyMaterial<T> BridgeMaterial => GuitarDrawer<T>.LoadMaterialFromFile("bridge_texture.material", 32, 0.95f); // TODO
-        public MyMaterial<T> FretMaterial => GuitarDrawer<T>.LoadMaterialFromFile("pin_texture.material", 32, 0.89f); // TODO
         public MyMaterial<T>[] StringMaterials => new MyMaterial<T>[] { FretMaterial, FretMaterial, FretMaterial, StringCylinderMaterial, StringCylinderMaterial, StringCylinderMaterial}; // TODO
-        public MyMaterial<T> StringCylinderMaterial => GuitarDrawer<T>.LoadMaterialFromFile("pin_head_texture.material", 32, 0.95f); // TODO
-        public MyMaterial<T> BasePinMaterial => GuitarDrawer<T>.LoadMaterialFromFile("pin_texture.material", 32, 0.95f); // TODO
-        public MyMaterial<T> HeadPinMaterial => GuitarDrawer<T>.LoadMaterialFromFile("pin_head_texture.material", 32, 0.95f); // TODO
-        public MyMaterial<T> GuitarHoleMaterial => GuitarDrawer<T>.LoadMaterialFromFile("circle_texture.material", 32, 0.95f); // TODO
-        public MyMaterial<T> StringHubMaterial => GuitarDrawer<T>.LoadMaterialFromFile("bridge_texture.material", 32, 0.95f); // TODO
-        public MyMaterial<T> HeadstockMaterial => GuitarDrawer<T>.LoadMaterialFromFile("bridge_texture.material", 32, 0.98f); // TODO
-        public MyMaterial<T> GuitarBodyFrontMaterial => GuitarDrawer<T>.LoadMaterialFromFile("guitar_texture.material", 32, 0.9f); // TODO
-        public MyMaterial<T> GuitarBodyBackMaterial => GuitarDrawer<T>.LoadMaterialFromFile("guitar_texture.material", 32, 0.95f); // TODO
-        public MyMaterial<T> GuitarBodySidesMaterial => GuitarDrawer<T>.LoadMaterialFromFile("bridge_texture.material", 32, 0.975f); // TODO
+        public MyMaterial<T> StringCylinderMaterial  => GuitarDrawer<T>.LoadMaterialFromFile("textures\\pin_head_texture.bmp"   , 0.05f ); // TODO
+        public MyMaterial<T> HeadPinMaterial         => GuitarDrawer<T>.LoadMaterialFromFile("textures\\pin_head_texture.bmp"   , 0.05f); // TODO
+        public MyMaterial<T> FretMaterial            => GuitarDrawer<T>.LoadMaterialFromFile("textures\\pin_texture.bmp"        , 0.1f ); // TODO
+        public MyMaterial<T> BasePinMaterial         => GuitarDrawer<T>.LoadMaterialFromFile("textures\\pin_texture.bmp"        , 0.1f); // TODO
+        public MyMaterial<T> GuitarHoleMaterial      => GuitarDrawer<T>.LoadMaterialFromFile("textures\\circle_texture.bmp"     , 0.1f ); // TODO
+        public MyMaterial<T> BridgeMaterial          => GuitarDrawer<T>.LoadMaterialFromFile("textures\\headstock_texture.bmp"  , 0f ); // TODO
+        public MyMaterial<T> StringHubMaterial       => GuitarDrawer<T>.LoadMaterialFromFile("textures\\headstock_texture.bmp"  , 0.1f ); // TODO
+        public MyMaterial<T> HeadstockMaterial       => GuitarDrawer<T>.LoadMaterialFromFile("textures\\headstock_texture.bmp"  , 0.05f); // TODO
+        public MyMaterial<T> GuitarBodySidesMaterial => GuitarDrawer<T>.LoadMaterialFromFile("textures\\headstock_texture.bmp"  , 0.1f ); // TODO
+        public MyMaterial<T> GuitarBodyFrontMaterial => GuitarDrawer<T>.LoadMaterialFromFile("textures\\guitar_texture.bmp"     , 0.05f ); // TODO
+        public MyMaterial<T> GuitarBodyBackMaterial  => GuitarDrawer<T>.LoadMaterialFromFile("textures\\headstock_texture.bmp"  , 0.1f ); // TODO
         
         #endregion
 
@@ -431,7 +431,7 @@ namespace Renderer
             //                                    .Transform<T>(p => new T { Position = float3(transform(p.Position.x, p.Position.z), p.Position.y, p.Position.z) })
             //                                    .ApplyTransforms(Transforms.Translate(0, 0, -.5f));
 
-            var body = GuitarBodyMesh((int)(50 * MeshScalar));
+            var body = GuitarBodyMesh((int)(250 * MeshScalar));
             body = body.Transform(MyTransforms.ExpandInto(body.BoundBox.oppositeCorner, body.BoundBox.topCorner, 1, 1, 1))
                        .Transform(Transforms.Translate(-.5f,-.5f,-.5f));
             

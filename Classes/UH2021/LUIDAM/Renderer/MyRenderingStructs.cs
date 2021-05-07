@@ -69,6 +69,7 @@ namespace Renderer
         public Texture2D Diffuse;
 
         public float3 Specular;
+
         public float SpecularPower;
 
         public float Glossyness;

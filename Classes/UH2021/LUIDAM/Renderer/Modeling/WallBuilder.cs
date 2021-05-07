@@ -33,9 +33,9 @@ namespace Renderer
 
         #region Materials
 
-        public MyMaterial<T> WallMaterial => GuitarDrawer<T>.LoadMaterialFromFile("wall_texture.material", 32, 0.9f); //TODO
+        public MyMaterial<T> WallMaterial => GuitarDrawer<T>.LoadMaterialFromFile("textures\\wall_texture.bmp", 0.01f); //TODO
 
-        public MyMaterial<T> FloorMaterial => GuitarDrawer<T>.LoadMaterialFromFile("floor_texture.material", 32, 0.9f); // TODO
+        public MyMaterial<T> FloorMaterial => GuitarDrawer<T>.LoadMaterialFromFile("textures\\floor_texture.bmp", 0.01f); // TODO
 
         #endregion
 
@@ -68,7 +68,7 @@ namespace Renderer
         public Mesh<T> WallMesh()
         {
             var wall = MeshShapeGenerator<T>.Box(4, 4, 2);
-            wall = wall.FitIn(1, 1, 1) .ApplyTransforms(Transforms.Scale(2,2,.01f), Transforms.Translate(0, 0, 1.06f));
+            wall = wall.FitIn(1, 1, 1) .ApplyTransforms(Transforms.Scale(2,2,.01f), Transforms.Translate(0, 0, 1.05f));
             wall.SetMaterial(WallMaterial);
 
             return wall;;

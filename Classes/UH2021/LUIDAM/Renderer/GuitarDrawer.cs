@@ -117,17 +117,17 @@ namespace Renderer
 
         public static Mesh<T> CreateWalls()
         {
-            var wall = Manifold<T>.Surface(4, 4, (x, y) => float3(2 * x, 2 * y, 0));
-            var wall2 = Manifold<T>.Surface(4, 4, (x, y) => float3(2 * x, 2 * y, -0.01f));
-            var floor = Manifold<T>.Surface(4, 4, (x, z) => float3(2 * x, 0, 2 * z));
-            wall = (wall + wall2).ApplyTransforms(Transforms.Translate(0,0,1.06f));
-            
-            var wallBuilder = new WallsBuilder<T>();
-            GuitarBuilder<T>.AddColorToMesh(wallBuilder.FloorColor, floor);
-            GuitarBuilder<T>.AddColorToMesh(wallBuilder.WallColor, wall);
+            //var wall = Manifold<T>.Surface(4, 4, (x, y) => float3(2 * x, 2 * y, 0));
+            //var wall2 = Manifold<T>.Surface(4, 4, (x, y) => float3(2 * x, 2 * y, -0.01f));
+            //var floor = Manifold<T>.Surface(4, 4, (x, z) => float3(2 * x, 0, 2 * z));
+            //wall = (wall + wall2).ApplyTransforms(Transforms.Translate(0,0,1.06f));
 
-            wall = wallBuilder.WallMesh();
-            floor = wallBuilder.FloorMesh();
+            var wallBuilder = new WallsBuilder<T>();
+            //GuitarBuilder<T>.AddColorToMesh(wallBuilder.FloorColor, floor);
+            //GuitarBuilder<T>.AddColorToMesh(wallBuilder.WallColor, wall);
+
+            var wall = wallBuilder.WallMesh();
+            var floor = wallBuilder.FloorMesh();
 
             wall.ComputeNormals();
             floor.ComputeNormals();
@@ -139,20 +139,17 @@ namespace Renderer
         {
             var model = CreateGuitarMesh();
             var meshes = MyMeshTools.MaterialDecompose(model);
-            var mat = LoadMaterialFromFile("guitar_texture.material", 32, 0.9f);
             foreach (var mesh in meshes)
             {
                 scene.Add(mesh.AsRaycast(), (MyMaterial<T>)mesh.Materials[0], worldTransformation);
             }
-            //scene.Add(model.AsRaycast(), LoadMaterialFromFile("guitar_texture.material", 32, 0.9f), worldTransformation);
-            
+
             var model2 = CreateWalls();
             var meshes2 = MyMeshTools.MaterialDecompose(model2);
             foreach (var mesh in meshes2)
             {
                 scene.Add(mesh.AsRaycast(), (MyMaterial<T>)mesh.Materials[0], worldTransformation);
             }
-            //scene.Add(model2.AsRaycast(), LoadMaterialFromFile("guitar_texture.material", 32, 0.9f), worldTransformation);
         }
 
         public static void GuitarCSGRaycast(Texture2D texture, float4x4 worldTransformation)
@@ -188,9 +185,9 @@ namespace Renderer
 
             // Scene Setup
             float3 CameraPosition = float3(1.1f, 1f, -.75f);
-            var lightPositionWorld = mul(worldTransformation, float4x1(2.0f, 1f, -.8f, 0));
+            var lightPositionWorld = mul(worldTransformation, float4x1(1.9f, 1.9f, -1f, 0));
             float3 LightPosition = float3(lightPositionWorld._m00, lightPositionWorld._m10, lightPositionWorld._m20);
-            float3 LightIntensity = float3(1, 1, 1) * 1;
+            float3 LightIntensity = float3(1, 1, 1) * 3;
             // View and projection matrices
             float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(1.1f, .58f, .5f), float3(0, 1, 0));
             float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 20);
@@ -248,30 +245,21 @@ namespace Renderer
             RenderUtils.Draw(texture, raycaster, scene, viewMatrix, projectionMatrix, DrawStep, XGrid, YGrid);
         }
 
-        public static MyMaterial<T> LoadMaterialFromFile(string dir, int size, float glossyness, bool rotate = false)
+        public static MyMaterial<T> LoadMaterialFromFile(string dir, float glossyness, float specularPower=60, float3? specular=default)
         {
-            string str = File.ReadAllText(dir);
-            string[] splitted = str.Split(' ');
-            string[] clean = new string[size * size * 3];
-            int count = 0;
-            foreach (string var in splitted)
-                if (var.Length > 0)
-                    clean[count++] = var;
-            Texture2D item = new Texture2D(size, size);
-            count = 0;
-            for (int i = 0; i < size; i++)
-                for (int j = 0; j < size; j++)
-                {
-                    float4 temp = new float4();
-                    temp.x = (float)int.Parse(clean[count++]);
-                    temp.y = (float)int.Parse(clean[count++]);
-                    temp.z = (float)int.Parse(clean[count++]);
-                    if (!rotate)
-                        item.Write(i, j, temp);
-                    else
-                        item.Write(j, i, temp);
-                }
-            return new MyMaterial<T> { Diffuse = item, Glossyness = glossyness, TextureSampler = new Sampler { Wrap = WrapMode.Repeat } };
+            var item = Texture2D.FromFile(dir);
+            var realSpecular = specular.HasValue ? specular.Value : float3(1, 1, 1);
+            return new MyMaterial<T> 
+            {
+                Diffuse = item, 
+                Glossyness = glossyness,
+                SpecularPower = specularPower,
+                Specular = realSpecular,
+                TextureSampler = new Sampler 
+                { 
+                    Wrap = WrapMode.Repeat,
+                },
+            };
         }
 
     }

@@ -77,7 +77,7 @@ namespace Rendering
                         return border;
                     break;
                 case WrapMode.Clamp:
-                    uv = clamp(uv, 0.0f, 0.99999999999f);
+                    uv = clamp(uv, 0.0f, 0.9999f);
                     break;
                 case WrapMode.Repeat:
                     uv = ((uv % 1) + 1) % 1;
