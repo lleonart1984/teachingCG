@@ -8,13 +8,19 @@ using static Renderer.Program;
 
 namespace Renderer.Modeling
 {
-    public static class MeshShapeGenerator<T> where T : struct, IVertex<T>
+    public static class MeshShapeGenerator<T> where T : struct, IVertex<T>, ICoordinatesVertex<T>
     {
         public static Mesh<T> Box(int width, int height, int deep, bool faceXYUp = true, bool faceXYDown = true, bool faceXZUp = true, bool faceXZDown = true, bool faceYZUp = true, bool faceYZDown = true
-                                                                              , bool holeXYUp = false, bool holeXYDown = false, bool holeXZUp = false, bool holeXZDown = false, bool holeYZUp = false, bool holeYZDown = false
-                                                                              , float4? sepXYUp = null, float4? sepXYDown = null, float4? sepXZUp = null, float4? sepXZDown = null, float4? sepYZUp = null, float4? sepYZDown = null)
+                                                                 , bool holeXYUp = false, bool holeXYDown = false, bool holeXZUp = false, bool holeXZDown = false, bool holeYZUp = false, bool holeYZDown = false
+                                                                 , float4? sepXYUp = null, float4? sepXYDown = null, float4? sepXZUp = null, float4? sepXZDown = null, float4? sepYZUp = null, float4? sepYZDown = null
+                                                                 , IMaterial XYUpMat = default, IMaterial XYDownMat = default, IMaterial XZUpMat = default, IMaterial XZDownMat = default, IMaterial YZUpMat = default, IMaterial YZDownMat = default
+                                                                 , IMaterial allMat = default)
         {
-            var box = new Mesh<T>(new T[] { }, new int[] { });
+            if (allMat != default)
+            {
+                XYDownMat = XYUpMat = XZUpMat = XZDownMat = YZDownMat = YZUpMat = allMat;
+            }
+            Mesh<T> box = null;
             foreach (var (dirX, dirY, trans) in new (float3 dirX, float3 dirY, float3 trans)[] 
             { 
                 (float3(1, 0, 0), float3(0,1,0), float3(0, 0, 0)), 
@@ -26,6 +32,7 @@ namespace Renderer.Modeling
             })
             {
                 Mesh<T> face = null;
+                IMaterial material = default;
                 int stacks = 0, slices = 0;
                 if (dirX.x != 0)
                 {
@@ -33,10 +40,12 @@ namespace Renderer.Modeling
                     slices = (int)Math.Max(dirY.y * height, dirY.z * deep);
                     if (dirY.y != 0)
                     {
+                        material = XYUpMat;
                         if (length(trans) == 0)
                         {
                             if (!faceXYDown)
                                 continue;
+                            material = XYDownMat;
                             if (holeXYDown)
                             {
                                 face = MyManifold<T>.MiddleHoleSurface(slices, stacks, sepXYDown.Value);
@@ -51,8 +60,10 @@ namespace Renderer.Modeling
                     }
                     else if (dirY.z != 0)
                     {
+                        material = XZUpMat;
                         if (length(trans) == 0)
                         {
+                            material = XZDownMat;
                             if (!faceXZDown)
                                 continue;
                             if (holeXZDown)
@@ -74,8 +85,10 @@ namespace Renderer.Modeling
                 {
                     stacks = height;
                     slices = deep;
+                    material = YZUpMat;
                     if (length(trans) == 0)
                     {
+                        material = YZDownMat;
                         if (!faceYZDown)
                             continue;
                         if (holeYZDown)
@@ -98,24 +111,28 @@ namespace Renderer.Modeling
                 {
                     face = face.ApplyTransforms(Transforms.Translate(trans));
                 }
-                box += face;
+                face.SetMaterial(material);
+                face = MaterialsUtils.MapPlane(face);
+                if (box == null)
+                    box = face;
+                else
+                    box += face;
             }
             return box.Transform(Transforms.Translate(-.5f, -.5f, -.5f));
         }
 
 
-        public static Mesh<T> Box(int points)
+        public static Mesh<T> Box(int points, IMaterial material = default)
         {
-            return Box(points / 3, points / 3, points / 3);
+            return Box(points / 3, points / 3, points / 3, allMat: material);
         }
 
-        public static Mesh<T> Cylinder(int points, float thickness=0, float angle = 2 * pi, bool surface = false)
+        public static Mesh<T> Cylinder(int points, float thickness=0, float angle = 2 * pi, bool surface = false, IMaterial upFaceMat = default, IMaterial downFaceMat = default, IMaterial cylinderMat = default)
         {
             var ss = (int)ceil(sqrt(points));
-            var baseCylOuter = new Mesh<T>();
+            Mesh<T> baseCylOuter = null;
             var face1 = MyManifold<T>.Revolution(ss, ss, x => float3(1 * x, 0, 0), float3(0, 0, 1), angle).Transform(Transforms.Translate(0,0,.5f));
             var face2 = MyManifold<T>.Revolution(ss, ss, x => float3(1 * x, 0, 0), float3(0, 0, 1), angle).Transform(Transforms.Translate(0,0,-.5f));
-            
             if (thickness != 0)
             {
                 baseCylOuter = MyManifold<T>.Revolution(ss, ss, x => float3(1 + thickness, 0, x), float3(0, 0, 1), angle).Transform(Transforms.Translate(0, 0, -.5f));
@@ -123,11 +140,23 @@ namespace Renderer.Modeling
                 face2 = MyManifold<T>.Revolution(ss, ss, x => float3(1 + x * thickness, 0, 0), float3(0, 0, 1), angle).Transform(Transforms.Translate(0, 0, -.5f));
             }
             var baseCyl = MyManifold<T>.Revolution(ss, ss, x => float3(1, 0, x), float3(0,0,1), angle).Transform(Transforms.Translate(0,0,-.5f));
+            face1.SetMaterial(upFaceMat);
+            face2.SetMaterial(downFaceMat);
+            face1 = MaterialsUtils.MapPlane(face1);
+            face2 = MaterialsUtils.MapPlane(face2);
+            baseCyl.SetMaterial(cylinderMat);
+            baseCylOuter?.SetMaterial(cylinderMat);
+            baseCyl = MaterialsUtils.MapCylinderCoordinates(baseCyl);
+            if (baseCylOuter != null)
+                baseCylOuter = MaterialsUtils.MapCylinderCoordinates(baseCylOuter);
             if (surface)
             {
                 return face1;
             }
-            return baseCyl + face1 + face2 + baseCylOuter;
+            if (baseCylOuter != null)
+                return baseCyl + face1 + face2 + baseCylOuter;
+            else
+                return baseCyl + face1 + face2;
         }
     
     }

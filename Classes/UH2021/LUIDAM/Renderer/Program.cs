@@ -104,6 +104,27 @@ namespace Renderer
             }
         }
 
+        struct MyProjectedVertex : IProjectedVertex<MyProjectedVertex>
+        {
+            public float4 Homogeneous { get; set; }
+
+            public MyProjectedVertex Add(MyProjectedVertex other)
+            {
+                return new MyProjectedVertex
+                {
+                    Homogeneous = this.Homogeneous + other.Homogeneous
+                };
+            }
+
+            public MyProjectedVertex Mul(float s)
+            {
+                return new MyProjectedVertex
+                {
+                    Homogeneous = this.Homogeneous * s
+                };
+            }
+        }
+
         public struct Material
         {
             public Texture2D Diffuse;
@@ -227,8 +248,8 @@ namespace Renderer
             float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 20);
 
             Scene<PositionNormalCoordinate, Material> scene = new Scene<PositionNormalCoordinate, Material>();
-            //CreateMeshScene(scene);
-            CreateRaycastScene(scene, mat);
+            CreateMeshScene(scene);
+            //CreateRaycastScene(scene, mat);
 
             // Raycaster to trace rays and check for shadow rays.
             Raytracer<ShadowRayPayload, PositionNormalCoordinate, Material> shadower = new Raytracer<ShadowRayPayload, PositionNormalCoordinate, Material>();
@@ -289,6 +310,48 @@ namespace Renderer
 
                     texture.Write(px, py, float4(coloring.Color, 1));
                 }
+        }
+
+        #endregion
+
+        #region Meshes
+
+        private static void GeneratingMeshes<V>(Raster<PositionNormal, V> render) where V : struct, IProjectedVertex<V>
+        {
+            render.ClearRT(float4(0, 0, 0.2f, 1)); // clear with color dark blue.
+
+            var primitive = CreateModel();
+
+            primitive = primitive.Expand();
+            //primitive = primitive.Expand();
+
+            /// Convert to a wireframe to render. Right now only lines can be rasterized.
+            primitive = primitive.ConvertTo(Topology.Lines);
+
+            #region viewing and projecting
+
+            float4x4 viewMatrix = Transforms.LookAtLH(float3(2, 1f, 2), float3(0, 0, 0), float3(0, 1, 0));
+            float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, render.RenderTarget.Height / (float)render.RenderTarget.Width, 0.01f, 20);
+
+            // Define a vertex shader that projects a vertex into the NDC.
+            render.VertexShader = v =>
+            {
+                float4 hPosition = float4(v.Position, 1);
+                hPosition = mul(hPosition, viewMatrix);
+                hPosition = mul(hPosition, projectionMatrix);
+                return new V { Homogeneous = hPosition };
+            };
+
+            // Define a pixel shader that colors using a constant value
+            render.PixelShader = p =>
+            {
+                return float4(p.Homogeneous.x / 1024.0f, p.Homogeneous.y / 512.0f, 1, 1);
+            };
+
+            #endregion
+
+            // Draw the mesh.
+            render.DrawMesh(primitive);
         }
 
         #endregion
@@ -432,7 +495,7 @@ namespace Renderer
                 float3(0.6f,1,0),
                 float3(0,1,0)
             };
-            
+
             /// Creates the model using a revolution of a bezier.
             /// Only Positions are updated.
             var model = Manifold<PositionNormal>.Revolution(30, 20, t => EvalBezier(contourn, t), float3(0, 1, 0)).Weld();
@@ -587,13 +650,18 @@ namespace Renderer
             //RaycastingMesh(texture);
             //Material mat = CreateMaterialFromRawText(guitar_texture_raw", 32);
             //RaycastingMeshTexture(texture, mat);
+            //GuitarDrawer<MyPositionNormalCoordinate>.DrawStep = 4;
             GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaycast(texture, Transforms.Identity);
             //GuitarDrawer.GuitarCSGRaycast(texture, Transforms.Identity);
 
-            stopwatch.Stop();
-
             texture.Save("test.rbm");
 
+            //Raster<PositionNormal, MyProjectedVertex> render = new Raster<PositionNormal, MyProjectedVertex>(1024, 512);
+            //GeneratingMeshes(render);
+            //render.RenderTarget.Save("test.rbm");
+
+            
+            stopwatch.Stop();
             Console.WriteLine("Done. Rendered in " + stopwatch.ElapsedMilliseconds + " ms");
             
             System.Diagnostics.Process.Start("CMD.exe","/C python imageviewer.py test.rbm");

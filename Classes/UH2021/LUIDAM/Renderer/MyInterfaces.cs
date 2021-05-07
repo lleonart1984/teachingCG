@@ -1,4 +1,5 @@
 ﻿using GMath;
+using Rendering;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -19,5 +20,10 @@ namespace Renderer
     public interface ITransformable<T> where T : struct
     {
         public T Transform(float4x4 matrix);
+    }
+
+    public interface IMaterial
+    {
+
     }
 }

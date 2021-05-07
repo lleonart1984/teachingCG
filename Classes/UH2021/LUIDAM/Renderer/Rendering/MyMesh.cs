@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using Renderer;
 
 namespace Rendering
 {
@@ -33,7 +34,226 @@ namespace Rendering
             return mesh.Transform(s);
         }
 
+        public static Mesh<V> Expand<V>(this Mesh<V> mesh) where V : struct, INormalVertex<V>
+        {
+            switch (mesh.Topology)
+            {
+                case Topology.Points:
+                    return mesh;
+                case Topology.Lines:
+                    throw new NotImplementedException();
+                case Topology.Triangles:
 
+                    List<V> vertexes = new List<V>();
+                    List<int> indexes = new List<int>();
+
+                    static float3 LinearSystem3x3 (float3 row1, float3 row2, float3 row3, float3 r)
+                    {
+                        // Solving linear system using Cramer's rule
+                        var D = determinant(float3x3(row1, row2, row3));
+
+                        var Dx = determinant(float3x3(float3(r.x, row1.y, row1.z),
+                                                      float3(r.y, row2.y, row2.z),
+                                                      float3(r.z, row3.y, row3.z)));
+
+                        var Dy = determinant(float3x3(float3(row1.x, r.x, row1.z),
+                                                      float3(row2.x,      r.y, row2.z),
+                                                      float3(row3.x, r.z , row3.z)));
+
+                        var Dz = determinant(float3x3(float3(row1.x, row1.y, r.x),
+                                                      float3(row2.x, row2.y,           r.y),
+                                                      float3(row3.x, row3.y, r.z)));
+                        return float3(Dx / D, Dy / D, Dz / D);
+                    }
+
+                    static float2 LinearSystem2x2(float2 row1, float2 row2, float2 r)
+                    {
+                        // Solving linear system using Cramer's rule
+                        var D = determinant(float2x2(row1, row2));
+
+                        var Dx = determinant(float2x2(float2(r.x, row1.y),
+                                                      float2(r.y, row2.y)));
+
+                        var Dy = determinant(float2x2(float2(row1.x, r.x),
+                                                      float2(row2.x, r.y)));
+
+                        return float2(Dx / D, Dy / D);
+                    }
+
+                    static float3 Bisect(float3 p0, float3 p1, float3 p2)
+                    {
+                        //var a = normalize(p1 - p0);
+                        //var b = normalize(p2 - p0);
+                        //var cosAngle = cos(acos(dot(a, b)) / 2);
+                        //var normal = cross(a, b);
+
+                        //var bisect = LinearSystem3x3(a, b, normal, float3(cosAngle, cosAngle, 0));
+
+                        var a = normalize(p1 - p0);
+                        var b = normalize(p2 - p0);
+                        var bisect = b + a;
+
+                        return normalize(bisect);
+                    }
+
+                    for (int i = 0; i < mesh.Indices.Length / 3; i++)
+                    {
+                        var v1 = mesh.Vertices[mesh.Indices[i * 3 + 0]];
+                        var v2 = mesh.Vertices[mesh.Indices[i * 3 + 1]];
+                        var v3 = mesh.Vertices[mesh.Indices[i * 3 + 2]];
+                        
+                        var p1 = v1.Position;
+                        var p2 = v2.Position;
+                        var p3 = v3.Position;
+
+                        var bisect1 = Bisect(p1, p2, p3);
+                        var bisect2 = Bisect(p2, p1, p3);
+
+                        var rest = p2 - p1;
+                        var inter =  LinearSystem2x2(float2(bisect1.x, -bisect2.x), 
+                                                     float2(bisect1.y, -bisect2.y), float2(rest.x, rest.y));
+
+                        float3? intersection = null;
+
+                        if (float.IsFinite(inter.x) && float.IsFinite(inter.y) && 
+                            inter.x >= 0 && inter.y >= 0 && 
+                            abs(inter.x * bisect1.z - inter.y * bisect2.z - rest.z) <= 0.001f) // Intersection
+                        {
+                            intersection = p1 + bisect1 * inter.x;
+                        }
+                        else
+                        {
+                            inter = LinearSystem2x2(float2(bisect1.z, -bisect2.z), 
+                                                    float2(bisect1.y, -bisect2.y), float2(rest.z, rest.y));
+
+                            if (float.IsFinite(inter.x) && float.IsFinite(inter.y) &&
+                                inter.x >= 0 && inter.y >= 0 &&
+                                abs(inter.x * bisect1.x - inter.y * bisect2.x - rest.x) <= 0.001f)
+                            {
+                                intersection = p1 + bisect1 * inter.x;
+                            }
+                            else
+                            {
+                                inter = LinearSystem2x2(float2(bisect1.z, -bisect2.z),
+                                                             float2(bisect1.x, -bisect2.x), float2(rest.z, rest.x));
+                                if (float.IsFinite(inter.x) && float.IsFinite(inter.y) &&
+                                    inter.x >= 0 && inter.y >= 0 &&
+                                    abs(inter.x * bisect1.y - inter.y * bisect2.y - rest.y) <= 0.001f)
+                                {
+                                    intersection = p1 + bisect1 * inter.x;
+                                }
+                            }
+                        }
+
+                        if (!intersection.HasValue)
+                        {
+                            if (length(p1 - p2) <= 0.0001f) // p1 == p2 => Middle Point
+                            {
+                                intersection = (p3 + p2) / 2;
+                            }
+                            else if (length(p3 - p2) <= 0.0001f) // p3 == p2 => Middle Point
+                            {
+                                intersection = (p1 + p2) / 2;
+                            }
+                            else if (length(p3 - p1) <= 0.0001f) // p3 == p1 => Middle Point
+                            {
+                                intersection = (p2 + p1) / 2;
+                            }
+                            else
+                                throw new InvalidOperationException("Interection failed");
+                        }
+
+                        var barycenter = intersection.Value;
+
+                        var v4 = new V { Position = barycenter, Normal = normalize(v1.Normal + v2.Normal + v3.Normal)};
+
+                        indexes.AddRange(new int[]
+                        {
+                            vertexes.Count + 0,
+                            vertexes.Count + 3,
+                            vertexes.Count + 1,
+
+                            vertexes.Count + 0,
+                            vertexes.Count + 3,
+                            vertexes.Count + 2,
+
+                            vertexes.Count + 1,
+                            vertexes.Count + 3,
+                            vertexes.Count + 2,
+                        });
+
+                        vertexes.AddRange(new V[]
+                        {
+                            v1,
+                            v2,
+                            v3,
+                            v4,
+                        });
+
+                    }
+                    mesh = new Mesh<V>(vertexes.ToArray(), indexes.ToArray());
+                    return mesh;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        /// <summary>
+        /// Applies the given material to all vertex in Mesh
+        /// </summary>
+        /// <param name="material"></param>
+        public static void SetMaterial<V>(this Mesh<V> mesh, IMaterial material) where V : struct, IVertex<V>
+        {
+            mesh.Materials = new IMaterial[] { material };
+            mesh.MaterialsSeparators = new int[] { mesh.Vertices.Length };
+        }
+
+        /// <summary>
+        /// Get the material corresponding to the vertex in <paramref name="vertexIndex"/>
+        /// </summary>
+        /// <typeparam name="V"></typeparam>
+        /// <param name="mesh"></param>
+        /// <param name="vertexIndex"></param>
+        /// <returns></returns>
+        public static IMaterial GetVertexMaterial<V>(this Mesh<V> mesh, int vertexIndex) where V : struct, IVertex<V>
+        {
+            for (int i = 0; i < mesh.MaterialsSeparators.Length; i++)
+            {
+                if (mesh.MaterialsSeparators[i] <= vertexIndex)
+                    return mesh.Materials[i];
+            }
+            throw new IndexOutOfRangeException();
+        }
+
+        /// <summary>
+        /// Extract submeshes from <paramref name="mesh"/> that has the same materials. 
+        /// </summary>
+        /// <typeparam name="V"></typeparam>
+        /// <param name="mesh"></param>
+        /// <returns></returns>
+        public static IEnumerable<Mesh<V>> MaterialDecompose<V>(this Mesh<V> mesh) where V : struct, IVertex<V>
+        {
+            List<Mesh<V>> meshMaterials = new List<Mesh<V>>();
+            int initVertexIndex = 0;
+            int initIndex = 0;
+            int topologyIndexPerVertex = mesh.Topology == Topology.Triangles ? 3 : mesh.Topology == Topology.Lines ? 2 : mesh.Topology == Topology.Points ? 1 : throw new NotImplementedException(); 
+            for (int i = 0; i < mesh.MaterialsSeparators.Length; i++)
+            {
+                var lastMaterialIndex = mesh.MaterialsSeparators[i];
+                var indexAmount = mesh.Indices.Where(x => initVertexIndex <= x && x < lastMaterialIndex).Count();
+                var vertexAmount = lastMaterialIndex - initVertexIndex;
+                var indexes = new int[indexAmount];
+                var vertex = new V[vertexAmount];
+
+                Array.Copy(mesh.Indices, initIndex, indexes, 0, indexes.Length);
+                Array.Copy(mesh.Vertices, initVertexIndex, vertex, 0, vertex.Length);
+                indexes = indexes.Select(x => x - initVertexIndex).ToArray();
+                meshMaterials.Add(new Mesh<V>(vertex, indexes, mesh.Materials[i]));
+                initVertexIndex += vertexAmount;
+                initIndex += indexAmount;
+            }
+            return meshMaterials;
+        }
     }
 
     public class MyManifold<V> where V : struct, IVertex<V>

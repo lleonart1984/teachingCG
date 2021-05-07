@@ -9,8 +9,10 @@ using static Renderer.Program;
 
 namespace Renderer
 {
-    class WallsBuilder
+    class WallsBuilder<T> where T : struct, IVertex<T>, INormalVertex<T>, ICoordinatesVertex<T>, IColorable, ITransformable<T>
     {
+        #region Scalars
+
         public float MeshScalar = 1f;
 
         public float Height;
@@ -19,8 +21,23 @@ namespace Renderer
 
         public float Depth { get { return 0.5f; } }
 
+        #endregion
+
+        #region Colors
+
         public Color WallColor { get; set; } = Color.FromArgb(180, 90, 125);
+
         public Color FloorColor { get; set; } = Color.FromArgb(113, 54, 82);
+        
+        #endregion
+
+        #region Materials
+
+        public MyMaterial<T> WallMaterial => GuitarDrawer<T>.LoadMaterialFromFile("textures\\wall_texture.bmp", 0.01f); //TODO
+
+        public MyMaterial<T> FloorMaterial => GuitarDrawer<T>.LoadMaterialFromFile("textures\\floor_texture.bmp", 0.01f); // TODO
+
+        #endregion
 
         public WallsBuilder()
         {
@@ -48,12 +65,22 @@ namespace Renderer
             return wall;
         }
     
-        public Mesh<PositionNormal> WallMesh()
+        public Mesh<T> WallMesh()
         {
-            var wall = MeshShapeGenerator<PositionNormal>.Box(30, 30, 2, true, false, false, false, false, false);
-            var floor = MeshShapeGenerator<PositionNormal>.Box(30, 2, 30, false, false, false, true, false, false);
+            var wall = MeshShapeGenerator<T>.Box(4, 4, 2);
+            wall = wall.FitIn(1, 1, 1) .ApplyTransforms(Transforms.Scale(2,2,.01f), Transforms.Translate(0, 0, 1.05f));
+            wall.SetMaterial(WallMaterial);
 
-            return (wall + floor);
+            return wall;;
         }
+
+        public Mesh<T> FloorMesh()
+        {
+            var floor = MeshShapeGenerator<T>.Box(4, 2, 4);
+            floor = floor.FitIn(1, 1, 1).ApplyTransforms(Transforms.Scale(2,.01f,2));
+            floor.SetMaterial(FloorMaterial);
+            return floor;
+        }
+    
     }
 }

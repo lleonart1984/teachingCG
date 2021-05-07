@@ -31,7 +31,7 @@ namespace MainForm
         private float _minScale;
         private Model _wall;
         private bool mesh = true;
-        private MyTexture2D _texture;
+        private Texture2D _texture;
 
         private float _currScale;
         private float _currRotX;
@@ -171,7 +171,7 @@ namespace MainForm
                     for (int j = 0; j < _texture.Height; j++)
                     {
                         var colorVector = _texture.Read(i, j);
-                        image.SetPixel(Math.Min(i, imagePbx.Width - 1), Math.Min(j, imagePbx.Height - 1),
+                        image.SetPixel(Math.Min(i, image.Width - 1), Math.Min(j, image.Height - 1),
                             Color.FromArgb(ColorComponent(colorVector.w), ColorComponent(colorVector.x), ColorComponent(colorVector.y), ColorComponent(colorVector.z))
                             );
                     }
