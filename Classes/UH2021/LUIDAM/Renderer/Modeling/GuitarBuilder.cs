@@ -431,7 +431,7 @@ namespace Renderer
             //                                    .Transform<T>(p => new T { Position = float3(transform(p.Position.x, p.Position.z), p.Position.y, p.Position.z) })
             //                                    .ApplyTransforms(Transforms.Translate(0, 0, -.5f));
 
-            var body = GuitarBodyMesh((int)(30 * MeshScalar));
+            var body = GuitarBodyMesh((int)(50 * MeshScalar));
             body = body.Transform(MyTransforms.ExpandInto(body.BoundBox.oppositeCorner, body.BoundBox.topCorner, 1, 1, 1))
                        .Transform(Transforms.Translate(-.5f,-.5f,-.5f));
             

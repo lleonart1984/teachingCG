@@ -1,6 +1,7 @@
 ﻿using GMath;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Text;
 using static GMath.Gfx;
@@ -113,6 +114,21 @@ namespace Rendering
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+    
+        public static Texture2D FromFile(string filename)
+        {
+            var image = new Bitmap(filename);
+            var texture = new Texture2D(image.Width, image.Height);
+            for (int i = 0; i < image.Width; i++)
+            {
+                for (int j = 0; j < image.Height; j++)
+                {
+                    var color = image.GetPixel(i, j);
+                    texture.Write(i, j, float4(color.R / 255f, color.G / 255f, color.B / 255f, color.A / 255f));
+                }
+            }
+            return texture;
         }
     }
 
