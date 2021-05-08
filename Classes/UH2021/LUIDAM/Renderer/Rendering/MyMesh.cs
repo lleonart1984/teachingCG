@@ -117,7 +117,7 @@ namespace Rendering
 
                         if (float.IsFinite(inter.x) && float.IsFinite(inter.y) && 
                             inter.x >= 0 && inter.y >= 0 && 
-                            abs(inter.x * bisect1.z - inter.y * bisect2.z - rest.z) <= 0.001f) // Intersection
+                            abs(inter.x * bisect1.z - inter.y * bisect2.z - rest.z) <= 0.00001f) // Intersection
                         {
                             intersection = p1 + bisect1 * inter.x;
                         }
@@ -147,15 +147,15 @@ namespace Rendering
 
                         if (!intersection.HasValue)
                         {
-                            if (length(p1 - p2) <= 0.0001f) // p1 == p2 => Middle Point
+                            if (length(p1 - p2) <= 0.00001f) // p1 == p2 => Middle Point
                             {
                                 intersection = (p3 + p2) / 2;
                             }
-                            else if (length(p3 - p2) <= 0.0001f) // p3 == p2 => Middle Point
+                            else if (length(p3 - p2) <= 0.00001f) // p3 == p2 => Middle Point
                             {
                                 intersection = (p1 + p2) / 2;
                             }
-                            else if (length(p3 - p1) <= 0.0001f) // p3 == p1 => Middle Point
+                            else if (length(p3 - p1) <= 0.00001f) // p3 == p1 => Middle Point
                             {
                                 intersection = (p2 + p1) / 2;
                             }

@@ -135,17 +135,21 @@ namespace Renderer
             // FOR TESTING ONLY 
             var ret = face.Clone();
             var clone = face.Clone();
-            if (Math.Abs(clone.BoundBox.topCorner.x) < 0.00001 && Math.Abs(clone.BoundBox.oppositeCorner.x) < 0.00001)
+            if (Math.Abs(clone.BoundBox.topCorner.x - clone.BoundBox.oppositeCorner.x) < 0.00001)
             {
-                clone.Transform(Transforms.RotateY(pi / 2));
+                clone = clone.Transform(Transforms.RotateY(pi / 2));
             }
-            else if (Math.Abs(clone.BoundBox.topCorner.y) < 0.00001 && Math.Abs(clone.BoundBox.oppositeCorner.y) < 0.00001)
+            else if (Math.Abs(clone.BoundBox.topCorner.y - clone.BoundBox.oppositeCorner.y) < 0.00001)
             {
-                clone.Transform(Transforms.RotateX(pi / 2));
+                clone = clone.Transform(Transforms.RotateX(pi / 2));
             }
-            clone.Transform(MyTransforms.ExpandInto(clone.BoundBox.oppositeCorner, clone.BoundBox.topCorner, 1.0f, 1.0f, 1.0f));
+            clone = clone.Transform(MyTransforms.ExpandInto(clone.BoundBox.oppositeCorner, clone.BoundBox.topCorner, 1.0f, 1.0f, 1.0f));
             for (int i = 0; i < clone.Vertices.Length; i++)
             {
+                if (float.IsNaN(clone.Vertices[i].Position.y))
+                {
+
+                }
                 ret.Vertices[i].Coordinates = float2(Math.Abs(clone.Vertices[i].Position.x), Math.Abs(clone.Vertices[i].Position.y));
             }
             return ret;

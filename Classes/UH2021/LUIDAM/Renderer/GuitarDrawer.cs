@@ -213,29 +213,37 @@ namespace Renderer
                 attribute = attribute.Transform(context.FromGeometryToWorld);
 
                 float3 V = normalize(CameraPosition - attribute.Position);
-                float3 L = (LightPosition - attribute.Position);
-                float d = length(L);
-                L /= d; // normalize direction to light reusing distance to light
-
-                attribute.Normal = normalize(attribute.Normal);
-
-                var l = dot(attribute.Normal, L);
-                if (l < 0)
+                foreach (var (lightPosition, lightIntentisty) in new (float3 lightPosition, float3 lightIntensity)[] 
+                { 
+                    (LightPosition, LightIntensity), 
+                    (CameraPosition, LightIntensity * 0.5f) 
+                })
                 {
-                    l = -l;
-                    attribute.Normal *= -1;
+                    float3 L = (lightPosition - attribute.Position);
+                    float d = length(L);
+                    L /= d; // normalize direction to light reusing distance to light
+
+                    attribute.Normal = normalize(attribute.Normal);
+
+                    var l = dot(attribute.Normal, L);
+                    if (l < 0)
+                    {
+                        l = -l;
+                        attribute.Normal *= -1;
+                    }
+                    float lambertFactor = max(0, l);
+
+                    // Check ray to light...
+                    MyShadowRayPayload shadow = new MyShadowRayPayload();
+                    shadower.Trace(scene,
+                        RayDescription.FromDir(attribute.Position + attribute.Normal * 0.001f, // Move an epsilon away from the surface to avoid self-shadowing 
+                        L), ref shadow);
+
+                    float3 Intensity = (shadow.Shadowed ? 0.2f : 1.0f) * lightIntentisty / (d * d);
+
+                    payload.Color += material.EvalBRDF(attribute, V, L) * Intensity * lambertFactor;
+
                 }
-                float lambertFactor = max(0, l);
-
-                // Check ray to light...
-                MyShadowRayPayload shadow = new MyShadowRayPayload();
-                shadower.Trace(scene,
-                    RayDescription.FromDir(attribute.Position + attribute.Normal * 0.001f, // Move an epsilon away from the surface to avoid self-shadowing 
-                    L), ref shadow);
-
-                float3 Intensity = (shadow.Shadowed ? 0.2f : 1.0f) * LightIntensity / (d * d);
-
-                payload.Color = material.EvalBRDF(attribute, V, L) * Intensity * lambertFactor;
             };
             raycaster.OnMiss += delegate (IRaycastContext context, ref DefaultRayPayload payload)
             {

@@ -77,7 +77,7 @@ namespace Renderer
         public Mesh<T> FloorMesh()
         {
             var floor = MeshShapeGenerator<T>.Box(4, 2, 4);
-            floor = floor.FitIn(1, 1, 1).ApplyTransforms(Transforms.Scale(2,.01f,2));
+            floor = floor.FitIn(1, 1, 1).ApplyTransforms(Transforms.Scale(2,.01f,1.1f));
             floor.SetMaterial(FloorMaterial);
             return floor;
         }

@@ -792,7 +792,7 @@ namespace Renderer
                 float centerX = .75f;
                 float radiusSqr = .3f * .3f;
                 var sqrtInside = radiusSqr - (x - centerX) * (x - centerX);
-                return sqrtInside < 0 ? .001f : sqrt(sqrtInside); // 0.001 returned because of weird bug in shading when both parts are joined. Without it, should be 0
+                return sqrtInside < 0 ? .0f : sqrt(sqrtInside); // 0.001 returned because of weird bug in shading when both parts are joined. Without it, should be 0
             }
 
             var prevLRBZ = bz(step);
@@ -802,65 +802,110 @@ namespace Renderer
                 var t1 = step * (i + 1);
                 var prev = bz(t0);
                 var curr = bz(t1);
-                float3 prevLL1Up = float3(0, deep, prev.x), prevUL1Up = float3( prev.y, deep, prev.x),
-                       prevLR1Up = float3(0, deep, curr.x), prevUR1Up = float3( curr.y, deep, curr.x);
-                float3 prevLL1Dw = float3(holeFunc(prev.x), 0, prev.x), prevUL1Dw = float3( prev.y, 0, prev.x),
-                       prevLR1Dw = float3(holeFunc(curr.x), 0, curr.x), prevUR1Dw = float3( curr.y, 0, curr.x);
+                // LL => Lower Left
+                // UR => Upper Right
+                // Up, Down => Up face side
+                float3 LLUp = float3(0, deep, prev.x), ULUp = float3( prev.y, deep, prev.x),
+                       LRUp = float3(0, deep, curr.x), URUp = float3( curr.y, deep, curr.x);
+                float3 LLDw = float3(holeFunc(prev.x), 0, prev.x), ULDw = float3( prev.y, 0, prev.x),
+                       LRDw = float3(holeFunc(curr.x), 0, curr.x), URDw = float3( curr.y, 0, curr.x);
 
-                float3 prevLL2Up = float3(0, deep, prev.x), prevUL2Up = float3(-prev.y , deep, prev.x),
-                       prevLR2Up = float3(0, deep, curr.x), prevUR2Up = float3(-curr.y , deep, curr.x);
-                float3 prevLL2Dw = float3(-holeFunc(prev.x), 0, prev.x), prevUL2Dw = float3(-prev.y, 0, prev.x),
-                       prevLR2Dw = float3(-holeFunc(curr.x), 0, curr.x), prevUR2Dw = float3(-curr.y, 0, curr.x);
+                // Corner Auxiliar Vertex, to prevent normal issues
+                float3 auxULUp1 = ULUp,
+                       auxURUp1 = URUp,
+                       auxULDw1 = ULDw,
+                       auxURDw1 = URDw;
+
+                float3 auxULUp2 = ULUp - 0.05f * (ULUp - LLUp),
+                       auxURUp2 = URUp - 0.05f * (URUp - LRUp),
+                       auxULDw2 = ULDw - 0.05f * (ULDw - LLDw),
+                       auxURDw2 = URDw - 0.05f * (URDw - LRDw);
 
                 var panel1 = 
                     new Mesh<T>(new T[]
                     {
                         new T()
                         {
-                            Position = prevUL1Dw
+                            Position = ULDw
                         },
                         new T()
                         {
-                            Position = prevUL1Up
+                            Position = ULUp
                         },
                         new T()
                         {
-                            Position = prevUR1Dw
+                            Position = URDw
                         },
                         new T()
                         {
-                            Position = prevUR1Up
+                            Position = URUp
                         },
                         new T()
                         {
-                            Position = prevLL1Up
+                            Position = LLUp
                         },
                         new T()
                         {
-                            Position = prevLR1Up
+                            Position = LRUp
                         },
                         new T()
                         {
-                            Position = prevLL1Dw
+                            Position = LLDw
                         },
                         new T()
                         {
-                            Position = prevLR1Dw
+                            Position = LRDw
                         },
-
+                        new T()
+                        {
+                            Position = auxULDw1
+                        },
+                        new T()
+                        {
+                            Position = auxULUp1
+                        },
+                        new T()
+                        {
+                            Position = auxURDw1
+                        },
+                        new T()
+                        {
+                            Position = auxURUp1
+                        },
+                        new T()
+                        {
+                            Position = auxULUp2
+                        },
+                        new T()
+                        {
+                            Position = auxULDw2
+                        },
+                        new T()
+                        {
+                            Position = auxURUp2
+                        },
+                        new T()
+                        {
+                            Position = auxURDw2
+                        },
                     },
                     new int[] 
                     {
                         0,1,2,
                         1,3,2,
-                        1,4,3,
-                        4,5,3,
-                        0,6,2,
-                        6,7,2,
+                        9,12,3,
+                        12,4,14,
+                        4,5,14,
+                        12,14,11,
+                        8,13,10,
+                        13,6,15,
+                        6,7,15,
+                        13,15,2,
                     });
-                var panel2 = panel1.Transform<T>(x => new T() { Position = float3(-x.Position.x - .0001f, x.Position.y, x.Position.z) });
+                var panel2 = panel1.Transform<T>(x => new T() { Position = float3(-x.Position.x - .0f, x.Position.y, x.Position.z) });
                 body += panel1 + panel2;
             }
+            //body = body.Weld();
             body.SetMaterial(new GuitarBuilder<T>().GuitarBodyFrontMaterial); // TODO Set the materials properly
             body = MaterialsUtils.MapPlane(body);
             return body;

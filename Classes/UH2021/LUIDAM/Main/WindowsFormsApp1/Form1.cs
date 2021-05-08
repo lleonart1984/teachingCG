@@ -66,7 +66,6 @@ namespace MainForm
             _minScale = .5f;
             var stepSize = (_maxScale - _minScale) / (zoomBar.Maximum - zoomBar.Minimum);
             zoomBar.Value = (int)((1 - _minScale) / stepSize); // Setting zoomBar value to the value that represent scaling by 1
-            DrawModel();
         }
 
         private float4x4 WorldTransformation()
