@@ -146,10 +146,6 @@ namespace Renderer
             clone = clone.Transform(MyTransforms.ExpandInto(clone.BoundBox.oppositeCorner, clone.BoundBox.topCorner, 1.0f, 1.0f, 1.0f));
             for (int i = 0; i < clone.Vertices.Length; i++)
             {
-                if (float.IsNaN(clone.Vertices[i].Position.y))
-                {
-
-                }
                 ret.Vertices[i].Coordinates = float2(Math.Abs(clone.Vertices[i].Position.x), Math.Abs(clone.Vertices[i].Position.y));
             }
             return ret;

@@ -442,7 +442,7 @@ namespace Renderer
             var radius = BridgeWidth * 1.45f / 2;
             var dz = BridgeLength + radius - (BridgeLength / 4 * .2f);
             
-            var hole = MeshShapeGenerator<T>.Cylinder((int)(200 * MeshScalar), thickness: BridgeWidth / 8, surface:true, upFaceMat: GuitarHoleMaterial, downFaceMat: GuitarHoleMaterial, cylinderMat: GuitarHoleMaterial)
+            var hole = MeshShapeGenerator<T>.Cylinder((int)(60 * 60 * MeshScalar), thickness: BridgeWidth / 8, surface:true, upFaceMat: GuitarHoleMaterial, downFaceMat: GuitarHoleMaterial, cylinderMat: GuitarHoleMaterial)
                                                    .ApplyTransforms(Transforms.RotateX(pi_over_4 * 2),
                                                                     Transforms.Scale(radius, 1, radius),
                                                                     Transforms.Translate(0, -.6f, dz -.2f));
@@ -784,7 +784,11 @@ namespace Renderer
         {
             float step = 3.0f / pointsLength;
             float deep = 5f;
-            Mesh<T> body = new Mesh<T>();
+
+            Mesh<T> frontBody = null,
+                    backBody = null,
+                    sideBody = null;
+
             var bz = BodyFunction();
             
             static float holeFunc(float x)
@@ -794,7 +798,12 @@ namespace Renderer
                 var sqrtInside = radiusSqr - (x - centerX) * (x - centerX);
                 return sqrtInside < 0 ? .0f : sqrt(sqrtInside); // 0.001 returned because of weird bug in shading when both parts are joined. Without it, should be 0
             }
-
+            
+            var guitarBuilder = new GuitarBuilder<T>();
+            var backMaterial = guitarBuilder.GuitarBodyBackMaterial;
+            var frontMaterial = guitarBuilder.GuitarBodyFrontMaterial;
+            var sideMaterial = guitarBuilder.GuitarBodySidesMaterial;
+            
             var prevLRBZ = bz(step);
             for (int i = 0; (i+1) * step < 3; i++)
             {
@@ -822,92 +831,150 @@ namespace Renderer
                        auxURDw2 = URDw - 0.05f * (URDw - LRDw);
 
                 var panel1 = 
-                    new Mesh<T>(new T[]
+                    new Mesh<T>(
+                        new T[]
                     {
-                        new T()
+                        new T() //0
                         {
                             Position = ULDw
                         },
-                        new T()
+                        new T() //1
                         {
                             Position = ULUp
                         },
-                        new T()
+                        new T() //2
                         {
                             Position = URDw
                         },
-                        new T()
+                        new T() //3
                         {
                             Position = URUp
                         },
-                        new T()
-                        {
-                            Position = LLUp
-                        },
-                        new T()
-                        {
-                            Position = LRUp
-                        },
-                        new T()
-                        {
-                            Position = LLDw
-                        },
-                        new T()
-                        {
-                            Position = LRDw
-                        },
-                        new T()
-                        {
-                            Position = auxULDw1
-                        },
-                        new T()
+                        new T() // 9
                         {
                             Position = auxULUp1
                         },
-                        new T()
-                        {
-                            Position = auxURDw1
-                        },
-                        new T()
+                        new T() // 11
                         {
                             Position = auxURUp1
                         },
-                        new T()
+                        new T() // 12
                         {
                             Position = auxULUp2
                         },
-                        new T()
-                        {
-                            Position = auxULDw2
-                        },
-                        new T()
+                        new T() // 14
                         {
                             Position = auxURUp2
                         },
-                        new T()
+                        new T() // 4
+                        {
+                            Position = LLUp
+                        },
+                        new T() // 5
+                        {
+                            Position = LRUp
+                        },
+                        new T() // 8
+                        {
+                            Position = auxULDw1
+                        },
+                        new T() // 10
+                        {
+                            Position = auxURDw1
+                        },
+                        new T() // 13
+                        {
+                            Position = auxULDw2
+                        },
+                        new T() // 15
                         {
                             Position = auxURDw2
+                        },
+                        new T() // 6
+                        {
+                            Position = LLDw
+                        },
+                        new T() // 7
+                        {
+                            Position = LRDw
                         },
                     },
                     new int[] 
                     {
                         0,1,2,
                         1,3,2,
-                        9,12,3,
-                        12,4,14,
-                        4,5,14,
-                        12,14,11,
-                        8,13,10,
-                        13,6,15,
-                        6,7,15,
-                        13,15,2,
+                        4,6,5,
+                        6,8,7,
+                        8,9,7,
+                        6,7,5,
+                        10,12,11,
+                        12,14,13,
+                        14,15,13,
+                        12,13,11,
                     });
+
+                panel1.Materials = new IMaterial[]
+                {
+                    sideMaterial,
+                    backMaterial,
+                    frontMaterial,
+                };
+                panel1.MaterialsSeparators = new int[]
+                {
+                    4,
+                    10,
+                    16,
+                };
+
                 var panel2 = panel1.Transform<T>(x => new T() { Position = float3(-x.Position.x - .0f, x.Position.y, x.Position.z) });
-                body += panel1 + panel2;
+                var bodyParts = panel1.MaterialDecompose().ToArray();
+                for (int k = 0; k < bodyParts.Length; k++)
+                {
+                    switch (k)
+                    {
+                        case 0: // side
+                            sideBody = sideBody == null ? bodyParts[k] : sideBody + bodyParts[k];
+                            break;
+                        case 1: // back
+                            backBody = backBody == null ? bodyParts[k] : backBody + bodyParts[k];
+                            break;
+                        case 2: // front
+                            frontBody = frontBody == null ? bodyParts[k] : frontBody + bodyParts[k];
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                bodyParts = panel2.MaterialDecompose().ToArray();
+                for (int k = 0; k < bodyParts.Length; k++)
+                {
+                    switch (k)
+                    {
+                        case 0: // side
+                            sideBody = sideBody == null ? bodyParts[k] : sideBody + bodyParts[k];
+                            break;
+                        case 1: // back
+                            backBody = backBody == null ? bodyParts[k] : backBody + bodyParts[k];
+                            break;
+                        case 2: // front
+                            frontBody = frontBody == null ? bodyParts[k] : frontBody + bodyParts[k];
+                            break;
+                        default:
+                            break;
+                    }
+                }
             }
-            //body = body.Weld();
-            body.SetMaterial(new GuitarBuilder<T>().GuitarBodyFrontMaterial); // TODO Set the materials properly
-            body = MaterialsUtils.MapPlane(body);
+            // All this material shit is for Memory Usage, only one material instance is used. Also it improves time performance
+            frontBody.SetMaterial(frontMaterial);
+            frontBody = MaterialsUtils.MapPlane(frontBody);
+
+            backBody.SetMaterial(backMaterial);
+            backBody = MaterialsUtils.MapPlane(backBody);
+
+            sideBody.SetMaterial(sideMaterial);
+            sideBody = MaterialsUtils.MapPlane(sideBody);
+
+            var body = sideBody + frontBody + backBody;
             return body;
         }
 
