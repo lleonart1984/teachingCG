@@ -253,16 +253,18 @@ namespace Renderer
             RenderUtils.Draw(texture, raycaster, scene, viewMatrix, projectionMatrix, DrawStep, XGrid, YGrid);
         }
 
-        public static MyMaterial<T> LoadMaterialFromFile(string dir, float glossyness, float specularPower=60, float3? specular=default)
+        public static MyMaterial<T> LoadMaterialFromFile(string dir, float glossyness, float specularPower=60, float3? specular=default, float3? diffuse = default)
         {
-            var item = Texture2D.FromFile(dir);
+            var item = Texture2D.LoadBmpFromFile(dir);
             var realSpecular = specular.HasValue ? specular.Value : float3(1, 1, 1);
+            var realDifusse = diffuse.HasValue ? diffuse.Value : float3(1, 1, 1);
             return new MyMaterial<T> 
             {
-                Diffuse = item, 
-                Glossyness = glossyness,
+                DiffuseMap = item, 
+                WeightGlossy = glossyness,
                 SpecularPower = specularPower,
                 Specular = realSpecular,
+                Diffuse = realDifusse,
                 TextureSampler = new Sampler 
                 { 
                     Wrap = WrapMode.Repeat,

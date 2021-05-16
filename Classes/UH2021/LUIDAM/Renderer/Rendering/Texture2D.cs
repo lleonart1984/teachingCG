@@ -1,4 +1,6 @@
 ﻿using GMath;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -115,8 +117,23 @@ namespace Rendering
                     throw new ArgumentOutOfRangeException();
             }
         }
-    
-        public static Texture2D FromFile(string filename)
+
+        public static Texture2D LoadFromFile(string path)
+        {
+            using (Image<Rgba32> image = Image<Rgba32>.Load(path).CloneAs<Rgba32>())
+            {
+                Texture2D texture = new Texture2D(image.Width, image.Height);
+                for (int i = 0; i < image.Height; i++)
+                    for (int j = 0; j < image.Width; j++)
+                    {
+                        var color = image[j, i];
+                        texture[j, i] = float4(color.R / 255f, color.G / 255f, color.B / 255f, color.A / 255f);
+                    }
+                return texture;
+            }
+        }
+
+        public static Texture2D LoadBmpFromFile(string filename)
         {
             var image = new Bitmap(filename);
             var texture = new Texture2D(image.Width, image.Height);

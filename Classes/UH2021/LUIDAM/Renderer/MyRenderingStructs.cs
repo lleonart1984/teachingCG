@@ -64,41 +64,94 @@ namespace Renderer
 
     #region Materials
 
-    public struct MyMaterial<T> : IMaterial where T : struct, INormalVertex<T>, ICoordinatesVertex<T> 
+    public struct MyImpulse
     {
-        public Texture2D Diffuse;
+        public float3 Direction;
+        public float3 Ratio;
+    }
 
-        public float3 Specular;
+    public struct MyMaterial<T> : IMaterial where T : struct, INormalVertex<T>, ICoordinatesVertex<T>
+    {
+        public float3 Emissive;
 
-        public float SpecularPower;
-
-        public float Glossyness;
-
+        public Texture2D DiffuseMap;
+        public Texture2D BumpMap;
         public Sampler TextureSampler;
+
+        public float3 Diffuse;
+        public float3 Specular;
+        public float SpecularPower;
+        public float RefractionIndex;
+
+        // 4 float values with Diffuseness, Glossyness, Mirrorness, Fresnelness
+        public float WeightDiffuse { get { return 1 - OneMinusWeightDiffuse; } set { OneMinusWeightDiffuse = 1 - value; } }
+        float OneMinusWeightDiffuse; // This is intended for default values of the struct to work as 1, 0, 0, 0 weight initial settings
+        public float WeightGlossy;
+        public float WeightMirror;
+        public float WeightFresnel;
+
+        public float WeightNormalization
+        {
+            get { return max(0.0001f, WeightDiffuse + WeightGlossy + WeightMirror + WeightFresnel); }
+        }
 
         public float3 EvalBRDF(T surfel, float3 wout, float3 win)
         {
-            if (Diffuse == null) // TODO Remove ONLY FOR TESTING
-            {
-                Diffuse = new Texture2D(2, 2);
-                Diffuse.Write(0, 0, float4(1, 0, 0, 1));
-                Diffuse.Write(0, 1, float4(0, 1, 0, 1));
-                Diffuse.Write(1, 0, float4(0, 0, 1, 1));
-                Diffuse.Write(1, 1, float4(0, 1, 1, 1));
-                TextureSampler = new Sampler { Wrap = WrapMode.Repeat };
-                //var c = GuitarDrawer<MyPositionNormalCoordinate>.LoadMaterialFromFile("guitar_texture.material", 32, 0.9f);
-                //Diffuse = c.Diffuse;
-                //Glossyness = c.Glossyness;
-                //TextureSampler = c.TextureSampler;
-                //Specular = c.Specular;
-                //SpecularPower = c.SpecularPower;
-            }
-            float3 diffuse = Diffuse.Sample(TextureSampler, surfel.Coordinates).xyz / pi;
+            float3 diffuse = Diffuse * (DiffuseMap == null ? float3(1, 1, 1) : DiffuseMap.Sample(TextureSampler, surfel.Coordinates).xyz) / pi;
             float3 H = normalize(win + wout);
             float3 specular = Specular * pow(max(0, dot(H, surfel.Normal)), SpecularPower) * (SpecularPower + 2) / two_pi;
-            return diffuse * (1 - Glossyness) + specular * Glossyness;
+            return diffuse * WeightDiffuse / WeightNormalization + specular * WeightGlossy / WeightNormalization;
         }
 
+        // Compute fresnel reflection component given the cosine of input direction and refraction index ratio.
+        // Refraction can be obtained subtracting to one.
+        // Uses the Schlick's approximation
+        float ComputeFresnel(float NdotL, float ratio)
+        {
+            float f = pow((1 - ratio) / (1 + ratio), 2);
+            return (f + (1.0f - f) * pow((1.0f - NdotL), 5));
+        }
+
+        public IEnumerable<MyImpulse> GetBRDFImpulses(T surfel, float3 wout)
+        {
+            if (!any(Specular))
+                yield break; // No specular => Ratio == 0
+
+            float NdotL = dot(surfel.Normal, wout);
+            // Check if ray is entering the medium or leaving
+            bool entering = NdotL > 0;
+
+            // Invert all data if leaving
+            NdotL = entering ? NdotL : -NdotL;
+            surfel.Normal = entering ? surfel.Normal : -surfel.Normal;
+            float ratio = entering ? 1.0f / this.RefractionIndex : this.RefractionIndex / 1.0f; // 1.0f air refraction index approx
+
+            // Reflection vector
+            float3 R = reflect(wout, surfel.Normal);
+
+            // Refraction vector
+            float3 T = refract(wout, surfel.Normal, ratio);
+
+            // Reflection quantity, (1 - F) will be the refracted quantity.
+            float F = ComputeFresnel(NdotL, ratio);
+
+            if (!any(T))
+                F = 1; // total internal reflection (produced with critical angles)
+
+            if (WeightMirror + WeightFresnel * F > 0) // something is reflected
+                yield return new MyImpulse
+                {
+                    Direction = R,
+                    Ratio = Specular * (WeightMirror + WeightFresnel * F) / WeightNormalization
+                };
+
+            if (WeightFresnel * (1 - F) > 0) // something to refract
+                yield return new MyImpulse
+                {
+                    Direction = T,
+                    Ratio = Specular * WeightFresnel * (1 - F) / WeightNormalization
+                };
+        }
     }
 
     public struct NoMaterial : IMaterial
