@@ -59,6 +59,13 @@ namespace Renderer
             public float3 Ratio;
         }
 
+        public struct ScatteredRay
+        {
+            public float3 Direction;
+            public float3 Ratio;
+            public float PDF;
+        }
+
         public struct Material
         {
             public float3 Emissive;
@@ -131,16 +138,49 @@ namespace Renderer
                     yield return new Impulse
                     {
                         Direction = R,
-                        Ratio = Specular * (WeightMirror + WeightFresnel * F) / WeightNormalization
+                        Ratio = Specular * (WeightMirror + WeightFresnel * F) / WeightNormalization / NdotL
                     };
 
                 if (WeightFresnel * (1 - F) > 0) // something to refract
                     yield return new Impulse
                     {
                         Direction = T,
-                        Ratio = Specular * WeightFresnel * (1 - F) / WeightNormalization
+                        Ratio = Specular * WeightFresnel * (1 - F) / WeightNormalization / -dot(surfel.Normal, T)
                     };
             }
+
+            /// <summary>
+            /// Scatter a ray using the BRDF and Impulses
+            /// </summary>
+            public ScatteredRay Scatter(PositionNormalCoordinate surfel, float3 w)
+            {
+                float selection = random();
+                float impulseProb = 0;
+
+                foreach (var impulse in GetBRDFImpulses(surfel, w))
+                {
+                    float pdf = (impulse.Ratio.x + impulse.Ratio.y + impulse.Ratio.z) / 3;
+                    if (selection < pdf) // this impulse is choosen
+                        return new ScatteredRay
+                        {
+                            Ratio = impulse.Ratio,
+                            Direction = impulse.Direction,
+                            PDF = pdf
+                        };
+                    selection -= pdf;
+                    impulseProb += pdf;
+                }
+
+                float3 wout = randomHSDirection(surfel.Normal);
+                /// BRDF uniform sampling
+                return new ScatteredRay
+                {
+                    Direction = wout,
+                    Ratio = EvalBRDF(surfel, wout, w),
+                    PDF = (1 - impulseProb) / (2 * pi)
+                };
+            }
+            
         }
 
         #region Scenes
@@ -193,7 +233,7 @@ namespace Renderer
                 WeightFresnel = 1.0f, // Glass sphere
                 RefractionIndex = 1.0f
             },
-               mul(Transforms.Scale(0.4f), Transforms.Translate(LightPosition)));
+               mul(Transforms.Scale(2.4f, 0.4f, 2.4f), Transforms.Translate(LightPosition)));
         }
 
         #endregion
@@ -201,9 +241,16 @@ namespace Renderer
         /// <summary>
         /// Payload used to pick a color from a hit intersection
         /// </summary>
-        struct MyRayPayload
+        struct RTRayPayload
         {
             public float3 Color;
+            public int Bounces; // Maximum value of allowed bounces
+        }
+
+        struct PTRayPayload
+        {
+            public float3 Color; // Accumulated color to the viewer
+            public float3 Importance; // Importance of the ray to the viewer
             public int Bounces; // Maximum value of allowed bounces
         }
 
@@ -244,8 +291,8 @@ namespace Renderer
             };
 
             // Raycaster to trace rays and lit closest surfaces
-            Raytracer<MyRayPayload, PositionNormalCoordinate, Material> raycaster = new Raytracer<MyRayPayload, PositionNormalCoordinate, Material>();
-            raycaster.OnClosestHit += delegate (IRaycastContext context, PositionNormalCoordinate attribute, Material material, ref MyRayPayload payload)
+            Raytracer<RTRayPayload, PositionNormalCoordinate, Material> raycaster = new Raytracer<RTRayPayload, PositionNormalCoordinate, Material>();
+            raycaster.OnClosestHit += delegate (IRaycastContext context, PositionNormalCoordinate attribute, Material material, ref RTRayPayload payload)
             {
                 // Move geometry attribute to world space
                 attribute = attribute.Transform(context.FromGeometryToWorld);
@@ -288,7 +335,7 @@ namespace Renderer
 
                         RayDescription ray = new RayDescription { Direction = D, Origin = attribute.Position + facedNormal * 0.001f, MinT = 0.0001f, MaxT = 10000 };
 
-                        MyRayPayload newPayload = new MyRayPayload
+                        RTRayPayload newPayload = new RTRayPayload
                         {
                             Bounces = payload.Bounces - 1
                         };
@@ -298,7 +345,7 @@ namespace Renderer
                         payload.Color += newPayload.Color * impulse.Ratio;
                     }
             };
-            raycaster.OnMiss += delegate (IRaycastContext context, ref MyRayPayload payload)
+            raycaster.OnMiss += delegate (IRaycastContext context, ref RTRayPayload payload)
             {
                 payload.Color = float3(0, 0, 0); // Blue, as the sky.
             };
@@ -315,7 +362,7 @@ namespace Renderer
 
                     RayDescription ray = RayDescription.FromScreen(px + 0.5f, py + 0.5f, texture.Width, texture.Height, inverse(viewMatrix), inverse(projectionMatrix), 0, 1000);
 
-                    MyRayPayload coloring = new MyRayPayload();
+                    RTRayPayload coloring = new RTRayPayload();
                     coloring.Bounces = 3;
 
                     raycaster.Trace(scene, ray, ref coloring);
@@ -324,22 +371,115 @@ namespace Renderer
                 }
         }
 
+        static void Pathtracing(Texture2D texture, int pass)
+        {
+            // View and projection matrices
+            float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(0, 1, 0), float3(0, 1, 0));
+            float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 20);
+
+            Scene<PositionNormalCoordinate, Material> scene = new Scene<PositionNormalCoordinate, Material>();
+            //CreateMeshScene(scene);
+            CreateRaycastScene(scene);
+
+            // Raycaster to trace rays and lit closest surfaces
+            Raytracer<PTRayPayload, PositionNormalCoordinate, Material> raycaster = new Raytracer<PTRayPayload, PositionNormalCoordinate, Material>();
+            raycaster.OnClosestHit += delegate (IRaycastContext context, PositionNormalCoordinate attribute, Material material, ref PTRayPayload payload)
+            {
+                // Move geometry attribute to world space
+                attribute = attribute.Transform(context.FromGeometryToWorld);
+
+                float3 V = -normalize(context.GlobalRay.Direction);
+
+                attribute.Normal = normalize(attribute.Normal);
+
+                if (material.BumpMap != null)
+                {
+                    float3 T, B;
+                    createOrthoBasis(attribute.Normal, out T, out B);
+                    float3 tangentBump = material.BumpMap.Sample(material.TextureSampler, attribute.Coordinates).xyz * 2 - 1;
+                    float3 globalBump = tangentBump.x * T + tangentBump.y * B + tangentBump.z * attribute.Normal;
+                    attribute.Normal = globalBump;// normalize(attribute.Normal + globalBump * 5f);
+                }
+
+                ScatteredRay outgoing = material.Scatter(attribute, V);
+
+                float lambertFactor = max(0, dot(attribute.Normal, outgoing.Direction));
+
+                payload.Color += payload.Importance * material.Emissive;
+                
+                // Recursive calls for indirect light due to reflections and refractions
+                if (payload.Bounces > 0)
+                {
+                    float3 D = outgoing.Direction; // recursive direction to check
+                    float3 facedNormal = dot(D, attribute.Normal) > 0 ? attribute.Normal : -attribute.Normal; // normal respect to direction
+
+                    RayDescription ray = new RayDescription { Direction = D, Origin = attribute.Position + facedNormal * 0.001f, MinT = 0.0001f, MaxT = 10000 };
+
+                    payload.Importance *= outgoing.Ratio / outgoing.PDF;
+                    payload.Bounces--;
+
+                    raycaster.Trace(scene, ray, ref payload);
+                }
+            };
+            raycaster.OnMiss += delegate (IRaycastContext context, ref PTRayPayload payload)
+            {
+                payload.Color = float3(0, 0, 0); // Blue, as the sky.
+            };
+
+            /// Render all points of the screen
+            for (int px = 0; px < texture.Width; px++)
+                for (int py = 0; py < texture.Height; py++)
+                {
+                    int progress = (px * texture.Height + py);
+                    if (progress % 10000 == 0)
+                    {
+                        Console.Write("\r" + progress * 100 / (float)(texture.Width * texture.Height) + "%            ");
+                    }
+
+                    RayDescription ray = RayDescription.FromScreen(px + 0.5f, py + 0.5f, texture.Width, texture.Height, inverse(viewMatrix), inverse(projectionMatrix), 0, 1000);
+
+                    float4 accum = texture.Read(px, py) * pass;
+                    PTRayPayload coloring = new PTRayPayload();
+                    coloring.Importance = float3(1, 1, 1);
+                    coloring.Bounces = 3;
+
+                    raycaster.Trace(scene, ray, ref coloring);
+
+                    texture.Write(px, py, float4((accum.xyz + coloring.Color) / (pass + 1), 1));
+                }
+        }
+
         public static void Main()
         {
-            Stopwatch stopwatch = new Stopwatch();
-
-            stopwatch.Start();
-
             // Texture to output the image.
             Texture2D texture = new Texture2D(512, 512);
 
-            Raytracing(texture);
+            bool UseRT = false;
+            if (UseRT)
+            {
+                Stopwatch stopwatch = new Stopwatch();
 
-            stopwatch.Stop();
+                stopwatch.Start();
 
-            texture.Save("test.rbm");
+                Raytracing(texture);
 
-            Console.WriteLine("Done. Rendered in " + stopwatch.ElapsedMilliseconds + " ms");
+                stopwatch.Stop();
+
+                texture.Save("test.rbm");
+
+                Console.WriteLine("Done. Rendered in " + stopwatch.ElapsedMilliseconds + " ms");
+            }
+            else
+            {
+                int pass = 0;
+                while (true)
+                {
+                    Console.WriteLine("Pass: " + pass);
+                    Pathtracing(texture, pass);
+                    texture.Save("test.rbm");
+                    pass++;
+                }
+            }
         }
     }
 }
