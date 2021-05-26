@@ -109,10 +109,10 @@ namespace Renderer
 
             Texture2D rugose_texture = Texture2DFunctions.LoadTextureFromJPG(rugose_texture_t);
 
-            Texture2D tableTexture = new Texture2D(1, 1);
-            tableTexture.Write(0, 0, float4(1f, 1f, 0.8f, 1));
+            string wood_texture_t = "wood.jpeg";
+            Texture2D wood_texture = Texture2DFunctions.LoadTextureFromJPG(wood_texture_t);
 
-            scene.Add(Raycasting.PlaneXZ.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(a.x, a.z), Normal = float3(0, 1, 0) }), new Material { Diffuse = tableTexture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat }, Specular = float3(1,1,1), SpecularPower = 50, Glossyness = 0.2f },
+            scene.Add(Raycasting.PlaneXZ.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(a.z*0.1f, a.x*0.1f), Normal = float3(0, 1, 0) }), new Material { Diffuse = wood_texture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat }, Specular = float3(1,1,1), SpecularPower = 50, Glossyness = 0.2f },
             Transforms.Identity); //Table
 
             Texture2D wallTexture = new Texture2D(1, 1);
@@ -134,6 +134,9 @@ namespace Renderer
 
             Texture2D metalTexture = new Texture2D(1, 1);
             metalTexture.Write(0, 0, float4(1f, 1f, 1f, 1));
+
+            string rugose_texture_t = "texture.jpg";
+            Texture2D rugose_texture = Texture2DFunctions.LoadTextureFromJPG(rugose_texture_t);
 
             scene.Add(plastic_model.AsRaycast(), new Material { Diffuse = plasticTexture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat } }, Transforms.Identity);
             scene.Add(metal_model.AsRaycast(), new Material { Diffuse = rugose_texture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat }, Specular = float3(1f,1f,1f), SpecularPower = 60, Glossyness = 0.2f}, Transforms.Identity);
