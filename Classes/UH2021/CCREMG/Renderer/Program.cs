@@ -105,7 +105,7 @@ namespace Renderer
 
         static void CreateMeshScene(Scene<PositionNormalCoordinate, Material> scene)
         {
-            string rugose_texture_t = "texture.jpg";
+            string rugose_texture_t = "texture.jpeg";
 
             Texture2D rugose_texture = Texture2DFunctions.LoadTextureFromJPG(rugose_texture_t);
 
@@ -136,7 +136,7 @@ namespace Renderer
             metalTexture.Write(0, 0, float4(1f, 1f, 1f, 1));
 
             scene.Add(plastic_model.AsRaycast(), new Material { Diffuse = plasticTexture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat } }, Transforms.Identity);
-            scene.Add(metal_model.AsRaycast(), new Material { Diffuse = rugose_texture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat }, Specular = float3(0.5f,0.5f,0.5f), SpecularPower = 1f, Glossyness = 0.95f}, Transforms.Identity);
+            scene.Add(metal_model.AsRaycast(), new Material { Diffuse = rugose_texture, TextureSampler = new Sampler { Wrap = WrapMode.Repeat }, Specular = float3(1f,1f,1f), SpecularPower = 60, Glossyness = 0.2f}, Transforms.Identity);
 
         }
 
@@ -146,8 +146,8 @@ namespace Renderer
             float3 CameraPosition = float3(-12f, 6.6f, 0);
             // float3(-15, 13f, 25), ligth in the right side
             // float3(-15, 13f, 0), Light in the front
-            float3[] Lights = {float3(-15, 13f, 25), float3(-15, 17f, -15)};
-            float3 LightIntensity = float3(1, 1, 1) * 1500;
+            float3[] Lights = {float3(-15, 17f, 25), float3(-15, 17f, -15)};
+            float3 LightIntensity = float3(1, 1, 1) * 2500;
 
             // View and projection matrices
             float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(0, 4, 0), float3(0, 1, 0));
