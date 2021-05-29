@@ -5,6 +5,8 @@ using System.IO;
 using System.Text;
 using static GMath.Gfx;
 using System.Drawing;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Rendering
 {
@@ -191,32 +193,19 @@ namespace Rendering
             return texture;
         }
 
-        public static Texture2D LoadTextureFromJPG(string fileName)
+        public static Texture2D LoadFromFile(string path)
         {
-            Stream fileStream = System.IO.File.Open(fileName, System.IO.FileMode.Open);
-            Image image = Image.FromStream(fileStream);
-
-            Bitmap bmp = new Bitmap(image);
-
-            int width = bmp.Width;
-            int height = bmp.Height;
-
-            Texture2D texture = new Texture2D(width, height);
-
-            for(int py = 0; py < height; py++)
-                for (int px = 0; px < width; px++)
-                {
-                    Color color = bmp.GetPixel(px, py);
-
-                    float r = color.R;
-                    float g = color.G;
-                    float b = color.B;
-                    float a = color.A;
-
-                    texture[px, py] = new float4(r/255, g/255, b/255, a/255);
-                }
-
-            return texture;
+            using (Image<Rgba32> image = Image<Rgba32>.Load(path).CloneAs<Rgba32>())
+            {
+                Texture2D texture = new Texture2D(image.Width, image.Height);
+                for (int i = 0; i < image.Height; i++)
+                    for (int j = 0; j < image.Width; j++)
+                    {
+                        var color = image[j, i];
+                        texture[j, i] = float4(color.R / 255f, color.G / 255f, color.B / 255f, color.A / 255f);
+                    }
+                return texture;
+            }
         }
     }
 }
