@@ -45,7 +45,7 @@ namespace Renderer
             cosita_mesh = cosita_mesh.Add_Mesh(top_cosita_mesh);
 
             Mesh<V> up_mesh = handle_mesh.Add_Mesh(cosita_mesh);
-            up_mesh = up_mesh.Transform(Transforms.RotateRespectTo(float3(0,0,0), float3(0,1,0), pi/3));
+            up_mesh = up_mesh.Transform(Transforms.RotateRespectTo(float3(0,0,0), float3(0,1,0), pi/3 + pi/10));
 
             Mesh<V> r_model = up_mesh.Bigger_Mesh();
 
@@ -66,14 +66,14 @@ namespace Renderer
 
             List<float3> buttonTopPoints = PoliedroXZ(sides, float3(0, altura_tope, 0), 1.4f);
             List<float3> topTopPoints = PoliedroXZ(sides, float3(0, altura_tope + h_tope, 0), 2.1f);
-            Mesh<V> top_mesh = CoffeMakerTopSection_Mesh(buttonTopPoints, topTopPoints, 2.1f, 0.7f);
+            Mesh<V> top_mesh = CoffeMakerTopSection_Mesh(buttonTopPoints, topTopPoints, 2.1f, 0.5f);
 
             List<float3> buttonTapaPoints = PoliedroXZ(sides, float3(0, altura_tapa, 0), 2.1f);
             List<float3> topTapaPoints = PoliedroXZ(sides, float3(0, altura_tapa + h_tapa, 0), 0.3f);
             Mesh<V> tapa_mesh = CoffeMakerSection_Mesh(buttonTapaPoints, topTapaPoints);
 
             Mesh<V> up_mesh = top_mesh.Add_Mesh(tapa_mesh);
-            up_mesh = up_mesh.Transform(Transforms.RotateRespectTo(float3(0,0,0), float3(0,1,0), pi/3));
+            up_mesh = up_mesh.Transform(Transforms.RotateRespectTo(float3(0,0,0), float3(0,1,0), pi/3 + pi/10));
 
             Mesh<V> r_model = base_mesh.Add_Mesh(coffee_base_mesh).Add_Mesh(union_mesh).Add_Mesh(up_mesh);
             r_model = r_model.Bigger_Mesh();
