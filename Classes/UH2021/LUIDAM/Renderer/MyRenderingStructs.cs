@@ -64,12 +64,6 @@ namespace Renderer
 
     #region Materials
 
-    public struct MyImpulse
-    {
-        public float3 Direction;
-        public float3 Ratio;
-    }
-
     public struct MyMaterial<T> : IMaterial where T : struct, INormalVertex<T>, ICoordinatesVertex<T>
     {
         public float3 Emissive;
@@ -152,6 +146,39 @@ namespace Renderer
                     Ratio = Specular * WeightFresnel * (1 - F) / WeightNormalization
                 };
         }
+
+        /// <summary>
+        /// Scatter a ray using the BRDF and Impulses
+        /// </summary>
+        public MyScatteredRay Scatter(T surfel, float3 w)
+        {
+            float selection = random();
+            float impulseProb = 0;
+
+            foreach (var impulse in GetBRDFImpulses(surfel, w))
+            {
+                float pdf = (impulse.Ratio.x + impulse.Ratio.y + impulse.Ratio.z) / 3;
+                if (selection < pdf) // this impulse is choosen
+                    return new MyScatteredRay
+                    {
+                        Ratio = impulse.Ratio,
+                        Direction = impulse.Direction,
+                        PDF = pdf
+                    };
+                selection -= pdf;
+                impulseProb += pdf;
+            }
+
+            float3 wout = randomHSDirection(surfel.Normal);
+            /// BRDF uniform sampling
+            return new MyScatteredRay
+            {
+                Direction = wout,
+                Ratio = EvalBRDF(surfel, wout, w),
+                PDF = (1 - impulseProb) / (2 * pi)
+            };
+        }
+
     }
 
     public struct NoMaterial : IMaterial
@@ -170,6 +197,36 @@ namespace Renderer
     public struct MyShadowRayPayload
     {
         public bool Shadowed;
+    }
+
+    public struct MyRTRayPayload
+    {
+        public float3 Color;
+        public int Bounces; // Maximum value of allowed bounces
+    }
+
+    public struct MyPTRayPayload
+    {
+        public float3 Color; // Accumulated color to the viewer
+        public float3 Importance; // Importance of the ray to the viewer
+        public int Bounces; // Maximum value of allowed bounces
+    }
+
+    #endregion
+
+    #region Rays
+
+    public struct MyImpulse
+    {
+        public float3 Direction;
+        public float3 Ratio;
+    }
+
+    public struct MyScatteredRay
+    {
+        public float3 Direction;
+        public float3 Ratio;
+        public float PDF;
     }
 
     #endregion

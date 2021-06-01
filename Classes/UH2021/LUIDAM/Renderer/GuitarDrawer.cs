@@ -63,6 +63,107 @@ namespace Renderer
             start.Stop();
             Console.WriteLine($"Elapsed {start.ElapsedMilliseconds} milliseconds");
         }
+
+        public static void RayTrace<T>(Texture2D texture, Scene<T, MyMaterial<T>> scene, Raytracer<MyRTRayPayload, T, MyMaterial<T>> raycaster, float4x4 viewMatrix, float4x4 projectionMatrix, int rendStep = 1, int gridXDiv = 8, int gridYDiv = 8) where T : struct, IVertex<T>, INormalVertex<T>, ICoordinatesVertex<T>, IColorable, ITransformable<T>
+        {
+            var start = new Stopwatch();
+
+            start.Start();
+
+            var tasks = new List<Task>();
+            int id = 0, xStep = texture.Width / gridXDiv, yStep = texture.Height / gridYDiv;
+            for (int i = 0; i * yStep < texture.Height; i++)
+            {
+                for (int j = 0; j * xStep < texture.Width; j++)
+                {
+                    int threadId = id, x0 = j * xStep, y0 = i * yStep, maxX = Math.Min((j + 1) * xStep, texture.Width), maxY = Math.Min((i + 1) * yStep, texture.Height);
+                    tasks.Add(Task.Run(() => RenderUtils.RaytracePassDrawArea(threadId, x0, y0, maxX, maxY, raycaster, texture, viewMatrix, projectionMatrix, scene, rendStep)));
+                    id++;
+                }
+            }
+            Task.WaitAll(tasks.ToArray());
+            start.Stop();
+            Console.WriteLine($"Elapsed {start.ElapsedMilliseconds} milliseconds");
+        }
+
+        public static void RaytracePassDrawArea<T>(int id, int x0, int y0, int xf, int yf, Raytracer<MyRTRayPayload, T, MyMaterial<T>> raycaster, Texture2D texture, float4x4 viewMatrix, float4x4 projectionMatrix, Scene<T, MyMaterial<T>> scene, int step = 1) where T : struct, IVertex<T>, INormalVertex<T>, ICoordinatesVertex<T>, IColorable, ITransformable<T>
+        {
+            for (int px = x0; px < xf; px += step)
+                for (int py = y0; py < yf; py += step)
+                {
+
+                    RayDescription ray = RayDescription.FromScreen(px + 0.5f, py + 0.5f, texture.Width, texture.Height, inverse(viewMatrix), inverse(projectionMatrix), 0, 1000);
+
+                    MyRTRayPayload coloring = new MyRTRayPayload();
+                    coloring.Bounces = 3;
+
+                    raycaster.Trace(scene, ray, ref coloring);
+
+                    for (int i = 0; i < step; i++)
+                    {
+                        for (int j = 0; j < step; j++)
+                        {
+                            texture.Write(Math.Min(px + i, texture.Width - 1), Math.Min(py + j, texture.Height - 1), float4(coloring.Color, 1));
+                        }
+                    }
+                }
+            Console.WriteLine($"Done {id}");
+        }
+
+        public static void PathTrace<T>(Texture2D texture, Scene<T, MyMaterial<T>> scene, Raytracer<MyPTRayPayload, T, MyMaterial<T>> raycaster, float4x4 viewMatrix, float4x4 projectionMatrix, int maxPass, int rendStep = 1, int gridXDiv = 8, int gridYDiv = 8) where T : struct, IVertex<T>, INormalVertex<T>, ICoordinatesVertex<T>, IColorable, ITransformable<T>
+        {
+            var start = new Stopwatch();
+
+            start.Start();
+
+            int id = 0, xStep = texture.Width / gridXDiv, yStep = texture.Height / gridYDiv;
+            int pass = 0;
+            while (pass < maxPass)
+            {
+                var tasks = new List<Task>();
+                for (int i = 0; i * yStep < texture.Height; i++)
+                {
+                    for (int j = 0; j * xStep < texture.Width; j++)
+                    {
+                        int threadId = id, x0 = j * xStep, y0 = i * yStep, maxX = Math.Min((j + 1) * xStep, texture.Width), maxY = Math.Min((i + 1) * yStep, texture.Height);
+                        tasks.Add(Task.Run(() => RenderUtils.PathtracePassDrawArea(threadId, x0, y0, maxX, maxY, raycaster, texture, viewMatrix, projectionMatrix, scene, pass, rendStep)));
+                        id++;
+                    }
+                }
+                Task.WaitAll(tasks.ToArray());
+                Console.WriteLine($"Pass {pass} completed in {start.ElapsedMilliseconds} milliseconds");
+                pass++;
+            }
+            start.Stop();
+            Console.WriteLine($"Elapsed {start.ElapsedMilliseconds} milliseconds");
+        }
+
+        public static void PathtracePassDrawArea<T>(int id, int x0, int y0, int xf, int yf, Raytracer<MyPTRayPayload, T, MyMaterial<T>> raycaster, Texture2D texture, float4x4 viewMatrix, float4x4 projectionMatrix, Scene<T, MyMaterial<T>> scene, int pass, int step = 1) where T : struct, IVertex<T>, INormalVertex<T>, ICoordinatesVertex<T>, IColorable, ITransformable<T>
+        {
+            for (int px = x0; px < xf; px += step)
+                for (int py = y0; py < yf; py += step)
+                {
+
+                    RayDescription ray = RayDescription.FromScreen(px + 0.5f, py + 0.5f, texture.Width, texture.Height, inverse(viewMatrix), inverse(projectionMatrix), 0, 1000);
+
+                    float4 accum = texture.Read(px, py) * pass;
+                    MyPTRayPayload coloring = new MyPTRayPayload();
+                    coloring.Importance = float3(1, 1, 1);
+                    coloring.Bounces = 3;
+
+                    raycaster.Trace(scene, ray, ref coloring);
+
+                    for (int i = 0; i < step; i++)
+                    {
+                        for (int j = 0; j < step; j++)
+                        {
+                            texture.Write(Math.Min(px + i, texture.Width - 1), Math.Min(py + j, texture.Height - 1), float4((accum.xyz + coloring.Color) / (pass + 1), 1));
+                        }
+                    }
+                }
+            Console.WriteLine($"Done {id}");
+        }
+
     }
 
     public class GuitarDrawer<T> where T : struct, IVertex<T>, INormalVertex<T>, ICoordinatesVertex<T>
@@ -71,6 +172,21 @@ namespace Renderer
         public static int DrawStep { get; set; } = 1;
         public static int YGrid { get; set; } = 8;
         public static int XGrid { get; set; } = 8;
+
+        public static float3 CameraPosition = float3(1.1f, 1f, -.75f);
+        
+        private static float3 GlobalLightIntensity = float3(1, 1, 1) * 10;
+        public static (float3 position, float3 intensity)[] LightSources = new (GMath.float3 position, GMath.float3 intensity)[]
+        {
+            (float3(1.9f, 1.9f, -1f), GlobalLightIntensity),
+            //(CameraPosition, .5f*GlobalLightIntensity),
+        };
+
+        public static float3 Target = float3(1.1f, .58f, .5f);
+
+        public static float4x4 ViewMatrix = Transforms.LookAtLH(CameraPosition, Target, float3(0, 1, 0));
+
+        public static float4x4 ProjectionMatrix(int height, int width) => Transforms.PerspectiveFovLH(pi_over_4, height / (float)width, 0.01f, 20);
 
         private static GuitarBuilder<T> CreateCSGGuitar(float4x4 worldTransformation)
         {
@@ -135,6 +251,22 @@ namespace Renderer
             return wall + floor;
         }
 
+        public static void AddLightSource(Scene<T, MyMaterial<T>> scene)
+        {
+            //foreach ((var position, var intensity) in LightSources)
+            //{
+            //    var sphereModel = Raycasting.UnitarySphere.AttributesMap(a => new T { Position = a, Coordinates = float2(atan2(a.z, a.x) * 0.5f / pi + 0.5f, a.y), Normal = normalize(a), Color = float3(1,1,1) });
+            //    scene.Add(sphereModel, new MyMaterial<T>
+            //    {
+            //        Emissive = intensity / (4 * pi), // power per unit area
+            //        WeightDiffuse = 0,
+            //        WeightFresnel = 1.0f, // Glass sphere
+            //        RefractionIndex = 1.0f
+            //    },
+            //       mul(Transforms.Scale(.1f, .1f, .05f), Transforms.Translate(position)));
+            //}
+        }
+
         public static void CreateGuitarMeshScene(Scene<T, MyMaterial<T>> scene, float4x4 worldTransformation)
         {
             var model = CreateGuitarMesh();
@@ -150,6 +282,8 @@ namespace Renderer
             {
                 scene.Add(mesh.AsRaycast(), (MyMaterial<T>)mesh.Materials[0], worldTransformation);
             }
+
+            AddLightSource(scene);
         }
 
         public static void GuitarCSGRaycast(Texture2D texture, float4x4 worldTransformation)
@@ -184,13 +318,13 @@ namespace Renderer
             //float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, target, float3(0, 1, 0));
 
             // Scene Setup
-            float3 CameraPosition = float3(1.1f, 1f, -.75f);
-            var lightPositionWorld = mul(worldTransformation, float4x1(1.9f, 1.9f, -1f, 0));
-            float3 LightPosition = float3(lightPositionWorld._m00, lightPositionWorld._m10, lightPositionWorld._m20);
-            float3 LightIntensity = float3(1, 1, 1) * 3;
+            //float3 CameraPosition = float3(1.1f, 1f, -.75f);
+            //var lightPositionWorld = mul(worldTransformation, float4x1(1.9f, 1.9f, -1f, 0));
+            //float3 LightPosition = float3(lightPositionWorld._m00, lightPositionWorld._m10, lightPositionWorld._m20);
+            //float3 LightIntensity = float3(1, 1, 1) * 3;
+            
             // View and projection matrices
-            float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(1.1f, .58f, .5f), float3(0, 1, 0));
-            float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 20);
+            float4x4 projectionMatrix = ProjectionMatrix(texture.Height, texture.Width);
 
             Scene<T, MyMaterial<T>> scene = new Scene<T, MyMaterial<T>>();
             CreateGuitarMeshScene(scene, worldTransformation);
@@ -213,11 +347,7 @@ namespace Renderer
                 attribute = attribute.Transform(context.FromGeometryToWorld);
 
                 float3 V = normalize(CameraPosition - attribute.Position);
-                foreach (var (lightPosition, lightIntentisty) in new (float3 lightPosition, float3 lightIntensity)[] 
-                { 
-                    (LightPosition, LightIntensity), 
-                    (CameraPosition, LightIntensity * 0.5f) 
-                })
+                foreach (var (lightPosition, lightIntentisty) in LightSources)
                 {
                     float3 L = (lightPosition - attribute.Position);
                     float d = length(L);
@@ -250,8 +380,154 @@ namespace Renderer
                 payload.Color = float3(0, 0, 1); // Blue, as the sky.
             };
 
-            RenderUtils.Draw(texture, raycaster, scene, viewMatrix, projectionMatrix, DrawStep, XGrid, YGrid);
+            RenderUtils.Draw(texture, raycaster, scene, ViewMatrix, projectionMatrix, DrawStep, XGrid, YGrid);
         }
+
+        public static void GuitarPathtracing(Texture2D texture, float4x4 worldTransformation, int maxPass)
+        {
+            // View and projection matrices
+            float4x4 projectionMatrix = ProjectionMatrix(texture.Height, texture.Width);
+
+            Scene<T, MyMaterial<T>> scene = new Scene<T, MyMaterial<T>>();
+            //CreateMeshScene(scene);
+            CreateGuitarMeshScene(scene, worldTransformation);
+
+            // Raycaster to trace rays and lit closest surfaces
+            Raytracer<MyPTRayPayload, T, MyMaterial<T>> raycaster = new Raytracer<MyPTRayPayload, T, MyMaterial<T>>();
+            raycaster.OnClosestHit += delegate (IRaycastContext context, T attribute, MyMaterial<T> material, ref MyPTRayPayload payload)
+            {
+                // Move geometry attribute to world space
+                attribute = attribute.Transform(context.FromGeometryToWorld);
+
+                float3 V = -normalize(context.GlobalRay.Direction);
+
+                attribute.Normal = normalize(attribute.Normal);
+
+                if (material.BumpMap != null)
+                {
+                    float3 T, B;
+                    createOrthoBasis(attribute.Normal, out T, out B);
+                    float3 tangentBump = material.BumpMap.Sample(material.TextureSampler, attribute.Coordinates).xyz * 2 - 1;
+                    float3 globalBump = tangentBump.x * T + tangentBump.y * B + tangentBump.z * attribute.Normal;
+                    attribute.Normal = globalBump;// normalize(attribute.Normal + globalBump * 5f);
+                }
+
+                MyScatteredRay outgoing = material.Scatter(attribute, V);
+
+                float lambertFactor = max(0, dot(attribute.Normal, outgoing.Direction));
+
+                payload.Color += payload.Importance * material.Emissive;
+
+                // Recursive calls for indirect light due to reflections and refractions
+                if (payload.Bounces > 0)
+                {
+                    float3 D = outgoing.Direction; // recursive direction to check
+                    float3 facedNormal = dot(D, attribute.Normal) > 0 ? attribute.Normal : -attribute.Normal; // normal respect to direction
+
+                    RayDescription ray = new RayDescription { Direction = D, Origin = attribute.Position + facedNormal * 0.001f, MinT = 0.0001f, MaxT = 10000 };
+
+                    payload.Importance *= outgoing.Ratio / outgoing.PDF;
+                    payload.Bounces--;
+
+                    raycaster.Trace(scene, ray, ref payload);
+                }
+            };
+            raycaster.OnMiss += delegate (IRaycastContext context, ref MyPTRayPayload payload)
+            {
+                payload.Color = float3(0, 0, 0); // Black, as the night.
+            };
+
+            RenderUtils.PathTrace(texture, scene, raycaster, ViewMatrix, projectionMatrix, maxPass);
+        }
+
+        public static void GuitarRaytracing(Texture2D texture, float4x4 worldTransformation)
+        {
+            // View and projection matrices
+            float4x4 projectionMatrix = ProjectionMatrix(texture.Height, texture.Width);
+
+            Scene<T, MyMaterial<T>> scene = new Scene<T, MyMaterial<T>>();
+            CreateGuitarMeshScene(scene, worldTransformation);
+
+            // Raycaster to trace rays and check for shadow rays.
+            Raytracer<MyShadowRayPayload, T, MyMaterial<T>> shadower = new Raytracer<MyShadowRayPayload, T, MyMaterial<T>>();
+            shadower.OnAnyHit += delegate (IRaycastContext context, T attribute, MyMaterial<T> material, ref MyShadowRayPayload payload)
+            {
+                // If any object is found in ray-path to the light, the ray is shadowed.
+                payload.Shadowed = true;
+                // No neccessary to continue checking other objects
+                return HitResult.Stop;
+            };
+
+            // Raycaster to trace rays and lit closest surfaces
+            Raytracer<MyRTRayPayload, T, MyMaterial<T>> raycaster = new Raytracer<MyRTRayPayload, T, MyMaterial<T>>();
+            raycaster.OnClosestHit += delegate (IRaycastContext context, T attribute, MyMaterial<T> material, ref MyRTRayPayload payload)
+            {
+                // Move geometry attribute to world space
+                attribute = attribute.Transform(context.FromGeometryToWorld);
+
+                float3 V = normalize(CameraPosition - attribute.Position);
+                foreach (var (lightPosition, lightIntentisty) in LightSources)
+                {
+                    float3 L = (lightPosition - attribute.Position);
+                    float d = length(L);
+                    L /= d; // normalize direction to light reusing distance to light
+
+                    attribute.Normal = normalize(attribute.Normal);
+
+                    if (material.BumpMap != null)
+                    {
+                        float3 T, B;
+                        createOrthoBasis(attribute.Normal, out T, out B);
+                        float3 tangentBump = material.BumpMap.Sample(material.TextureSampler, attribute.Coordinates).xyz * 2 - 1;
+                        float3 globalBump = tangentBump.x * T + tangentBump.y * B + tangentBump.z * attribute.Normal;
+                        attribute.Normal = globalBump;// normalize(attribute.Normal + globalBump * 5f);
+                    }
+
+                    var l = dot(attribute.Normal, L);
+                    if (l < 0)
+                    {
+                        l = -l;
+                        attribute.Normal *= -1;
+                    }
+                    float lambertFactor = max(0, l);
+
+                    // Check ray to light...
+                    MyShadowRayPayload shadow = new MyShadowRayPayload();
+                    shadower.Trace(scene,
+                        RayDescription.FromDir(attribute.Position + attribute.Normal * 0.001f, // Move an epsilon away from the surface to avoid self-shadowing 
+                        L), ref shadow);
+
+                    float3 Intensity = (shadow.Shadowed ? 0.2f : 1.0f) * lightIntentisty / (d * d);
+
+                    payload.Color += material.Emissive + material.EvalBRDF(attribute, V, L) * Intensity * lambertFactor; // direct light computation
+                                                                                                                         // Recursive calls for indirect light due to reflections and refractions
+                    if (payload.Bounces > 0)
+                        foreach (var impulse in material.GetBRDFImpulses(attribute, V))
+                        {
+                            float3 D = impulse.Direction; // recursive direction to check
+                            float3 facedNormal = dot(D, attribute.Normal) > 0 ? attribute.Normal : -attribute.Normal; // normal respect to direction
+
+                            RayDescription ray = new RayDescription { Direction = D, Origin = attribute.Position + facedNormal * 0.001f, MinT = 0.0001f, MaxT = 10000 };
+
+                            MyRTRayPayload newPayload = new MyRTRayPayload
+                            {
+                                Bounces = payload.Bounces - 1
+                            };
+
+                            raycaster.Trace(scene, ray, ref newPayload);
+
+                            payload.Color += newPayload.Color * impulse.Ratio;
+                        }
+                }
+            };
+            raycaster.OnMiss += delegate (IRaycastContext context, ref MyRTRayPayload payload)
+            {
+                payload.Color = float3(0, 0, 0); // Black, as the night.
+            };
+
+            RenderUtils.RayTrace<T>(texture, scene, raycaster, ViewMatrix, projectionMatrix, DrawStep, XGrid, YGrid);
+        }
+
 
         public static MyMaterial<T> LoadMaterialFromFile(string dir, float glossyness, float specularPower=60, float3? specular=default, float3? diffuse = default)
         {
@@ -265,6 +541,7 @@ namespace Renderer
                 SpecularPower = specularPower,
                 Specular = realSpecular,
                 Diffuse = realDifusse,
+                Emissive = float3(0,0,0),
                 TextureSampler = new Sampler 
                 { 
                     Wrap = WrapMode.Repeat,

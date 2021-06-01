@@ -223,6 +223,16 @@ namespace GMath
             return __random.random2();
         }
 
+        public static float3 randomDirection()
+        {
+            return __random.randomDirection();
+        }
+
+        public static float3 randomHSDirection(float3 N)
+        {
+            return __random.randomHSDirection(N);
+        }
+
         public static float3 randomInBox()
         {
             float u = random() * 2 - 1, v = random() * 2 - 1;
