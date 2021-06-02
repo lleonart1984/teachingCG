@@ -38,18 +38,21 @@ namespace Renderer
        
         #region Materials
 
-        public MyMaterial<T>[] StringMaterials => new MyMaterial<T>[] { FretMaterial, FretMaterial, FretMaterial, StringCylinderMaterial, StringCylinderMaterial, StringCylinderMaterial}; // TODO
-        public MyMaterial<T> StringCylinderMaterial  => GuitarDrawer<T>.LoadMaterialFromFile("textures\\pin_head_texture.bmp"   , 0.05f ); // TODO
-        public MyMaterial<T> HeadPinMaterial         => GuitarDrawer<T>.LoadMaterialFromFile("textures\\pin_head_texture.bmp"   , 0.05f); // TODO
-        public MyMaterial<T> FretMaterial            => GuitarDrawer<T>.LoadMaterialFromFile("textures\\pin_texture.bmp"        , 0.1f ); // TODO
-        public MyMaterial<T> BasePinMaterial         => GuitarDrawer<T>.LoadMaterialFromFile("textures\\pin_texture.bmp"        , 0.1f); // TODO
-        public MyMaterial<T> GuitarHoleMaterial      => GuitarDrawer<T>.LoadMaterialFromFile("textures\\circle_texture.bmp"     , 0.1f ); // TODO
-        public MyMaterial<T> BridgeMaterial          => GuitarDrawer<T>.LoadMaterialFromFile("textures\\headstock_texture.bmp"  , 0f ); // TODO
-        public MyMaterial<T> StringHubMaterial       => GuitarDrawer<T>.LoadMaterialFromFile("textures\\headstock_texture.bmp"  , 0.1f ); // TODO
-        public MyMaterial<T> HeadstockMaterial       => GuitarDrawer<T>.LoadMaterialFromFile("textures\\headstock_texture.bmp"  , 0.05f); // TODO
-        public MyMaterial<T> GuitarBodySidesMaterial => GuitarDrawer<T>.LoadMaterialFromFile("textures\\headstock_texture.bmp"  , 0.1f ); // TODO
-        public MyMaterial<T> GuitarBodyFrontMaterial => GuitarDrawer<T>.LoadMaterialFromFile("textures\\guitar_texture.bmp"     , 0.05f ); // TODO
-        public MyMaterial<T> GuitarBodyBackMaterial  => GuitarDrawer<T>.LoadMaterialFromFile("textures\\headstock_texture.bmp"  , 0.1f ); // TODO
+        public MyMaterial<T>[] StringMaterials => new MyMaterial<T>[] 
+        { MetalStringMaterial, MetalStringMaterial, MetalStringMaterial, NylonStringMaterial, MetalStringMaterial, MetalStringMaterial}; // TODO
+        public MyMaterial<T> StringCylinderMaterial  => GuitarDrawer<T>.GetBasePinHeadMaterial(); // TODO
+        public MyMaterial<T> HeadPinMaterial         => GuitarDrawer<T>.GetBasePinHeadMaterial(); // TODO
+        public MyMaterial<T> FretMaterial            => GuitarDrawer<T>.GetBasePinMaterial(); // TODO
+        public MyMaterial<T> BasePinMaterial         => GuitarDrawer<T>.GetBasePinMaterial(); // TODO
+        public MyMaterial<T> MetalStringMaterial     => GuitarDrawer<T>.GetMetalStringMaterial(); // TODO
+        public MyMaterial<T> NylonStringMaterial     => GuitarDrawer<T>.GetNylonStringMaterial(); // TODO
+        public MyMaterial<T> GuitarHoleMaterial      => GuitarDrawer<T>.GetGuitarBodyHoleMaterial(); // TODO
+        public MyMaterial<T> BridgeMaterial          => GuitarDrawer<T>.GetBackMainGuitarBodyMaterial(); // TODO
+        public MyMaterial<T> StringHubMaterial       => GuitarDrawer<T>.GetBackMainGuitarBodyMaterial(); // TODO
+        public MyMaterial<T> HeadstockMaterial       => GuitarDrawer<T>.GetBackMainGuitarBodyMaterial(); // TODO
+        public MyMaterial<T> GuitarBodySidesMaterial => GuitarDrawer<T>.GetBackMainGuitarBodyMaterial(); // TODO
+        public MyMaterial<T> GuitarBodyFrontMaterial => GuitarDrawer<T>.GetFrontMainGuitarBodyMaterial(); // TODO
+        public MyMaterial<T> GuitarBodyBackMaterial  => GuitarDrawer<T>.GetBackMainGuitarBodyMaterial(); // TODO
         
         #endregion
 

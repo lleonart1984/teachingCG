@@ -33,9 +33,9 @@ namespace Renderer
 
         #region Materials
 
-        public MyMaterial<T> WallMaterial => GuitarDrawer<T>.LoadMaterialFromFile("textures\\wall_texture.bmp", 0.01f); //TODO
+        public MyMaterial<T> WallMaterial => GuitarDrawer<T>.LoadMaterialFromFile("textures\\wall_texture.bmp", 0.01f, 60,0,0); //TODO
 
-        public MyMaterial<T> FloorMaterial => GuitarDrawer<T>.LoadMaterialFromFile("textures\\floor_texture.bmp", 0.01f); // TODO
+        public MyMaterial<T> FloorMaterial => GuitarDrawer<T>.LoadMaterialFromFile("textures\\floor_texture.bmp", 0.01f, 60, 0, 0); // TODO
 
         #endregion
 

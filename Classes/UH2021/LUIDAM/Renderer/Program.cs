@@ -1,4 +1,5 @@
 ﻿using GMath;
+using Renderer.Modeling;
 using Rendering;
 using System;
 using System.Collections.Generic;
@@ -139,7 +140,7 @@ namespace Renderer
             public float PDF;
         }
 
-        public struct Material
+        public struct Material : IMaterial
         {
             public float3 Emissive;
 
@@ -534,7 +535,8 @@ namespace Renderer
                     createOrthoBasis(attribute.Normal, out T, out B);
                     float3 tangentBump = material.BumpMap.Sample(material.TextureSampler, attribute.Coordinates).xyz * 2 - 1;
                     float3 globalBump = tangentBump.x * T + tangentBump.y * B + tangentBump.z * attribute.Normal;
-                    attribute.Normal = globalBump;// normalize(attribute.Normal + globalBump * 5f);
+                    //attribute.Normal = globalBump;
+                    attribute.Normal = normalize(attribute.Normal + globalBump );
                 }
 
                 float lambertFactor = max(0, dot(attribute.Normal, L));
@@ -622,6 +624,27 @@ namespace Renderer
             },
                 Transforms.Translate(1.5f, 1, 0));
 
+
+            Texture2D boxDiffuse = Texture2D.LoadFromFile("textures\\wall_texture.bmp");
+            Texture2D boxBump = Texture2D.LoadFromFile("textures\\bump1.jpg");
+            GuitarDrawer<MyPositionNormalCoordinate>.CreateNoisyBumpMap("noisy.bmp", 0.05f, 400, 400);
+            GuitarDrawer<MyPositionNormalCoordinate>.CreateRoughStringBumpMap("rough.bmp", 20, 400, 400);
+            boxBump = Texture2D.LoadFromFile("noisy.bmp");
+            boxBump = Texture2D.LoadFromFile("rough.bmp");
+            boxBump = null;
+
+            var material = new Material
+            {
+                DiffuseMap = boxDiffuse,
+                BumpMap = boxBump,
+                Diffuse = float3(1, 1, 1),
+                Specular = float3(1, 1, 1) * .3f,
+                SpecularPower = 60,
+                WeightGlossy = .02f,
+                WeightFresnel = 0f,
+                TextureSampler = new Sampler { Wrap = WrapMode.Repeat, MinMagFilter = Filter.Linear },
+            };
+
             scene.Add(sphereModel, new Material
             {
                 Specular = float3(1, 1, 1) * 0.1f,
@@ -629,6 +652,17 @@ namespace Renderer
                 Diffuse = float3(1, 1, 1)
             },
                 Transforms.Translate(-1.5f, 1, 0));
+
+            var mesh = MeshShapeGenerator<PositionNormalCoordinate>.Box(5,5,5,false,false, false, false,false,allMat:material);
+            var normal = float3(1, 0, 0);
+            scene.Add(Raycasting.PlaneYZ.AttributesMap(a => new PositionNormalCoordinate 
+            {
+                Position = a,
+                Coordinates = float2(a.y, a.z),
+                Normal = normal
+            }), 
+                      material, 
+                      Transforms.Translate(-1.5f, 1, 0));
 
             scene.Add(Raycasting.PlaneXZ.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(a.x * 0.2f, a.z * 0.2f), Normal = float3(0, 1, 0) }),
                 new Material { DiffuseMap = planeTexture, Diffuse = float3(1, 1, 1), TextureSampler = new Sampler { Wrap = WrapMode.Repeat, MinMagFilter = Filter.Linear } },
@@ -1047,7 +1081,8 @@ namespace Renderer
             GuitarDrawer<MyPositionNormalCoordinate>.DrawStep = 6;
             GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaycast(texture, Transforms.Identity);
             //GuitarDrawer.GuitarCSGRaycast(texture, Transforms.Identity);
-            //GuitarDrawer<MyPositionNormalCoordinate>.GuitarPathtracing(texture, Transforms.Identity, 5);
+            //GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaytracing(texture, Transforms.Translate(-.3f,0,-.7f));
+            //GuitarDrawer<MyPositionNormalCoordinate>.GuitarPathtracing(texture, Transforms.Identity, 6);
 
             //Raytracing(texture);
 

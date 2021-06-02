@@ -8,6 +8,7 @@ using static Renderer.Program;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.IO;
+using System.Drawing;
 
 namespace Renderer
 {
@@ -480,7 +481,8 @@ namespace Renderer
                         createOrthoBasis(attribute.Normal, out T, out B);
                         float3 tangentBump = material.BumpMap.Sample(material.TextureSampler, attribute.Coordinates).xyz * 2 - 1;
                         float3 globalBump = tangentBump.x * T + tangentBump.y * B + tangentBump.z * attribute.Normal;
-                        attribute.Normal = globalBump;// normalize(attribute.Normal + globalBump * 5f);
+                        attribute.Normal = normalize(attribute.Normal + globalBump);
+                        //attribute.Normal = globalBump;
                     }
 
                     var l = dot(attribute.Normal, L);
@@ -529,19 +531,26 @@ namespace Renderer
         }
 
 
-        public static MyMaterial<T> LoadMaterialFromFile(string dir, float glossyness, float specularPower=60, float3? specular=default, float3? diffuse = default)
+        public static MyMaterial<T> LoadMaterialFromFile(string diffuseDir, float glossyness, float specularPower, float fresnel, float mirror, float diffuseWeight=1.0f, float refraction=1.0f, string bumpDir = null, float3? specular=default, float3? diffuse = default)
         {
-            var item = Texture2D.LoadBmpFromFile(dir);
+            var item = Texture2D.LoadBmpFromFile(diffuseDir);
+            Texture2D bump = null;
+            if (bumpDir != null)
+                bump = Texture2D.LoadBmpFromFile(bumpDir);
             var realSpecular = specular.HasValue ? specular.Value : float3(1, 1, 1);
             var realDifusse = diffuse.HasValue ? diffuse.Value : float3(1, 1, 1);
-            return new MyMaterial<T> 
+            return new MyMaterial<T>
             {
-                DiffuseMap = item, 
+                DiffuseMap = item,
+                BumpMap = bump,
                 WeightGlossy = glossyness,
                 SpecularPower = specularPower,
                 Specular = realSpecular,
                 Diffuse = realDifusse,
-                Emissive = float3(0,0,0),
+                WeightDiffuse = diffuseWeight,
+                WeightMirror = mirror,
+                WeightFresnel = fresnel,
+                RefractionIndex = refraction,
                 TextureSampler = new Sampler 
                 { 
                     Wrap = WrapMode.Repeat,
@@ -549,5 +558,82 @@ namespace Renderer
             };
         }
 
+        /// <summary>
+        /// Create a noisy bump texture
+        /// </summary>
+        /// <param name="file">Image file</param>
+        /// <param name="noiseScalar">Noise presence, between 0 and 1</param>
+        /// <param name="width">Image width</param>
+        /// <param name="height">Image height</param>
+        public static void CreateNoisyBumpMap(string file, float noiseScalar, int width, int height)
+        {
+            var bmp = new Bitmap(width, height);
+            for (int i = 0; i < width; i++)
+            {
+                for (int j = 0; j < height; j++)
+                {
+                    bmp.SetPixel(i, j, Color.FromArgb(255, (int)(127.5 + 127.5 * noiseScalar * random()), (int)(127.5 + 127.5 * noiseScalar * random()), (int)(127.5 + 127.5 * noiseScalar * random())));
+                }
+            }
+            bmp.Save(file);
+        }
+
+        /// <summary>
+        /// Create a sine like bump texture
+        /// </summary>
+        /// <param name="file"></param>
+        /// <param name="bumpScatterScalar">Separation between peaks</param>
+        /// <param name="width">Image width</param>
+        /// <param name="height">Image height</param>
+        public static void CreateRoughStringBumpMap(string file, int bumpScatterScalar, int width, int height)
+        {
+            var bmp = new Bitmap(width, height);
+            for (int i = 0; i < width; i++)
+            {
+                float3 value = float3(sin(pi*i/bumpScatterScalar),0,0);
+                for (int j = 0; j < height; j++)
+                {
+                    bmp.SetPixel(i, j, Color.FromArgb(255, (int)(127.5 + 127.5 * value.x), (int)(127.5 + 127.5 * value.y), (int)(127.5 + 127.5 * value.z)));
+                }
+            }
+            bmp.Save(file);
+        }
+
+
+
+        public static MyMaterial<T> GetFrontMainGuitarBodyMaterial()
+        {
+            return LoadMaterialFromFile("textures\\guitar_texture.bmp", 0.01f, 60, 0.07f, 0, bumpDir: "textures\\body_noise.bmp", specular: float3(1, 1, 1) * .5f);
+        }
+
+        public static MyMaterial<T> GetBackMainGuitarBodyMaterial()
+        {
+            return LoadMaterialFromFile("textures\\headstock_texture.bmp", 0.01f, 60, 0.04f, 0, bumpDir:"textures\\body_noise.bmp", specular:float3(1,1,1)*.5f);
+        }
+
+        public static MyMaterial<T> GetGuitarBodyHoleMaterial()
+        {
+            return LoadMaterialFromFile("textures\\circle_texture.bmp", 0.01f, 60, 0.01f, 0);
+        }
+
+        public static MyMaterial<T> GetBasePinMaterial()
+        {
+            return LoadMaterialFromFile("textures\\pin_texture.bmp", 0.04f, 60, 0, 0);
+        }
+
+        public static MyMaterial<T> GetBasePinHeadMaterial()
+        {
+            return LoadMaterialFromFile("textures\\pin_head_texture.bmp", 0.02f, 60, 0, 0);
+        }
+
+        public static MyMaterial<T> GetMetalStringMaterial()
+        {
+            return LoadMaterialFromFile("textures\\pin_texture.bmp", 0.04f, 60, 0, 0, bumpDir:"textures\\string_bump.bmp");
+        }
+
+        public static MyMaterial<T> GetNylonStringMaterial()
+        {
+            return LoadMaterialFromFile("textures\\pin_head_texture.bmp", 0.04f, 200, .7f, 0, diffuseWeight:0.4f, refraction:1.6f);
+        }
     }
 }
