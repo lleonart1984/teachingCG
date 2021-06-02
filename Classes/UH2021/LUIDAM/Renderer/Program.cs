@@ -626,12 +626,11 @@ namespace Renderer
 
 
             Texture2D boxDiffuse = Texture2D.LoadFromFile("textures\\wall_texture.bmp");
-            Texture2D boxBump = Texture2D.LoadFromFile("textures\\bump1.jpg");
             GuitarDrawer<MyPositionNormalCoordinate>.CreateNoisyBumpMap("noisy.bmp", 0.05f, 400, 400);
-            GuitarDrawer<MyPositionNormalCoordinate>.CreateRoughStringBumpMap("rough.bmp", 20, 400, 400);
-            boxBump = Texture2D.LoadFromFile("noisy.bmp");
+            GuitarDrawer<MyPositionNormalCoordinate>.CreateRoughStringBumpMap("rough.bmp", 10, 400, 400);
+            var boxBump = Texture2D.LoadFromFile("noisy.bmp");
             boxBump = Texture2D.LoadFromFile("rough.bmp");
-            boxBump = null;
+            //boxBump = null;
 
             var material = new Material
             {
@@ -1079,7 +1078,8 @@ namespace Renderer
             //Pathtracing(texture);
 
             GuitarDrawer<MyPositionNormalCoordinate>.DrawStep = 6;
-            GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaycast(texture, Transforms.Identity);
+            GuitarDrawer<MyPositionNormalCoordinate>.CreateRoughStringBumpMap("textures\\string_bump.bmp", 10, 400, 400);
+            GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaytracing(texture, Transforms.Identity);
             //GuitarDrawer.GuitarCSGRaycast(texture, Transforms.Identity);
             //GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaytracing(texture, Transforms.Translate(-.3f,0,-.7f));
             //GuitarDrawer<MyPositionNormalCoordinate>.GuitarPathtracing(texture, Transforms.Identity, 6);

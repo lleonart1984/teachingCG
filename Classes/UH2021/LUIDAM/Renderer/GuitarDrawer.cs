@@ -590,7 +590,7 @@ namespace Renderer
             var bmp = new Bitmap(width, height);
             for (int i = 0; i < width; i++)
             {
-                float3 value = float3(sin(pi*i/bumpScatterScalar),0,0);
+                float3 value = abs(float3(0, sin(pi * i / bumpScatterScalar), 0));
                 for (int j = 0; j < height; j++)
                 {
                     bmp.SetPixel(i, j, Color.FromArgb(255, (int)(127.5 + 127.5 * value.x), (int)(127.5 + 127.5 * value.y), (int)(127.5 + 127.5 * value.z)));
@@ -634,6 +634,16 @@ namespace Renderer
         public static MyMaterial<T> GetNylonStringMaterial()
         {
             return LoadMaterialFromFile("textures\\pin_head_texture.bmp", 0.04f, 200, .7f, 0, diffuseWeight:0.4f, refraction:1.6f);
+        }
+
+        public static MyMaterial<T> GetWallMaterial()
+        {
+            return LoadMaterialFromFile("textures\\wall_texture.bmp", 0.01f, 60, 0, 0);
+        }
+
+        public static MyMaterial<T> GetFloorMaterial()
+        {
+            return LoadMaterialFromFile("textures\\floor_texture.bmp", 0.01f, 60, 0, 0);
         }
     }
 }

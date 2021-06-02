@@ -39,7 +39,7 @@ namespace Renderer
         #region Materials
 
         public MyMaterial<T>[] StringMaterials => new MyMaterial<T>[] 
-        { MetalStringMaterial, MetalStringMaterial, MetalStringMaterial, NylonStringMaterial, MetalStringMaterial, MetalStringMaterial}; // TODO
+        { MetalStringMaterial, MetalStringMaterial, MetalStringMaterial, NylonStringMaterial, NylonStringMaterial, NylonStringMaterial}; // TODO
         public MyMaterial<T> StringCylinderMaterial  => GuitarDrawer<T>.GetBasePinHeadMaterial(); // TODO
         public MyMaterial<T> HeadPinMaterial         => GuitarDrawer<T>.GetBasePinHeadMaterial(); // TODO
         public MyMaterial<T> FretMaterial            => GuitarDrawer<T>.GetBasePinMaterial(); // TODO
