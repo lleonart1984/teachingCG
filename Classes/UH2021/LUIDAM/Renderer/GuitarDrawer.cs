@@ -177,10 +177,11 @@ namespace Renderer
         public static float3 CameraPosition = float3(1.1f, 1f, -.75f);
         
         private static float3 GlobalLightIntensity = float3(1, 1, 1) * 10;
-        public static (float3 position, float3 intensity)[] LightSources = new (GMath.float3 position, GMath.float3 intensity)[]
+        public static (float3 position, float3 intensity, float3 scale)[] LightSources = new (float3 position, float3 intensity, float3 scale)[]
         {
-            (float3(1.9f, 1.9f, -1f), GlobalLightIntensity),
-            //(CameraPosition, .5f*GlobalLightIntensity),
+            (float3(1.9f, 1.9f, -1f), GlobalLightIntensity, float3(1f,.1f,1f)),
+            //(float3(1f, 1.5f, .5f), GlobalLightIntensity, float3(1f,.1f,1f)), // Light above guitar
+            //(float3(1.9f, 1.9f, -1f), .5f*GlobalLightIntensity, float3(1f,.1f,1f)),
         };
 
         public static float3 Target = float3(1.1f, .58f, .5f);
@@ -254,18 +255,18 @@ namespace Renderer
 
         public static void AddLightSource(Scene<T, MyMaterial<T>> scene)
         {
-            //foreach ((var position, var intensity) in LightSources)
-            //{
-            //    var sphereModel = Raycasting.UnitarySphere.AttributesMap(a => new T { Position = a, Coordinates = float2(atan2(a.z, a.x) * 0.5f / pi + 0.5f, a.y), Normal = normalize(a), Color = float3(1,1,1) });
-            //    scene.Add(sphereModel, new MyMaterial<T>
-            //    {
-            //        Emissive = intensity / (4 * pi), // power per unit area
-            //        WeightDiffuse = 0,
-            //        WeightFresnel = 1.0f, // Glass sphere
-            //        RefractionIndex = 1.0f
-            //    },
-            //       mul(Transforms.Scale(.1f, .1f, .05f), Transforms.Translate(position)));
-            //}
+            foreach ((var position, var intensity, var scale) in LightSources)
+            {
+                var sphereModel = Raycasting.UnitarySphere.AttributesMap(a => new T { Position = a, Coordinates = float2(atan2(a.z, a.x) * 0.5f / pi + 0.5f, a.y), Normal = normalize(a), Color = float3(1, 1, 1) });
+                scene.Add(sphereModel, new MyMaterial<T>
+                {
+                    Emissive = intensity / (4 * pi), // power per unit area
+                    WeightDiffuse = 0,
+                    WeightFresnel = 1.0f, // Glass sphere
+                    RefractionIndex = 1.0f
+                },
+                   mul(Transforms.Scale(scale), Transforms.Translate(position)));
+            }
         }
 
         public static void CreateGuitarMeshScene(Scene<T, MyMaterial<T>> scene, float4x4 worldTransformation)
@@ -348,7 +349,7 @@ namespace Renderer
                 attribute = attribute.Transform(context.FromGeometryToWorld);
 
                 float3 V = normalize(CameraPosition - attribute.Position);
-                foreach (var (lightPosition, lightIntentisty) in LightSources)
+                foreach (var (lightPosition, lightIntentisty, _) in LightSources)
                 {
                     float3 L = (lightPosition - attribute.Position);
                     float d = length(L);
@@ -410,12 +411,19 @@ namespace Renderer
                     createOrthoBasis(attribute.Normal, out T, out B);
                     float3 tangentBump = material.BumpMap.Sample(material.TextureSampler, attribute.Coordinates).xyz * 2 - 1;
                     float3 globalBump = tangentBump.x * T + tangentBump.y * B + tangentBump.z * attribute.Normal;
-                    attribute.Normal = globalBump;// normalize(attribute.Normal + globalBump * 5f);
+                    //attribute.Normal = globalBump;
+                    attribute.Normal = normalize(attribute.Normal + globalBump);
                 }
 
                 MyScatteredRay outgoing = material.Scatter(attribute, V);
 
-                float lambertFactor = max(0, dot(attribute.Normal, outgoing.Direction));
+                var l = dot(attribute.Normal, outgoing.Direction);
+                if (l < 0)
+                {
+                    l = -l;
+                    attribute.Normal *= -1;
+                }
+                float lambertFactor = max(0, l);
 
                 payload.Color += payload.Importance * material.Emissive;
 
@@ -453,6 +461,9 @@ namespace Renderer
             Raytracer<MyShadowRayPayload, T, MyMaterial<T>> shadower = new Raytracer<MyShadowRayPayload, T, MyMaterial<T>>();
             shadower.OnAnyHit += delegate (IRaycastContext context, T attribute, MyMaterial<T> material, ref MyShadowRayPayload payload)
             {
+                if (any(material.Emissive))
+                    return HitResult.Discard; // Discard light sources during shadow test.
+
                 // If any object is found in ray-path to the light, the ray is shadowed.
                 payload.Shadowed = true;
                 // No neccessary to continue checking other objects
@@ -466,8 +477,8 @@ namespace Renderer
                 // Move geometry attribute to world space
                 attribute = attribute.Transform(context.FromGeometryToWorld);
 
-                float3 V = normalize(CameraPosition - attribute.Position);
-                foreach (var (lightPosition, lightIntentisty) in LightSources)
+                float3 V = -normalize(context.GlobalRay.Direction);
+                foreach (var (lightPosition, lightIntentisty, _) in LightSources)
                 {
                     float3 L = (lightPosition - attribute.Position);
                     float d = length(L);

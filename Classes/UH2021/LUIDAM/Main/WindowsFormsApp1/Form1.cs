@@ -175,6 +175,7 @@ namespace MainForm
                             );
                     }
                 }
+                Console.Beep(440, 1000);
             }
             else
             {

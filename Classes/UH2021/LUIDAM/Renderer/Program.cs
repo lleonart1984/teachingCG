@@ -1095,7 +1095,8 @@ namespace Renderer
             
             stopwatch.Stop();
             Console.WriteLine("Done. Rendered in " + stopwatch.ElapsedMilliseconds + " ms");
-            
+            Console.Beep(440, 1000);
+
             System.Diagnostics.Process.Start("CMD.exe","/C python imageviewer.py test.rbm");
         }
     }
