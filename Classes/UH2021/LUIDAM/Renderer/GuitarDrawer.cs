@@ -9,6 +9,8 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.IO;
 using System.Drawing;
+using System.Linq;
+using Renderer.Modeling;
 
 namespace Renderer
 {
@@ -132,6 +134,7 @@ namespace Renderer
                     }
                 }
                 Task.WaitAll(tasks.ToArray());
+                texture.Save("test.rbm");
                 Console.WriteLine($"Pass {pass} completed in {start.ElapsedMilliseconds} milliseconds");
                 pass++;
             }
@@ -175,14 +178,7 @@ namespace Renderer
         public static int XGrid { get; set; } = 8;
 
         public static float3 CameraPosition = float3(1.1f, 1f, -.75f);
-        
-        private static float3 GlobalLightIntensity = float3(1, 1, 1) * 10;
-        public static (float3 position, float3 intensity, float3 scale)[] LightSources = new (float3 position, float3 intensity, float3 scale)[]
-        {
-            (float3(1.9f, 1.9f, -1f), GlobalLightIntensity, float3(1f,.1f,1f)),
-            //(float3(1f, 1.5f, .5f), GlobalLightIntensity, float3(1f,.1f,1f)), // Light above guitar
-            //(float3(1.9f, 1.9f, -1f), .5f*GlobalLightIntensity, float3(1f,.1f,1f)),
-        };
+        //public static float3 CameraPosition = float3(1.1f, 3f, -1.0f); // From top
 
         public static float3 Target = float3(1.1f, .58f, .5f);
 
@@ -190,6 +186,16 @@ namespace Renderer
 
         public static float4x4 ProjectionMatrix(int height, int width) => Transforms.PerspectiveFovLH(pi_over_4, height / (float)width, 0.01f, 20);
 
+        private static float3 GlobalLightIntensity = float3(1, 1, 1) * 120;
+        private static float3 LocalLightIntensity = float3(1, 1, 1) * 150;
+
+        public static (float3 position, float3 intensity, float3 scale)[] LightSources = new (float3 position, float3 intensity, float3 scale)[]
+        {
+            (float3(1.6f, 2f, 0.6f), LocalLightIntensity, float3(1,.1f,1)),
+            (Target, GlobalLightIntensity, 5f), 
+            //(float3(1f, 1.5f, .5f), GlobalLightIntensity, float3(1f,.1f,1f)), // Light above guitar
+            //(float3(1.9f, 1.9f, -1f), .5f*GlobalLightIntensity, float3(1f,.1f,1f)),
+        };
         private static GuitarBuilder<T> CreateCSGGuitar(float4x4 worldTransformation)
         {
             var guitar = new GuitarBuilder<T>();
@@ -255,9 +261,18 @@ namespace Renderer
 
         public static void AddLightSource(Scene<T, MyMaterial<T>> scene)
         {
+            var sphereModel = Raycasting.UnitarySphere.AttributesMap(a => new T { Position = a, Coordinates = float2(atan2(a.z, a.x) * 0.5f / pi + 0.5f, a.y), Normal = normalize(a), Color = float3(1, 1, 1) });
+            //scene.Add(sphereModel,
+            //    GetFrontMainGuitarBodyMaterial(),
+            //    //LoadMaterialFromFile("textures\\pin_head_texture.bmp", 0f, 200, 0f, 1, diffuseWeight: 0.4f),
+            //    //LoadMaterialFromFile("textures\\circle_texture.bmp", 0.01f, 60, 0.01f, 0),
+            //    mul(Transforms.Scale(.3f), Transforms.Translate(Target)));
+
+            //scene.Add(MeshShapeGenerator<T>.Box(30).AsRaycast(), GetFrontMainGuitarBodyMaterial(),
+            //mul(Transforms.Scale(LightSources[1].scale + .1f), Transforms.Translate(LightSources[1].position)));
+
             foreach ((var position, var intensity, var scale) in LightSources)
             {
-                var sphereModel = Raycasting.UnitarySphere.AttributesMap(a => new T { Position = a, Coordinates = float2(atan2(a.z, a.x) * 0.5f / pi + 0.5f, a.y), Normal = normalize(a), Color = float3(1, 1, 1) });
                 scene.Add(sphereModel, new MyMaterial<T>
                 {
                     Emissive = intensity / (4 * pi), // power per unit area
@@ -280,6 +295,7 @@ namespace Renderer
 
             var model2 = CreateWalls();
             var meshes2 = MyMeshTools.MaterialDecompose(model2);
+            //foreach (var mesh in meshes2.Skip(1).Take(1))
             foreach (var mesh in meshes2)
             {
                 scene.Add(mesh.AsRaycast(), (MyMaterial<T>)mesh.Materials[0], worldTransformation);
@@ -394,7 +410,6 @@ namespace Renderer
             //CreateMeshScene(scene);
             CreateGuitarMeshScene(scene, worldTransformation);
 
-            // Raycaster to trace rays and lit closest surfaces
             Raytracer<MyPTRayPayload, T, MyMaterial<T>> raycaster = new Raytracer<MyPTRayPayload, T, MyMaterial<T>>();
             raycaster.OnClosestHit += delegate (IRaycastContext context, T attribute, MyMaterial<T> material, ref MyPTRayPayload payload)
             {
@@ -417,13 +432,7 @@ namespace Renderer
 
                 MyScatteredRay outgoing = material.Scatter(attribute, V);
 
-                var l = dot(attribute.Normal, outgoing.Direction);
-                if (l < 0)
-                {
-                    l = -l;
-                    attribute.Normal *= -1;
-                }
-                float lambertFactor = max(0, l);
+                float lambertFactor = max(0, dot(attribute.Normal, outgoing.Direction));
 
                 payload.Color += payload.Importance * material.Emissive;
 
@@ -446,7 +455,7 @@ namespace Renderer
                 payload.Color = float3(0, 0, 0); // Black, as the night.
             };
 
-            RenderUtils.PathTrace(texture, scene, raycaster, ViewMatrix, projectionMatrix, maxPass);
+            RenderUtils.PathTrace(texture, scene, raycaster, ViewMatrix, projectionMatrix, maxPass, DrawStep, XGrid, YGrid);
         }
 
         public static void GuitarRaytracing(Texture2D texture, float4x4 worldTransformation)
@@ -614,12 +623,12 @@ namespace Renderer
 
         public static MyMaterial<T> GetFrontMainGuitarBodyMaterial()
         {
-            return LoadMaterialFromFile("textures\\guitar_texture.bmp", 0.01f, 60, 0.07f, 0, bumpDir: "textures\\body_noise.bmp", specular: float3(1, 1, 1) * .5f);
+            return LoadMaterialFromFile("textures\\guitar_texture.bmp", 0.01f, 60, 0.07f, 0, specular: float3(1, 1, 1) * .5f);
         }
 
         public static MyMaterial<T> GetBackMainGuitarBodyMaterial()
         {
-            return LoadMaterialFromFile("textures\\headstock_texture.bmp", 0.01f, 60, 0.04f, 0, bumpDir:"textures\\body_noise.bmp", specular:float3(1,1,1)*.5f);
+            return LoadMaterialFromFile("textures\\headstock_texture.bmp", 0.01f, 60, 0.04f, 0, specular:float3(1,1,1)*.5f);
         }
 
         public static MyMaterial<T> GetGuitarBodyHoleMaterial()
@@ -649,12 +658,12 @@ namespace Renderer
 
         public static MyMaterial<T> GetWallMaterial()
         {
-            return LoadMaterialFromFile("textures\\wall_texture.bmp", 0.01f, 60, 0, 0);
+            return LoadMaterialFromFile("textures\\wall_texture.bmp", 0f, 260, 0, 0);
         }
 
         public static MyMaterial<T> GetFloorMaterial()
         {
-            return LoadMaterialFromFile("textures\\floor_texture.bmp", 0.01f, 60, 0, 0);
+            return LoadMaterialFromFile("textures\\floor_texture.bmp", 0f, 260, 0, 0);
         }
     }
 }

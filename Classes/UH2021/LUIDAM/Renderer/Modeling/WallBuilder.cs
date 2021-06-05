@@ -67,17 +67,19 @@ namespace Renderer
     
         public Mesh<T> WallMesh()
         {
-            var wall = MeshShapeGenerator<T>.Box(4, 4, 2);
-            wall = wall.FitIn(1, 1, 1) .ApplyTransforms(Transforms.Scale(2,2,.01f), Transforms.Translate(0, 0, 1.05f));
+            var initWall = MeshShapeGenerator<T>.Box(2, 2, 2);
+            initWall = initWall.FitIn(1, 1, 1).ApplyTransforms(Transforms.Scale(2,2,.01f));
+            var wall = initWall.ApplyTransforms(Transforms.Translate(0, 0, 1.05f));
+            wall += initWall.ApplyTransforms(Transforms.RotateYGrad(90), Transforms.Translate(0, 0, 1.05f));
+            wall += initWall.ApplyTransforms(Transforms.RotateYGrad(90), Transforms.Translate(2,0,1.05f));
             wall.SetMaterial(WallMaterial);
-
             return wall;;
         }
 
         public Mesh<T> FloorMesh()
         {
             var floor = MeshShapeGenerator<T>.Box(4, 2, 4);
-            floor = floor.FitIn(1, 1, 1).ApplyTransforms(Transforms.Scale(2,.01f,1.1f));
+            floor = floor.FitIn(1, 1, 1).ApplyTransforms(Transforms.Scale(2,.01f,2f), Transforms.Translate(0,0,-.8f));
             floor.SetMaterial(FloorMaterial);
             return floor;
         }

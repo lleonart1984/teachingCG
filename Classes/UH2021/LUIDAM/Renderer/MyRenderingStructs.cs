@@ -66,6 +66,9 @@ namespace Renderer
 
     public struct MyMaterial<T> : IMaterial where T : struct, INormalVertex<T>, ICoordinatesVertex<T>
     {
+        private float3? _color;
+        public float3 Color { get => _color.HasValue ? _color.Value : float3(1,1,1); set => _color = value; }
+
         public float3 Emissive;
 
         public Texture2D DiffuseMap;
@@ -91,7 +94,7 @@ namespace Renderer
 
         public float3 EvalBRDF(T surfel, float3 wout, float3 win)
         {
-            float3 diffuse = Diffuse * (DiffuseMap == null ? float3(1, 1, 1) : DiffuseMap.Sample(TextureSampler, surfel.Coordinates).xyz) / pi;
+            float3 diffuse = Diffuse * (DiffuseMap == null ? Color : DiffuseMap.Sample(TextureSampler, surfel.Coordinates).xyz) / pi;
             float3 H = normalize(win + wout);
             float3 specular = Specular * pow(max(0, dot(H, surfel.Normal)), SpecularPower) * (SpecularPower + 2) / two_pi;
             return diffuse * WeightDiffuse / WeightNormalization + specular * WeightGlossy / WeightNormalization;
