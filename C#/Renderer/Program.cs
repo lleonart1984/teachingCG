@@ -138,14 +138,14 @@ namespace Renderer
                     yield return new Impulse
                     {
                         Direction = R,
-                        Ratio = Specular * (WeightMirror + WeightFresnel * F) / WeightNormalization / NdotL
+                        Ratio = Specular * (WeightMirror + WeightFresnel * F) / WeightNormalization
                     };
 
                 if (WeightFresnel * (1 - F) > 0) // something to refract
                     yield return new Impulse
                     {
                         Direction = T,
-                        Ratio = Specular * WeightFresnel * (1 - F) / WeightNormalization / -dot(surfel.Normal, T)
+                        Ratio = Specular * WeightFresnel * (1 - F) / WeightNormalization
                     };
             }
 
@@ -163,7 +163,7 @@ namespace Renderer
                     if (selection < pdf) // this impulse is choosen
                         return new ScatteredRay
                         {
-                            Ratio = impulse.Ratio,
+                            Ratio = impulse.Ratio / abs(dot(surfel.Normal, impulse.Direction)),
                             Direction = impulse.Direction,
                             PDF = pdf
                         };
@@ -403,7 +403,7 @@ namespace Renderer
 
                 ScatteredRay outgoing = material.Scatter(attribute, V);
 
-                float lambertFactor = max(0, dot(attribute.Normal, outgoing.Direction));
+                float lambertFactor = abs(dot(attribute.Normal, outgoing.Direction));
 
                 payload.Color += payload.Importance * material.Emissive;
                 
@@ -415,7 +415,7 @@ namespace Renderer
 
                     RayDescription ray = new RayDescription { Direction = D, Origin = attribute.Position + facedNormal * 0.001f, MinT = 0.0001f, MaxT = 10000 };
 
-                    payload.Importance *= outgoing.Ratio / outgoing.PDF;
+                    payload.Importance *= outgoing.Ratio * lambertFactor / outgoing.PDF;
                     payload.Bounces--;
 
                     raycaster.Trace(scene, ray, ref payload);
