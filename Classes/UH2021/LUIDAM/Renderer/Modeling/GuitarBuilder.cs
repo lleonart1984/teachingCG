@@ -40,19 +40,19 @@ namespace Renderer
 
         public MyMaterial<T>[] StringMaterials => new MyMaterial<T>[] 
         { MetalStringMaterial, MetalStringMaterial, MetalStringMaterial, NylonStringMaterial, NylonStringMaterial, NylonStringMaterial}; // TODO
-        public MyMaterial<T> StringCylinderMaterial  => GuitarDrawer<T>.GetBasePinHeadMaterial(); // TODO
-        public MyMaterial<T> HeadPinMaterial         => GuitarDrawer<T>.GetBasePinHeadMaterial(); // TODO
-        public MyMaterial<T> FretMaterial            => GuitarDrawer<T>.GetBasePinMaterial(); // TODO
-        public MyMaterial<T> BasePinMaterial         => GuitarDrawer<T>.GetBasePinMaterial(); // TODO
-        public MyMaterial<T> MetalStringMaterial     => GuitarDrawer<T>.GetMetalStringMaterial(); // TODO
-        public MyMaterial<T> NylonStringMaterial     => GuitarDrawer<T>.GetNylonStringMaterial(); // TODO
-        public MyMaterial<T> GuitarHoleMaterial      => GuitarDrawer<T>.GetGuitarBodyHoleMaterial(); // TODO
-        public MyMaterial<T> BridgeMaterial          => GuitarDrawer<T>.GetBackMainGuitarBodyMaterial(); // TODO
-        public MyMaterial<T> StringHubMaterial       => GuitarDrawer<T>.GetBackMainGuitarBodyMaterial(); // TODO
-        public MyMaterial<T> HeadstockMaterial       => GuitarDrawer<T>.GetBackMainGuitarBodyMaterial(); // TODO
-        public MyMaterial<T> GuitarBodySidesMaterial => GuitarDrawer<T>.GetBackMainGuitarBodyMaterial(); // TODO
-        public MyMaterial<T> GuitarBodyFrontMaterial => GuitarDrawer<T>.GetFrontMainGuitarBodyMaterial(); // TODO
-        public MyMaterial<T> GuitarBodyBackMaterial  => GuitarDrawer<T>.GetBackMainGuitarBodyMaterial(); // TODO
+        public static MyMaterial<T> StringCylinderMaterial  = Materials<T>.BasePinHeadMaterial; // TODO
+        public static MyMaterial<T> HeadPinMaterial         = Materials<T>.BasePinHeadMaterial; // TODO
+        public static MyMaterial<T> FretMaterial            = Materials<T>.BasePinMaterial; // TODO
+        public static MyMaterial<T> BasePinMaterial         = Materials<T>.BasePinMaterial; // TODO
+        public static MyMaterial<T> MetalStringMaterial     = Materials<T>.MetalStringMaterial; // TODO
+        public static MyMaterial<T> NylonStringMaterial     = Materials<T>.NylonStringMaterial; // TODO
+        public static MyMaterial<T> GuitarHoleMaterial      = Materials<T>.GuitarBodyHoleMaterial; // TODO
+        public static MyMaterial<T> BridgeMaterial          = Materials<T>.BackMainGuitarBodyMaterial; // TODO
+        public static MyMaterial<T> StringHubMaterial       = Materials<T>.BackMainGuitarBodyMaterial; // TODO
+        public static MyMaterial<T> HeadstockMaterial       = Materials<T>.BackMainGuitarBodyMaterial; // TODO
+        public static MyMaterial<T> GuitarBodySidesMaterial = Materials<T>.BackMainGuitarBodyMaterial; // TODO
+        public static MyMaterial<T> GuitarBodyFrontMaterial = Materials<T>.FrontMainGuitarBodyMaterial; // TODO
+        public static MyMaterial<T> GuitarBodyBackMaterial  = Materials<T>.BackMainGuitarBodyMaterial; // TODO
         
         #endregion
 
@@ -802,10 +802,9 @@ namespace Renderer
                 return sqrtInside < 0 ? .0f : sqrt(sqrtInside); // 0.001 returned because of weird bug in shading when both parts are joined. Without it, should be 0
             }
             
-            var guitarBuilder = new GuitarBuilder<T>();
-            var backMaterial = guitarBuilder.GuitarBodyBackMaterial;
-            var frontMaterial = guitarBuilder.GuitarBodyFrontMaterial;
-            var sideMaterial = guitarBuilder.GuitarBodySidesMaterial;
+            var backMaterial = GuitarBodyBackMaterial;
+            var frontMaterial = GuitarBodyFrontMaterial;
+            var sideMaterial = GuitarBodySidesMaterial;
             
             var prevLRBZ = bz(step);
             for (int i = 0; (i+1) * step < 3; i++)

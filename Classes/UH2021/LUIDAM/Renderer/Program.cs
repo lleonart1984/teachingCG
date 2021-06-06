@@ -626,8 +626,8 @@ namespace Renderer
 
 
             Texture2D boxDiffuse = Texture2D.LoadFromFile("textures\\wall_texture.bmp");
-            GuitarDrawer<MyPositionNormalCoordinate>.CreateNoisyBumpMap("noisy.bmp", 0.05f, 400, 400);
-            GuitarDrawer<MyPositionNormalCoordinate>.CreateRoughStringBumpMap("rough.bmp", 10, 400, 400);
+            Materials<MyPositionNormalCoordinate>.CreateNoisyBumpMap("noisy.bmp", 0.05f, 400, 400);
+            Materials<MyPositionNormalCoordinate>.CreateRoughStringBumpMap("rough.bmp", 10, 400, 400);
             var boxBump = Texture2D.LoadFromFile("noisy.bmp");
             boxBump = Texture2D.LoadFromFile("rough.bmp");
             //boxBump = null;
@@ -1053,7 +1053,8 @@ namespace Renderer
             stopwatch.Start();
 
             // Texture to output the image.
-            Texture2D texture = new Texture2D(100, 100);
+            var size = 300;
+            Texture2D texture = new Texture2D(size, size);
 
             //SimpleRaycast(texture);
             //LitRaycast(texture);
@@ -1062,18 +1063,27 @@ namespace Renderer
             //RaycastingMeshTexture(texture, mat);
             //Pathtracing(texture);
 
-            var pathMax = 3;
-            if (true)
+            var pathMax = 1000;
+            var drawGuitar = true;
+            if (drawGuitar)
             {
-                /// Pathtracing can't be done concurrently
-                GuitarDrawer<MyPositionNormalCoordinate>.DrawStep = 1;
-                //GuitarDrawer<MyPositionNormalCoordinate>.XGrid = 1;
-                //GuitarDrawer<MyPositionNormalCoordinate>.YGrid = 1;
-                /// Pathtracing can't be done concurrently
-
-                //GuitarDrawer<MyPositionNormalCoordinate>.GuitarPathtracing(texture, Transforms.Identity, pathMax);
-                GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaytracing(texture, Transforms.Identity);
-                //GuitarDrawer.GuitarCSGRaycast(texture, Transforms.Identity);
+                Console.WriteLine($"Started at {DateTime.Now}");
+                var pathtracing = false;
+                if (pathtracing)
+                {
+                    /// Pathtracing can't be done concurrently
+                    GuitarDrawer<MyPositionNormalCoordinate>.DrawStep = 1;
+                    GuitarDrawer<MyPositionNormalCoordinate>.XGrid = 1;
+                    GuitarDrawer<MyPositionNormalCoordinate>.YGrid = 1;
+                    /// Pathtracing can't be done concurrently
+                    GuitarDrawer<MyPositionNormalCoordinate>.GuitarPathtracing(texture, Transforms.Identity, pathMax);
+                }
+                else
+                {
+                    GuitarDrawer<MyPositionNormalCoordinate>.DrawStep = 3;
+                    GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaytracing(texture, Transforms.Identity);
+                    //GuitarDrawer.GuitarCSGRaycast(texture, Transforms.Identity);
+                }
             }
             else
             {

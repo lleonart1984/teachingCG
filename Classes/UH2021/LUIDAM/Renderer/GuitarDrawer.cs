@@ -115,15 +115,17 @@ namespace Renderer
 
         public static void PathTrace<T>(Texture2D texture, Scene<T, MyMaterial<T>> scene, Raytracer<MyPTRayPayload, T, MyMaterial<T>> raycaster, float4x4 viewMatrix, float4x4 projectionMatrix, int maxPass, int rendStep = 1, int gridXDiv = 8, int gridYDiv = 8) where T : struct, IVertex<T>, INormalVertex<T>, ICoordinatesVertex<T>, IColorable, ITransformable<T>
         {
-            var start = new Stopwatch();
+            var pathTimer = new Stopwatch();
+            var passTimer = new Stopwatch();
 
-            start.Start();
+            pathTimer.Start();
 
             int id = 0, xStep = texture.Width / gridXDiv, yStep = texture.Height / gridYDiv;
             int pass = 0;
             while (pass < maxPass)
             {
                 var tasks = new List<Task>();
+                passTimer.Restart();
                 for (int i = 0; i * yStep < texture.Height; i++)
                 {
                     for (int j = 0; j * xStep < texture.Width; j++)
@@ -135,11 +137,11 @@ namespace Renderer
                 }
                 Task.WaitAll(tasks.ToArray());
                 texture.Save("test.rbm");
-                Console.WriteLine($"Pass {pass} completed in {start.ElapsedMilliseconds} milliseconds");
+                Console.WriteLine($"Pass {pass} completed in {passTimer.ElapsedMilliseconds * 1000} seconds. {DateTime.Now}");
                 pass++;
             }
-            start.Stop();
-            Console.WriteLine($"Elapsed {start.ElapsedMilliseconds} milliseconds");
+            pathTimer.Stop();
+            Console.WriteLine($"Elapsed {pathTimer.ElapsedMilliseconds * 1000} seconds. {DateTime.Now}");
         }
 
         public static void PathtracePassDrawArea<T>(int id, int x0, int y0, int xf, int yf, Raytracer<MyPTRayPayload, T, MyMaterial<T>> raycaster, Texture2D texture, float4x4 viewMatrix, float4x4 projectionMatrix, Scene<T, MyMaterial<T>> scene, int pass, int step = 1) where T : struct, IVertex<T>, INormalVertex<T>, ICoordinatesVertex<T>, IColorable, ITransformable<T>
@@ -177,18 +179,24 @@ namespace Renderer
         public static int YGrid { get; set; } = 8;
         public static int XGrid { get; set; } = 8;
 
-        public static float3 CameraPosition = float3(1.1f, 1f, -.75f);
+        public static float3 CameraPosition = float3(1.2f, 1f, -.4f);
+        //public static float3 CameraPosition = float3(1.1f, 1f, -.75f); // Forms camera
         //public static float3 CameraPosition = float3(1.1f, 3f, -1.0f); // From top
         //public static float3 CameraPosition = float3(1.1f, 1f, -.2f); // Close
+        //public static float3 CameraPosition = float3(1f, 1f, 1f);  // Headstock Wall camera
+        //public static float3 CameraPosition = float3(1f, 0.05f, .85f);  // Base camera
 
-        public static float3 Target = float3(1.1f, .58f, .5f);
+        public static float3 Target = float3(1.2f, .7f, .5f);
+        //public static float3 Target = float3(1.1f, .58f, .5f); // Forms target
+        //public static float3 Target = float3(1.4f, 1f, 1f); // Headstock Wall target
+        //public static float3 Target = float3(1.4f, 0.05f, .85f); // Base target
 
         public static float4x4 ViewMatrix = Transforms.LookAtLH(CameraPosition, Target, float3(0, 1, 0));
 
         public static float4x4 ProjectionMatrix(int height, int width) => Transforms.PerspectiveFovLH(pi_over_4, height / (float)width, 0.01f, 20);
 
         private static float3 GlobalLightIntensity = float3(1, 1, 1) * 120;
-        private static float3 LocalLightIntensity = float3(1, 1, 1) * 50;
+        private static float3 LocalLightIntensity = float3(1, 1, 1) * 20;
 
         public static (float3 position, float3 intensity, float3 scale)[] LightSources = new (float3 position, float3 intensity, float3 scale)[]
         {
@@ -226,15 +234,14 @@ namespace Renderer
 
             var model = new GuitarBuilder<T>() { MeshScalar = meshScalar }.GuitarMesh()
                 .ApplyTransforms(Transforms.Identity
-                                ,Transforms.RotateX(-pi / 2.0f - 11.3f * pi / 180.0f)
+                                ,Transforms.RotateX(-pi / 2.0f - 13.5f * pi / 180.0f)
                                 )
                             .FitIn(box, box, box);
 
             model = model.ApplyTransforms(Transforms.Identity
-                                         ,Transforms.Translate(1, 0, .8f)
+                                         ,Transforms.Translate(1, .02f, .8f)
                                          )
                             ;
-
             model.ComputeNormals();
             
             return model;
@@ -557,120 +564,5 @@ namespace Renderer
             RenderUtils.RayTrace<T>(texture, scene, raycaster, ViewMatrix, projectionMatrix, DrawStep, XGrid, YGrid);
         }
 
-
-        public static MyMaterial<T> LoadMaterialFromFile(string diffuseDir, float glossyness, float specularPower, float fresnel, float mirror, float diffuseWeight=1.0f, float refraction=1.0f, string bumpDir = null, float3? specular=default, float3? diffuse = default)
-        {
-            var item = Texture2D.LoadBmpFromFile(diffuseDir);
-            Texture2D bump = null;
-            if (bumpDir != null)
-                bump = Texture2D.LoadBmpFromFile(bumpDir);
-            var realSpecular = specular.HasValue ? specular.Value : float3(1, 1, 1);
-            var realDifusse = diffuse.HasValue ? diffuse.Value : float3(1, 1, 1);
-            return new MyMaterial<T>
-            {
-                DiffuseMap = item,
-                BumpMap = bump,
-                WeightGlossy = glossyness,
-                SpecularPower = specularPower,
-                Specular = realSpecular,
-                Diffuse = realDifusse,
-                WeightDiffuse = diffuseWeight,
-                WeightMirror = mirror,
-                WeightFresnel = fresnel,
-                RefractionIndex = refraction,
-                TextureSampler = new Sampler 
-                { 
-                    Wrap = WrapMode.Repeat,
-                },
-            };
-        }
-
-        /// <summary>
-        /// Create a noisy bump texture
-        /// </summary>
-        /// <param name="file">Image file</param>
-        /// <param name="noiseScalar">Noise presence, between 0 and 1</param>
-        /// <param name="width">Image width</param>
-        /// <param name="height">Image height</param>
-        public static void CreateNoisyBumpMap(string file, float noiseScalar, int width, int height)
-        {
-            var bmp = new Bitmap(width, height);
-            for (int i = 0; i < width; i++)
-            {
-                for (int j = 0; j < height; j++)
-                {
-                    bmp.SetPixel(i, j, Color.FromArgb(255, (int)(127.5 + 127.5 * noiseScalar * random()), (int)(127.5 + 127.5 * noiseScalar * random()), (int)(127.5 + 127.5 * noiseScalar * random())));
-                }
-            }
-            bmp.Save(file);
-        }
-
-        /// <summary>
-        /// Create a sine like bump texture
-        /// </summary>
-        /// <param name="file"></param>
-        /// <param name="bumpScatterScalar">Separation between peaks</param>
-        /// <param name="width">Image width</param>
-        /// <param name="height">Image height</param>
-        public static void CreateRoughStringBumpMap(string file, int bumpScatterScalar, int width, int height)
-        {
-            var bmp = new Bitmap(width, height);
-            for (int i = 0; i < width; i++)
-            {
-                float3 value = abs(float3(0, sin(pi * i / bumpScatterScalar), 0));
-                for (int j = 0; j < height; j++)
-                {
-                    bmp.SetPixel(i, j, Color.FromArgb(255, (int)(127.5 + 127.5 * value.x), (int)(127.5 + 127.5 * value.y), (int)(127.5 + 127.5 * value.z)));
-                }
-            }
-            bmp.Save(file);
-        }
-
-
-
-        public static MyMaterial<T> GetFrontMainGuitarBodyMaterial()
-        {
-            return LoadMaterialFromFile("textures\\guitar_texture.bmp", 0.01f, 60, 0.07f, 0, specular: float3(1, 1, 1) * .5f);
-        }
-
-        public static MyMaterial<T> GetBackMainGuitarBodyMaterial()
-        {
-            return LoadMaterialFromFile("textures\\headstock_texture.bmp", 0.01f, 60, 0.04f, 0, specular:float3(1,1,1)*.5f);
-        }
-
-        public static MyMaterial<T> GetGuitarBodyHoleMaterial()
-        {
-            return LoadMaterialFromFile("textures\\circle_texture.bmp", 0.01f, 60, 0.01f, 0);
-        }
-
-        public static MyMaterial<T> GetBasePinMaterial()
-        {
-            return LoadMaterialFromFile("textures\\pin_texture.bmp", 0.04f, 60, 0, 0);
-        }
-
-        public static MyMaterial<T> GetBasePinHeadMaterial()
-        {
-            return LoadMaterialFromFile("textures\\pin_head_texture.bmp", 0.02f, 60, 0, 0);
-        }
-
-        public static MyMaterial<T> GetMetalStringMaterial()
-        {
-            return LoadMaterialFromFile("textures\\pin_texture.bmp", 0.04f, 60, 0, 0, bumpDir:"textures\\string_bump.bmp");
-        }
-
-        public static MyMaterial<T> GetNylonStringMaterial()
-        {
-            return LoadMaterialFromFile("textures\\pin_head_texture.bmp", 0.04f, 200, .7f, 0, diffuseWeight:0.4f, refraction:1.6f);
-        }
-
-        public static MyMaterial<T> GetWallMaterial()
-        {
-            return LoadMaterialFromFile("textures\\wall_texture.bmp", 0f, 260, 0, 0);
-        }
-
-        public static MyMaterial<T> GetFloorMaterial()
-        {
-            return LoadMaterialFromFile("textures\\floor_texture.bmp", 0f, 260, 0, 0);
-        }
     }
 }

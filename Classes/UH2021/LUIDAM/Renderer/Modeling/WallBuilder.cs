@@ -33,9 +33,9 @@ namespace Renderer
 
         #region Materials
 
-        public MyMaterial<T> WallMaterial => GuitarDrawer<T>.GetWallMaterial(); //TODO
+        public static MyMaterial<T> WallMaterial = Materials<T>.WallMaterial; //TODO
 
-        public MyMaterial<T> FloorMaterial => GuitarDrawer<T>.GetFloorMaterial(); // TODO
+        public static MyMaterial<T> FloorMaterial = Materials<T>.FloorMaterial; // TODO
 
         #endregion
 
