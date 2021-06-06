@@ -301,3 +301,5 @@ FakesAssemblies/
 *.exe
 *.out
 *.app
+
+*.rmb
