@@ -163,7 +163,7 @@ namespace Renderer
                     if (selection < pdf) // this impulse is choosen
                         return new ScatteredRay
                         {
-                            Ratio = impulse.Ratio / abs(dot(surfel.Normal, impulse.Direction)),
+                            Ratio = impulse.Ratio,
                             Direction = impulse.Direction,
                             PDF = pdf
                         };
@@ -176,7 +176,7 @@ namespace Renderer
                 return new ScatteredRay
                 {
                     Direction = wout,
-                    Ratio = EvalBRDF(surfel, wout, w),
+                    Ratio = EvalBRDF(surfel, wout, w) * abs(dot(surfel.Normal, wout)),
                     PDF = (1 - impulseProb) / (2 * pi)
                 };
             }
@@ -403,8 +403,6 @@ namespace Renderer
 
                 ScatteredRay outgoing = material.Scatter(attribute, V);
 
-                float lambertFactor = abs(dot(attribute.Normal, outgoing.Direction));
-
                 payload.Color += payload.Importance * material.Emissive;
                 
                 // Recursive calls for indirect light due to reflections and refractions
@@ -415,7 +413,7 @@ namespace Renderer
 
                     RayDescription ray = new RayDescription { Direction = D, Origin = attribute.Position + facedNormal * 0.001f, MinT = 0.0001f, MaxT = 10000 };
 
-                    payload.Importance *= outgoing.Ratio * lambertFactor / outgoing.PDF;
+                    payload.Importance *= outgoing.Ratio / outgoing.PDF;
                     payload.Bounces--;
 
                     raycaster.Trace(scene, ray, ref payload);
