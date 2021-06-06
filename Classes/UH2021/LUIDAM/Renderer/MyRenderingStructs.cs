@@ -164,7 +164,7 @@ namespace Renderer
                 if (selection < pdf) // this impulse is choosen
                     return new MyScatteredRay
                     {
-                        Ratio = impulse.Ratio,
+                        Ratio = impulse.Ratio / abs(dot(surfel.Normal, impulse.Direction)),
                         Direction = impulse.Direction,
                         PDF = pdf
                     };

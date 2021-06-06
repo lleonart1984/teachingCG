@@ -440,13 +440,7 @@ namespace Renderer
 
                 MyScatteredRay outgoing = material.Scatter(attribute, V);
 
-                var l = dot(attribute.Normal, outgoing.Direction);
-                if (l < 0)
-                {
-                    l = -l;
-                    attribute.Normal *= -1;
-                }
-                float lambertFactor = max(0, l);
+                float lambertFactor = abs(dot(attribute.Normal, outgoing.Direction));
 
                 payload.Color += payload.Importance * material.Emissive;
 
@@ -458,7 +452,7 @@ namespace Renderer
 
                     RayDescription ray = new RayDescription { Direction = D, Origin = attribute.Position + facedNormal * 0.001f, MinT = 0.0001f, MaxT = 10000 };
 
-                    payload.Importance *= outgoing.Ratio / outgoing.PDF;
+                    payload.Importance *= outgoing.Ratio * lambertFactor / outgoing.PDF;
                     payload.Bounces--;
 
                     raycaster.Trace(scene, ray, ref payload);
