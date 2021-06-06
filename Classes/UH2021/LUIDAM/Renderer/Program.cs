@@ -1053,7 +1053,7 @@ namespace Renderer
             stopwatch.Start();
 
             // Texture to output the image.
-            var size = 300;
+            var size = 400;
             Texture2D texture = new Texture2D(size, size);
 
             //SimpleRaycast(texture);
@@ -1063,12 +1063,12 @@ namespace Renderer
             //RaycastingMeshTexture(texture, mat);
             //Pathtracing(texture);
 
-            var pathMax = 1000;
+            var pathMax = 30;
             var drawGuitar = true;
             if (drawGuitar)
             {
                 Console.WriteLine($"Started at {DateTime.Now}");
-                var pathtracing = false;
+                var pathtracing = true;
                 if (pathtracing)
                 {
                     /// Pathtracing can't be done concurrently

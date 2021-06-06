@@ -137,11 +137,11 @@ namespace Renderer
                 }
                 Task.WaitAll(tasks.ToArray());
                 texture.Save("test.rbm");
-                Console.WriteLine($"Pass {pass} completed in {passTimer.ElapsedMilliseconds * 1000} seconds. {DateTime.Now}");
+                Console.WriteLine($"Pass {pass} completed in {passTimer.ElapsedMilliseconds / 1000} seconds. {DateTime.Now}");
                 pass++;
             }
             pathTimer.Stop();
-            Console.WriteLine($"Elapsed {pathTimer.ElapsedMilliseconds * 1000} seconds. {DateTime.Now}");
+            Console.WriteLine($"Elapsed {pathTimer.ElapsedMilliseconds / 1000} seconds. {DateTime.Now}");
         }
 
         public static void PathtracePassDrawArea<T>(int id, int x0, int y0, int xf, int yf, Raytracer<MyPTRayPayload, T, MyMaterial<T>> raycaster, Texture2D texture, float4x4 viewMatrix, float4x4 projectionMatrix, Scene<T, MyMaterial<T>> scene, int pass, int step = 1) where T : struct, IVertex<T>, INormalVertex<T>, ICoordinatesVertex<T>, IColorable, ITransformable<T>
