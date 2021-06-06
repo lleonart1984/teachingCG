@@ -760,15 +760,8 @@ namespace Renderer
                 }
         }
 
-        static void Pathtracing(Texture2D texture)
+        static void PathtracingInit(Texture2D texture, int maxPass)
         {
-            Console.WriteLine("Write pathtracing max pass (defualt 10):");
-            string pathAmount = Console.ReadLine();
-            int maxPass = 10;
-            if (string.IsNullOrWhiteSpace(pathAmount) || !int.TryParse(pathAmount, out maxPass))
-            {
-                Console.WriteLine($"Default to {maxPass}");
-            }
             int pass = 0;
             while (pass < maxPass)
             {
@@ -780,6 +773,8 @@ namespace Renderer
         }
 
         #endregion
+
+        #region Raycasting
 
         static void CreateScene(Scene<PositionNormal, Material> scene)
         {
@@ -1048,6 +1043,9 @@ namespace Renderer
                 }
         }
 
+
+        #endregion
+
         static void Main(string[] args)
         {
             Stopwatch stopwatch = new Stopwatch();
@@ -1055,21 +1053,8 @@ namespace Renderer
             stopwatch.Start();
 
             // Texture to output the image.
-            Texture2D texture = new Texture2D(512, 512);
+            Texture2D texture = new Texture2D(100, 100);
 
-            var f1 = normalize(float3( 1, 0, 0));
-            var f2 = normalize(float3( 0, 1, 0));
-            var f3 = normalize(float3(-1, 1, 0));
-            var f4 = normalize(float3(-1,-1, 0));
-            var f5 = normalize(float3( 1,-1, 0));
-            Console.WriteLine(dot(f1,f2));
-            Console.WriteLine(dot(f1,f3));
-            Console.WriteLine(dot(f1,f4));
-            Console.WriteLine(dot(f1,f5));
-            Console.WriteLine(length(cross(f1, f2)));
-            Console.WriteLine(length(cross(f1, f3)));
-            Console.WriteLine(length(cross(f1, f4)));
-            Console.WriteLine(length(cross(f1, f5)));
             //SimpleRaycast(texture);
             //LitRaycast(texture);
             //RaycastingMesh(texture);
@@ -1077,14 +1062,25 @@ namespace Renderer
             //RaycastingMeshTexture(texture, mat);
             //Pathtracing(texture);
 
-            GuitarDrawer<MyPositionNormalCoordinate>.DrawStep = 6;
-            GuitarDrawer<MyPositionNormalCoordinate>.CreateRoughStringBumpMap("textures\\string_bump.bmp", 10, 400, 400);
-            GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaytracing(texture, Transforms.Identity);
-            //GuitarDrawer.GuitarCSGRaycast(texture, Transforms.Identity);
-            //GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaytracing(texture, Transforms.Translate(-.3f,0,-.7f));
-            //GuitarDrawer<MyPositionNormalCoordinate>.GuitarPathtracing(texture, Transforms.Identity, 6);
+            var pathMax = 3;
+            if (true)
+            {
+                /// Pathtracing can't be done concurrently
+                GuitarDrawer<MyPositionNormalCoordinate>.DrawStep = 1;
+                //GuitarDrawer<MyPositionNormalCoordinate>.XGrid = 1;
+                //GuitarDrawer<MyPositionNormalCoordinate>.YGrid = 1;
+                /// Pathtracing can't be done concurrently
 
-            //Raytracing(texture);
+                //GuitarDrawer<MyPositionNormalCoordinate>.GuitarPathtracing(texture, Transforms.Identity, pathMax);
+                GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaytracing(texture, Transforms.Identity);
+                //GuitarDrawer.GuitarCSGRaycast(texture, Transforms.Identity);
+            }
+            else
+            {
+                //Raytracing(texture);
+                PathtracingInit(texture, pathMax);
+            }
+
 
             texture.Save("test.rbm");
 

@@ -179,6 +179,7 @@ namespace Renderer
 
         public static float3 CameraPosition = float3(1.1f, 1f, -.75f);
         //public static float3 CameraPosition = float3(1.1f, 3f, -1.0f); // From top
+        //public static float3 CameraPosition = float3(1.1f, 1f, -.2f); // Close
 
         public static float3 Target = float3(1.1f, .58f, .5f);
 
@@ -187,12 +188,12 @@ namespace Renderer
         public static float4x4 ProjectionMatrix(int height, int width) => Transforms.PerspectiveFovLH(pi_over_4, height / (float)width, 0.01f, 20);
 
         private static float3 GlobalLightIntensity = float3(1, 1, 1) * 120;
-        private static float3 LocalLightIntensity = float3(1, 1, 1) * 150;
+        private static float3 LocalLightIntensity = float3(1, 1, 1) * 50;
 
         public static (float3 position, float3 intensity, float3 scale)[] LightSources = new (float3 position, float3 intensity, float3 scale)[]
         {
             (float3(1.6f, 2f, 0.6f), LocalLightIntensity, float3(1,.1f,1)),
-            (Target, GlobalLightIntensity, 5f), 
+            //(Target, GlobalLightIntensity, 5f), 
             //(float3(1f, 1.5f, .5f), GlobalLightIntensity, float3(1f,.1f,1f)), // Light above guitar
             //(float3(1.9f, 1.9f, -1f), .5f*GlobalLightIntensity, float3(1f,.1f,1f)),
         };
@@ -432,7 +433,13 @@ namespace Renderer
 
                 MyScatteredRay outgoing = material.Scatter(attribute, V);
 
-                float lambertFactor = max(0, dot(attribute.Normal, outgoing.Direction));
+                var l = dot(attribute.Normal, outgoing.Direction);
+                if (l < 0)
+                {
+                    l = -l;
+                    attribute.Normal *= -1;
+                }
+                float lambertFactor = max(0, l);
 
                 payload.Color += payload.Importance * material.Emissive;
 
