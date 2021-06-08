@@ -4,6 +4,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Text;
 using static GMath.Gfx;
@@ -170,6 +171,25 @@ namespace Rendering
                 }
             reader.Close();
             return bmp;
+        }
+
+        public void SaveToBmp(string fileName)
+        {
+            static int ColorComponent(float x)
+            {
+                return (int)Math.Max(0, Math.Min(255, 256 * x));
+            }
+
+            // Save Mesh
+            var btimap = new Bitmap(Width, Height);
+            for (int i = 0; i < btimap.Width; i++)
+            {
+                for (int j = 0; j < btimap.Height; j++)
+                {
+                    btimap.SetPixel(i, j, System.Drawing.Color.FromArgb(ColorComponent(this[i, j].w), ColorComponent(this[i, j].x), ColorComponent(this[i, j].y), ColorComponent(this[i, j].z)));
+                }
+            }
+            btimap.Save(fileName, ImageFormat.Bmp);
         }
     }
 

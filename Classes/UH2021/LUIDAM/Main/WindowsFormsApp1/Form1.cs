@@ -163,7 +163,7 @@ namespace MainForm
 
             if (mesh)
             {
-                GuitarDrawer<MyPositionNormalCoordinate>.DrawStep = 1;
+                GuitarDrawer<MyPositionNormalCoordinate>.DrawStep = 10;
                 GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaytracing(_texture, WorldTransformation());
                 for (int i = 0; i < _texture.Width; i++)
                 {

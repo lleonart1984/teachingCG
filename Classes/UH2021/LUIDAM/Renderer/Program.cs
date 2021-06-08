@@ -1067,13 +1067,19 @@ namespace Renderer
             //RaycastingMeshTexture(texture, mat);
             //Pathtracing(texture);
 
+
             var pathMax = 10000;
             var drawGuitar = true;
             if (drawGuitar)
             {
                 Console.WriteLine($"Started at {DateTime.Now}");
+                var mesh = false;
                 var pathtracing = true;
-                if (pathtracing)
+                if (mesh)
+                {
+                    GuitarDrawer<MyPositionNormalCoordinate>.GuitarMesh(new Raster<MyPositionNormalCoordinate, MyProjectedVertex>(texture));
+                }
+                else if (pathtracing)
                 {
                     /// Pathtracing can't be done concurrently
                     GuitarDrawer<MyPositionNormalCoordinate>.DrawStep = 1;
@@ -1081,7 +1087,7 @@ namespace Renderer
                     GuitarDrawer<MyPositionNormalCoordinate>.YGrid = 1;
                     /// Pathtracing can't be done concurrently
                     
-                    var continuePath = true;
+                    var continuePath = false;
                     var pass = 0;
                     if (continuePath)
                     {
@@ -1095,7 +1101,7 @@ namespace Renderer
                 }
                 else
                 {
-                    GuitarDrawer<MyPositionNormalCoordinate>.DrawStep = 7;
+                    GuitarDrawer<MyPositionNormalCoordinate>.DrawStep = 1;
                     GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaytracing(texture, Transforms.Identity);
                     //GuitarDrawer.GuitarCSGRaycast(texture, Transforms.Identity);
                 }
@@ -1108,6 +1114,7 @@ namespace Renderer
 
 
             texture.Save("test.rbm");
+            texture.SaveToBmp("test.bmp");
 
             //Raster<PositionNormal, MyProjectedVertex> render = new Raster<PositionNormal, MyProjectedVertex>(1024, 512);
             //GeneratingMeshes(render);

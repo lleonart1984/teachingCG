@@ -194,9 +194,9 @@ namespace Renderer
 
         public static float4x4 ProjectionMatrix(int height, int width) => Transforms.PerspectiveFovLH(pi_over_4, height / (float)width, 0.01f, 20);
 
-        private static float3 GlobalLightIntensity = float3(1, 1, 1) * 120;
-        private static float3 LocalLightIntensity = float3(1, 1, 1) * 55; // Pathtracing
-        //private static float3 LocalLightIntensity = float3(1, 1, 1) * 20; // Raytracing
+        public static float3 GlobalLightIntensity = float3(1, 1, 1) * 120;
+        //public static float3 LocalLightIntensity = float3(1, 1, 1) * 55; // Pathtracing
+        private static float3 LocalLightIntensity = float3(1, 1, 1) * 20; // Raytracing
 
         public static (float3 position, float3 intensity, float3 scale)[] LightSources = new (float3 position, float3 intensity, float3 scale)[]
         {
@@ -312,6 +312,38 @@ namespace Renderer
             }
 
             AddLightSource(scene);
+        }
+
+        public static void GuitarMesh<V>(Raster<T,V> render) where V : struct, IProjectedVertex<V>
+        {
+            render.ClearRT(float4(0, 0, 0.2f, 1)); // clear with color dark blue.
+
+            var primitive = CreateGuitarMesh() + CreateWalls();
+
+            /// Convert to a wireframe to render. Right now only lines can be rasterized.
+            primitive = primitive.ConvertTo(Topology.Lines);
+
+            #region viewing and projecting
+
+            // Define a vertex shader that projects a vertex into the NDC.
+            render.VertexShader = v =>
+            {
+                float4 hPosition = float4(v.Position, 1);
+                hPosition = mul(hPosition, ViewMatrix);
+                hPosition = mul(hPosition, ProjectionMatrix(render.RenderTarget.Height, render.RenderTarget.Width));
+                return new V { Homogeneous = hPosition };
+            };
+
+            // Define a pixel shader that colors using a constant value
+            render.PixelShader = p =>
+            {
+                return float4(p.Homogeneous.x / 1024.0f, p.Homogeneous.y / 512.0f, 1, 1);
+            };
+
+            #endregion
+
+            // Draw the mesh.
+            render.DrawMesh(primitive);
         }
 
         public static void GuitarCSGRaycast(Texture2D texture, float4x4 worldTransformation)
