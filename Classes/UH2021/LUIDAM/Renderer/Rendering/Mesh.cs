@@ -44,6 +44,17 @@ namespace Rendering
         public int[] MaterialsSeparators { get; set; }
 
         /// <summary>
+        /// Vertexes used in Normal Computation
+        /// </summary>
+        public float3[] NormalVertex { get; set; }
+
+        /// <summary>
+        /// Index that separates normal vertex in case of union
+        /// NormalSeparators[i] = last position + 1 of normal vertex i
+        /// </summary>
+        public int[] NormalSeparators { get; set; }
+
+        /// <summary>
         /// Creates a mesh object using vertices, indices and the desired topology.
         /// </summary>
         public Mesh (V[] vertices, int[] indices, Topology topology = Topology.Triangles)
@@ -52,15 +63,22 @@ namespace Rendering
             this.Indices = indices;
             this.Topology = topology;
             this.SetMaterial(default);
+            this.SetNormal(float3(0, 0, 0));
 
             if (Vertices.Any())
                 BoundBox = (float3(Vertices.Max(x => x.Position.x), Vertices.Max(x => x.Position.y), Vertices.Max(x => x.Position.z)),
                             float3(Vertices.Min(x => x.Position.x), Vertices.Min(x => x.Position.y), Vertices.Min(x => x.Position.z)));
         }
 
-        public Mesh (V[] vertices, int[] indices, IMaterial material, Topology topology = Topology.Triangles) : this(vertices, indices, topology)
+        public Mesh (V[] vertices, int[] indices, IMaterial material, float3 normal, Topology topology = Topology.Triangles) : this(vertices, indices, topology)
         {
             this.SetMaterial(material);
+            this.SetNormal(normal);
+        }
+
+        public Mesh(V[] vertices, int[] indices, float3 normal, Topology topology = Topology.Triangles) : this(vertices, indices, topology)
+        {
+            this.SetNormal(normal);
         }
 
         public Mesh() : this(new V[] { }, new int[] { }, default)
@@ -77,9 +95,13 @@ namespace Rendering
             int[] newIndices = Indices.Clone() as int[];
             IMaterial[] newMaterials = Materials.Clone() as IMaterial[];
             int[] newMaterialSeparators = MaterialsSeparators.Clone() as int[];
+            float3[] normals = NormalVertex.Clone() as float3[];
+            int[] normalSeparator = NormalSeparators.Clone() as int[];
             var mesh = new Mesh<V>(newVertices, newIndices, this.Topology);
             mesh.Materials = newMaterials;
             mesh.MaterialsSeparators = newMaterialSeparators;
+            mesh.NormalVertex = normals;
+            mesh.NormalSeparators = normalSeparator;
             return mesh;
         }
 
@@ -93,7 +115,7 @@ namespace Rendering
             return GetEnumerator();
         }
 
-        public static Mesh<V> operator +(Mesh<V> a, Mesh<V> b)
+        public static Mesh<V> operator + (Mesh<V> a, Mesh<V> b)
         {
             var mesh = new Mesh<V>(a.Vertices.Concat(b.Vertices).ToArray(),
                                    a.Indices.Concat(b.Indices.Select(x => x + a.Vertices.Length)).ToArray());
@@ -101,6 +123,10 @@ namespace Rendering
             var newMaterialsSeparator = a.MaterialsSeparators.Concat(b.MaterialsSeparators.Select(x => x + a.Vertices.Length)).ToArray();
             mesh.Materials = newMaterials;
             mesh.MaterialsSeparators = newMaterialsSeparator;
+            var newNormals = a.NormalVertex.Concat(b.NormalVertex).ToArray();
+            var newNormalsSeparator = a.NormalSeparators.Concat(b.NormalSeparators.Select(x => x + a.Vertices.Length)).ToArray();
+            mesh.NormalVertex = newNormals;
+            mesh.NormalSeparators = newNormalsSeparator;
             return mesh;
         }
 
@@ -117,9 +143,17 @@ namespace Rendering
             for (int i = 0; i < newVertices.Length; i++)
                 newVertices[i] = transform(mesh.Vertices[i]);
 
+            float3[] newNormals = new float3[mesh.NormalVertex.Length];
+            for (int i = 0; i < newNormals.Length; i++)
+                newNormals[i] = transform(new V { Position = mesh.NormalVertex[i] }).Position;
+
             var mesh2 = new Mesh<T>(newVertices, mesh.Indices, mesh.Topology);
             mesh2.Materials = mesh.Materials.Clone() as IMaterial[];
             mesh2.MaterialsSeparators = mesh.MaterialsSeparators.Clone() as int[];
+
+            mesh2.NormalVertex = mesh.NormalVertex.Clone() as float3[];
+            mesh2.NormalSeparators = mesh.NormalSeparators.Clone() as int[];
+
             return mesh2;
         }
 
@@ -248,12 +282,24 @@ namespace Rendering
 
             for (int i=0; i<mesh.Indices.Length/3; i++)
             {
-                float3 p0 = mesh.Vertices[mesh.Indices[i * 3 + 0]].Position;
-                float3 p1 = mesh.Vertices[mesh.Indices[i * 3 + 1]].Position;
-                float3 p2 = mesh.Vertices[mesh.Indices[i * 3 + 2]].Position;
+                var v0 = mesh.Indices[i * 3 + 0];
+                var v1 = mesh.Indices[i * 3 + 1];
+                var v2 = mesh.Indices[i * 3 + 2];
+
+                float3 p0 = mesh.Vertices[v0].Position;
+                float3 p1 = mesh.Vertices[v1].Position;
+                float3 p2 = mesh.Vertices[v2].Position;
 
                 // Compute the normal of the triangle.
                 float3 N = cross(p1 - p0, p2 - p0);
+
+                var normal0 = mesh.GetVertexNormal(v0);
+                var normal1 = mesh.GetVertexNormal(v1);
+                var normal2 = mesh.GetVertexNormal(v2);
+
+                var normal = normal0 + normal1 + normal2;
+                if (any(normal) && dot(N, normal) < 0)
+                    N = -N;
 
                 // Add the normal to the vertices involved
                 normals[mesh.Indices[i * 3 + 0]] += N;

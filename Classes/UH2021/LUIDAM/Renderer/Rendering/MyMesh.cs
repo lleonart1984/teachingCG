@@ -209,6 +209,17 @@ namespace Rendering
         }
 
         /// <summary>
+        /// Applies the given normal to all vertex in Mesh
+        /// </summary>
+        /// <param name="normal"></param>
+        public static void SetNormal<V>(this Mesh<V> mesh, float3 normal) where V : struct, IVertex<V>
+        {
+            mesh.NormalVertex = new float3[] { normal };
+            mesh.NormalSeparators = new int[] { mesh.Vertices.Length };
+        }
+
+
+        /// <summary>
         /// Get the material corresponding to the vertex in <paramref name="vertexIndex"/>
         /// </summary>
         /// <typeparam name="V"></typeparam>
@@ -217,10 +228,35 @@ namespace Rendering
         /// <returns></returns>
         public static IMaterial GetVertexMaterial<V>(this Mesh<V> mesh, int vertexIndex) where V : struct, IVertex<V>
         {
-            for (int i = 0; i < mesh.MaterialsSeparators.Length; i++)
+            if (vertexIndex < mesh.MaterialsSeparators[0])
             {
-                if (mesh.MaterialsSeparators[i] <= vertexIndex)
+                return mesh.Materials[0];
+            }
+            for (int i = 1; i < mesh.MaterialsSeparators.Length; i++)
+            {
+                if (mesh.MaterialsSeparators[i-1] <= vertexIndex && vertexIndex < mesh.MaterialsSeparators[i])
                     return mesh.Materials[i];
+            }
+            throw new IndexOutOfRangeException();
+        }
+
+        /// <summary>
+        /// Get the vertex normal corresponding to the vertex in <paramref name="vertexIndex"/>
+        /// </summary>
+        /// <typeparam name="V"></typeparam>
+        /// <param name="mesh"></param>
+        /// <param name="vertexIndex"></param>
+        /// <returns></returns>
+        public static float3 GetVertexNormal<V>(this Mesh<V> mesh, int vertexIndex) where V : struct, IVertex<V>
+        {
+            if (vertexIndex < mesh.NormalSeparators[0])
+            {
+                return mesh.NormalVertex[0];
+            }
+            for (int i = 1; i < mesh.NormalSeparators.Length; i++)
+            {
+                if (mesh.NormalSeparators[i - 1] <= vertexIndex && vertexIndex < mesh.NormalSeparators[i])
+                    return mesh.NormalVertex[i];
             }
             throw new IndexOutOfRangeException();
         }
@@ -248,7 +284,31 @@ namespace Rendering
                 Array.Copy(mesh.Indices, initIndex, indexes, 0, indexes.Length);
                 Array.Copy(mesh.Vertices, initVertexIndex, vertex, 0, vertex.Length);
                 indexes = indexes.Select(x => x - initVertexIndex).ToArray();
-                meshMaterials.Add(new Mesh<V>(vertex, indexes, mesh.Materials[i]));
+                var newMesh = new Mesh<V>(vertex, indexes, mesh.Materials[i], default);
+
+                var normal = new List<float3>();
+                var normalIndexes = new List<int>();
+                for (int j = initVertexIndex; j < initVertexIndex + vertexAmount; j++)
+                {
+                    var currNormal = mesh.GetVertexNormal(j);
+                    if (normal.Any())
+                    {
+                        if (any(normal[normal.Count - 1] != currNormal))
+                        {
+                            normalIndexes.Append(j - initVertexIndex);
+                            normal.Append(currNormal);
+                        }
+                    }
+                    else
+                    {
+                        normal.Add(currNormal);
+                    }
+                }
+                normalIndexes.Add(vertexAmount);
+                newMesh.NormalVertex = normal.ToArray();
+                newMesh.NormalSeparators = normalIndexes.ToArray();
+
+                meshMaterials.Add(newMesh);
                 initVertexIndex += vertexAmount;
                 initIndex += indexAmount;
             }

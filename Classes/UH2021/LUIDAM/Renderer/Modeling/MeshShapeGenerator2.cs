@@ -111,6 +111,8 @@ namespace Renderer.Modeling
                 {
                     face = face.ApplyTransforms(Transforms.Translate(trans));
                 }
+                var normal = any(trans) ? trans : -1 + dirX + dirY;
+                face.SetNormal(normal);
                 face.SetMaterial(material);
                 face = MaterialsUtils.MapPlane(face);
                 if (box == null)

@@ -308,6 +308,18 @@ namespace Renderer
                     frets += fret;
             }
             AddColorToMesh(FretColor, frets);
+
+            // Don't know why but it works when this is done. 
+            for (int i = 0; i < bridge.NormalVertex.Length; i++)
+            {
+                bridge.NormalVertex[i] *= -1;
+            }
+            // Don't know why but it works when this is done. 
+            for (int i = 0; i < frets.NormalVertex.Length; i++)
+            {
+                frets.NormalVertex[i] *= -1;
+            }
+
             return (bridge + bridge2).ApplyTransforms(Transforms.Scale(1, 1, BridgeLength)) + frets;
         }
     
@@ -412,6 +424,12 @@ namespace Renderer
                     stringPins += pin;
             }
 
+            // Don't know why but it works when this is done. 
+            for (int i = 0; i < basePiece.NormalVertex.Length; i++)
+            {
+                basePiece.NormalVertex[i] *= -1;
+            }
+
             basePiece += stringRollCylinders + stringPins;
             return basePiece;
         }
@@ -459,6 +477,12 @@ namespace Renderer
             AddColorToMesh(StringHubColor, stringHub);
             AddColorToMesh(BodyColor, body);
             AddColorToMesh(HoleColor, hole);
+
+            // Don't know why but it works when this is done. 
+            for (int i = 0; i < stringHub.NormalVertex.Length; i++)
+            {
+                stringHub.NormalVertex[i] *= -1;
+            }
 
             return hole + body + stringHub;
         }
@@ -927,8 +951,33 @@ namespace Renderer
                     10,
                     16,
                 };
+                panel1.NormalVertex = new float3[]
+                {
+                    float3(1,0,0),
+                    float3(0,1,0),
+                    float3(0,1,0),
+                };
+                panel1.NormalSeparators = new int[]
+                {
+                    4,
+                    10,
+                    16,
+                };
 
                 var panel2 = panel1.Transform<T>(x => new T() { Position = float3(-x.Position.x - .0f, x.Position.y, x.Position.z) });
+                panel2.NormalVertex = new float3[]
+                {
+                    float3(1,0,0),
+                    float3(0,1,0),
+                    float3(0,1,0),
+                };
+                panel2.NormalSeparators = new int[]
+                {
+                    4,
+                    10,
+                    16,
+                };
+
                 var bodyParts = panel1.MaterialDecompose().ToArray();
                 for (int k = 0; k < bodyParts.Length; k++)
                 {

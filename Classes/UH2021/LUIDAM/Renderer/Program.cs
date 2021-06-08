@@ -1053,8 +1053,12 @@ namespace Renderer
             stopwatch.Start();
 
             // Texture to output the image.
-            var size = 400;
-            Texture2D texture = new Texture2D(size, size);
+            var baseWidth = 300;
+            var baseHeight = 500;
+            var ratio = (float)baseWidth / (float)baseHeight;
+
+            var height = 850;
+            Texture2D texture = new Texture2D((int)(height * ratio), height);
 
             //SimpleRaycast(texture);
             //LitRaycast(texture);
@@ -1063,7 +1067,7 @@ namespace Renderer
             //RaycastingMeshTexture(texture, mat);
             //Pathtracing(texture);
 
-            var pathMax = 30;
+            var pathMax = 10000;
             var drawGuitar = true;
             if (drawGuitar)
             {
@@ -1080,7 +1084,7 @@ namespace Renderer
                 }
                 else
                 {
-                    GuitarDrawer<MyPositionNormalCoordinate>.DrawStep = 3;
+                    GuitarDrawer<MyPositionNormalCoordinate>.DrawStep = 7;
                     GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaytracing(texture, Transforms.Identity);
                     //GuitarDrawer.GuitarCSGRaycast(texture, Transforms.Identity);
                 }

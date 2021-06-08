@@ -179,14 +179,14 @@ namespace Renderer
         public static int YGrid { get; set; } = 8;
         public static int XGrid { get; set; } = 8;
 
-        public static float3 CameraPosition = float3(1.2f, 1f, -.4f);
+        public static float3 CameraPosition = float3(1.25f, 1f, -.4f);
         //public static float3 CameraPosition = float3(1.1f, 1f, -.75f); // Forms camera
         //public static float3 CameraPosition = float3(1.1f, 3f, -1.0f); // From top
         //public static float3 CameraPosition = float3(1.1f, 1f, -.2f); // Close
         //public static float3 CameraPosition = float3(1f, 1f, 1f);  // Headstock Wall camera
         //public static float3 CameraPosition = float3(1f, 0.05f, .85f);  // Base camera
 
-        public static float3 Target = float3(1.2f, .7f, .5f);
+        public static float3 Target = float3(1.25f, .7f, .5f);
         //public static float3 Target = float3(1.1f, .58f, .5f); // Forms target
         //public static float3 Target = float3(1.4f, 1f, 1f); // Headstock Wall target
         //public static float3 Target = float3(1.4f, 0.05f, .85f); // Base target
@@ -196,7 +196,8 @@ namespace Renderer
         public static float4x4 ProjectionMatrix(int height, int width) => Transforms.PerspectiveFovLH(pi_over_4, height / (float)width, 0.01f, 20);
 
         private static float3 GlobalLightIntensity = float3(1, 1, 1) * 120;
-        private static float3 LocalLightIntensity = float3(1, 1, 1) * 20;
+        private static float3 LocalLightIntensity = float3(1, 1, 1) * 55; // Pathtracing
+        //private static float3 LocalLightIntensity = float3(1, 1, 1) * 20; // Raytracing
 
         public static (float3 position, float3 intensity, float3 scale)[] LightSources = new (float3 position, float3 intensity, float3 scale)[]
         {
@@ -234,12 +235,14 @@ namespace Renderer
 
             var model = new GuitarBuilder<T>() { MeshScalar = meshScalar }.GuitarMesh()
                 .ApplyTransforms(Transforms.Identity
+                                ,Transforms.RotateZ(0 * pi / 180.0f)
                                 ,Transforms.RotateX(-pi / 2.0f - 13.5f * pi / 180.0f)
                                 )
                             .FitIn(box, box, box);
 
             model = model.ApplyTransforms(Transforms.Identity
                                          ,Transforms.Translate(1, .02f, .8f)
+                                         //,Transforms.Translate(0, 0, -.1f)
                                          )
                             ;
             model.ComputeNormals();
@@ -519,7 +522,7 @@ namespace Renderer
                         l = -l;
                         attribute.Normal *= -1;
                     }
-                    float lambertFactor = max(0, l);
+                    float lambertFactor = abs(l);
 
                     // Check ray to light...
                     MyShadowRayPayload shadow = new MyShadowRayPayload();
@@ -529,8 +532,10 @@ namespace Renderer
 
                     float3 Intensity = (shadow.Shadowed ? 0.2f : 1.0f) * lightIntentisty / (d * d);
 
+                    //payload.Color = float3((attribute.Normal.x + 1) / 2, (attribute.Normal.y + 1) / 2, (attribute.Normal.z + 1) / 2); // Normal
                     payload.Color += material.Emissive + material.EvalBRDF(attribute, V, L) * Intensity * lambertFactor; // direct light computation
-                                                                                                                         // Recursive calls for indirect light due to reflections and refractions
+
+                    // Recursive calls for indirect light due to reflections and refractions
                     if (payload.Bounces > 0)
                         foreach (var impulse in material.GetBRDFImpulses(attribute, V))
                         {
