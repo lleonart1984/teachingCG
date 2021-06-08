@@ -4,7 +4,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using static GMath.Gfx;
-using System.Drawing;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Rendering
 {
@@ -77,7 +78,7 @@ namespace Rendering
                         return border;
                     break;
                 case WrapMode.Clamp:
-                    uv = clamp(uv, 0.0f, 0.999f);
+                    uv = clamp(uv, 0.0f, 0.9999f);
                     break;
                 case WrapMode.Repeat:
                     uv = ((uv % 1) + 1) % 1;
@@ -113,6 +114,22 @@ namespace Rendering
                         sample11 * (w.x) * (w.y);
                 default:
                     throw new ArgumentOutOfRangeException();
+            }
+        }
+
+
+        public static Texture2D LoadFromFile(string path)
+        {
+            using (Image<Rgba32> image = Image<Rgba32>.Load(path).CloneAs<Rgba32>())
+            {
+                Texture2D texture = new Texture2D(image.Width, image.Height);
+                for (int i = 0; i < image.Height; i++)
+                    for (int j = 0; j < image.Width; j++)
+                    {
+                        var color = image[j, i];
+                        texture[j, i] = float4(color.R / 255f, color.G / 255f, color.B / 255f, color.A / 255f);
+                    }
+                return texture;
             }
         }
     }
@@ -163,60 +180,5 @@ namespace Rendering
         /// Gets or sets the border color used.
         /// </summary>
         public float4 Border;
-    }
-
-    public static class Texture2DFunctions
-    {
-        public static Texture2D LoadTextureFromRBM(string fileName)
-        {
-            FileStream fileStream = new FileStream(fileName, FileMode.Open);
-            BinaryReader binaryReader = new BinaryReader(fileStream);
-            int width = binaryReader.ReadInt32();
-            int height = binaryReader.ReadInt32();
-
-            Console.WriteLine("{0} {1}", width, height);
-
-            Texture2D texture = new Texture2D(width, height);
-
-            for(int py = 0; py < height; py++)
-                for (int px = 0; px < width; px++)
-                {
-                    float x = binaryReader.ReadSingle();
-                    float y = binaryReader.ReadSingle();
-                    float z = binaryReader.ReadSingle();
-                    float w = binaryReader.ReadSingle();
-
-                    texture[py, px] = new float4(x, y, z, w);
-                }
-            binaryReader.Close();
-
-            return texture;
-        }
-
-        // public static Texture2D LoadTextureFromJPG(string fileName)
-        // {
-        //     Stream fileStream = System.IO.File.Open(fileName, System.IO.FileMode.Open);
-        //     Bitmap bmp = new Bitmap(3, 4);
-
-        //     int width = bmp.Width;
-        //     int height = bmp.Height;
-
-        //     Texture2D texture = new Texture2D(width, height);
-
-        //     for(int py = 0; py < height; py++)
-        //         for (int px = 0; px < width; px++)
-        //         {
-        //             Color color = bmp.GetPixel(px, py);
-
-        //             float r = color.R;
-        //             float g = color.G;
-        //             float b = color.B;
-        //             float a = color.A;
-
-        //             texture[py, px] = new float4(r, g, b, a);
-        //         }
-
-        //     return texture;
-        // }
     }
 }
