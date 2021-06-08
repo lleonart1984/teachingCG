@@ -178,25 +178,25 @@ namespace Renderer
         public static int YGrid { get; set; } = 8;
         public static int XGrid { get; set; } = 8;
 
-        public static float3 CameraPosition = float3(1.25f, 1f, -.4f);
-        //public static float3 CameraPosition = float3(1.1f, 1f, -.75f); // Forms camera
-        //public static float3 CameraPosition = float3(1.1f, 3f, -1.0f); // From top
-        //public static float3 CameraPosition = float3(1.1f, 1f, -.2f); // Close
-        //public static float3 CameraPosition = float3(1f, 1f, 1f);  // Headstock Wall camera
-        //public static float3 CameraPosition = float3(1f, 0.05f, .85f);  // Base camera
+        public static float3 CameraPosition { get; set; } = float3(1.25f, 1f, -.4f);
+        //public static float3 CameraPosition { get; set; } = float3(1.1f, 1f, -.75f); // Forms camera
+        //public static float3 CameraPosition { get; set; } = float3(1.1f, 3f, -1.0f); // From top
+        //public static float3 CameraPosition { get; set; } = float3(1.1f, 1f, -.2f); // Close
+        //public static float3 CameraPosition { get; set; } = float3(1f, 1f, 1f);  // Headstock Wall camera
+        //public static float3 CameraPosition { get; set; } = float3(1f, 0.05f, .85f);  // Base camera
 
-        public static float3 Target = float3(1.25f, .7f, .5f);
-        //public static float3 Target = float3(1.1f, .58f, .5f); // Forms target
-        //public static float3 Target = float3(1.4f, 1f, 1f); // Headstock Wall target
-        //public static float3 Target = float3(1.4f, 0.05f, .85f); // Base target
+        public static float3 Target { get; set; } = float3(1.25f, .7f, .5f);
+        //public static float3 Target { get; set; } = float3(1.1f, .58f, .5f); // Forms target
+        //public static float3 Target { get; set; } = float3(1.4f, 1f, 1f); // Headstock Wall target
+        //public static float3 Target { get; set; } = float3(1.4f, 0.05f, .85f); // Base target
 
-        public static float4x4 ViewMatrix = Transforms.LookAtLH(CameraPosition, Target, float3(0, 1, 0));
+        public static float4x4 ViewMatrix { get; set; } = Transforms.LookAtLH(CameraPosition, Target, float3(0, 1, 0));
 
         public static float4x4 ProjectionMatrix(int height, int width) => Transforms.PerspectiveFovLH(pi_over_4, height / (float)width, 0.01f, 20);
 
-        public static float3 GlobalLightIntensity = float3(1, 1, 1) * 120;
-        //public static float3 LocalLightIntensity = float3(1, 1, 1) * 55; // Pathtracing
-        private static float3 LocalLightIntensity = float3(1, 1, 1) * 20; // Raytracing
+        public static float3 GlobalLightIntensity { get; set; } = float3(1, 1, 1) * 120;
+        public static float3 LocalLightIntensity { get; set; } = float3(1, 1, 1) * 55; // Pathtracing
+        //public static float3 LocalLightIntensity { get; set; } = float3(1, 1, 1) * 20; // Raytracing
 
         public static (float3 position, float3 intensity, float3 scale)[] LightSources = new (float3 position, float3 intensity, float3 scale)[]
         {

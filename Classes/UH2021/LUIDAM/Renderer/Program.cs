@@ -1102,6 +1102,7 @@ namespace Renderer
                 else
                 {
                     GuitarDrawer<MyPositionNormalCoordinate>.DrawStep = 1;
+                    GuitarDrawer<MyPositionNormalCoordinate>.LocalLightIntensity = float3(1, 1, 1) * 20;
                     GuitarDrawer<MyPositionNormalCoordinate>.GuitarRaytracing(texture, Transforms.Identity);
                     //GuitarDrawer.GuitarCSGRaycast(texture, Transforms.Identity);
                 }
