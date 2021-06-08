@@ -147,6 +147,30 @@ namespace Rendering
             }
             return texture;
         }
+
+        public static Texture2D LoadRbmFromFile(string filename)
+        {
+            BinaryReader reader = new BinaryReader(File.OpenRead(filename));
+
+            int width = reader.ReadInt32(); //read width value
+            int height = reader.ReadInt32(); // read height value
+
+            var bmp = new Texture2D(width, height);
+
+            for (int py = 0; py < height; py++)
+                for (int px = 0; px < width; px++)
+                {
+                    float r = reader.ReadSingle();
+                    float g = reader.ReadSingle();
+                    float b = reader.ReadSingle();
+                    float a = reader.ReadSingle();
+                    a = 1;// force no transparent
+
+                    bmp.Write(px, py, float4(r,g,b,a));
+                }
+            reader.Close();
+            return bmp;
+        }
     }
 
     public enum WrapMode

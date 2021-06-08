@@ -113,7 +113,7 @@ namespace Renderer
             Console.WriteLine($"Done {id}");
         }
 
-        public static void PathTrace<T>(Texture2D texture, Scene<T, MyMaterial<T>> scene, Raytracer<MyPTRayPayload, T, MyMaterial<T>> raycaster, float4x4 viewMatrix, float4x4 projectionMatrix, int maxPass, int rendStep = 1, int gridXDiv = 8, int gridYDiv = 8) where T : struct, IVertex<T>, INormalVertex<T>, ICoordinatesVertex<T>, IColorable, ITransformable<T>
+        public static void PathTrace<T>(Texture2D texture, Scene<T, MyMaterial<T>> scene, Raytracer<MyPTRayPayload, T, MyMaterial<T>> raycaster, float4x4 viewMatrix, float4x4 projectionMatrix, int maxPass, int rendStep = 1, int gridXDiv = 8, int gridYDiv = 8, int initPass = 0) where T : struct, IVertex<T>, INormalVertex<T>, ICoordinatesVertex<T>, IColorable, ITransformable<T>
         {
             var pathTimer = new Stopwatch();
             var passTimer = new Stopwatch();
@@ -121,7 +121,7 @@ namespace Renderer
             pathTimer.Start();
 
             int id = 0, xStep = texture.Width / gridXDiv, yStep = texture.Height / gridYDiv;
-            int pass = 0;
+            int pass = initPass;
             while (pass < maxPass)
             {
                 var tasks = new List<Task>();
@@ -169,7 +169,6 @@ namespace Renderer
                 }
             Console.WriteLine($"Done {id}");
         }
-
     }
 
     public class GuitarDrawer<T> where T : struct, IVertex<T>, INormalVertex<T>, ICoordinatesVertex<T>
@@ -412,7 +411,7 @@ namespace Renderer
             RenderUtils.Draw(texture, raycaster, scene, ViewMatrix, projectionMatrix, DrawStep, XGrid, YGrid);
         }
 
-        public static void GuitarPathtracing(Texture2D texture, float4x4 worldTransformation, int maxPass)
+        public static void GuitarPathtracing(Texture2D texture, float4x4 worldTransformation, int maxPass, int initPass=0)
         {
             // View and projection matrices
             float4x4 projectionMatrix = ProjectionMatrix(texture.Height, texture.Width);
@@ -466,7 +465,7 @@ namespace Renderer
                 payload.Color = float3(0, 0, 0); // Black, as the night.
             };
 
-            RenderUtils.PathTrace(texture, scene, raycaster, ViewMatrix, projectionMatrix, maxPass, DrawStep, XGrid, YGrid);
+            RenderUtils.PathTrace(texture, scene, raycaster, ViewMatrix, projectionMatrix, maxPass, DrawStep, XGrid, YGrid, initPass);
         }
 
         public static void GuitarRaytracing(Texture2D texture, float4x4 worldTransformation)

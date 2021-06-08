@@ -1080,7 +1080,18 @@ namespace Renderer
                     GuitarDrawer<MyPositionNormalCoordinate>.XGrid = 1;
                     GuitarDrawer<MyPositionNormalCoordinate>.YGrid = 1;
                     /// Pathtracing can't be done concurrently
-                    GuitarDrawer<MyPositionNormalCoordinate>.GuitarPathtracing(texture, Transforms.Identity, pathMax);
+                    
+                    var continuePath = true;
+                    var pass = 0;
+                    if (continuePath)
+                    {
+                        Console.WriteLine("Write file path:");
+                        var file = Console.ReadLine();
+                        Console.WriteLine("Write pass number:");
+                        pass = int.Parse(Console.ReadLine());
+                        texture = Texture2D.LoadRbmFromFile(file);
+                    }
+                    GuitarDrawer<MyPositionNormalCoordinate>.GuitarPathtracing(texture, Transforms.Identity, pathMax, pass);
                 }
                 else
                 {
