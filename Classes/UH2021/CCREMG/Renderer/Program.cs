@@ -257,31 +257,22 @@ namespace Renderer
 
 
             var sphereModel = Raycasting.UnitarySphere.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(atan2(a.z, a.x) * 0.5f / pi + 0.5f, a.y), Normal = normalize(a) });
-            // Light source
-            scene.Add(sphereModel, new Material
+            // Light sources
+            foreach(var light in Lights)
             {
-                Emissive = LightIntensityPath / (4 * pi), // power per unit area
-                WeightDiffuse = 0,
-                WeightFresnel = 1.0f, // Glass sphere
-                RefractionIndex = 1.0f
-            },
-               mul(Transforms.Scale(10f, 10f, 10f), Transforms.Translate(LightPosition1)));
-
-            scene.Add(sphereModel, new Material
-            {
-                Emissive = LightIntensityPath / (4 * pi), // power per unit area
-                WeightDiffuse = 0,
-                WeightFresnel = 1.0f, // Glass sphere
-                RefractionIndex = 1.0f
-            },
-               mul(Transforms.Scale(10f, 10f, 10f), Transforms.Translate(LightPosition2)));
-
+                scene.Add(sphereModel, new Material
+                {
+                    Emissive = LightIntensityPath / (4 * pi), // power per unit area
+                    WeightDiffuse = 0,
+                    WeightFresnel = 1.0f, // Glass sphere
+                    RefractionIndex = 1.0f
+                },
+                mul(Transforms.Scale(10f, 10f, 10f), Transforms.Translate(light)));
+            }
         }
 
         static float3 CameraPosition = float3(-12f, 6.6f, 0);
         static float3[] Lights = {float3(-17, 17f, 17), float3(-17, 20f, -25)};
-        static float3 LightPosition1 = Lights[0];
-        static float3 LightPosition2 = Lights[1];
         static float3 LightIntensity = float3(1, 1, 1) * 3500;
         static float3 LightIntensityPath = float3(1, 1, 1) * 50;
 
