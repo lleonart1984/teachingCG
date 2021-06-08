@@ -81,6 +81,27 @@ namespace Renderer
             return r_model;
         }
 
+        public Mesh<V> GetValveMesh()
+        {
+            float height = 1.4f;
+            float r = 0.25f;
+            List<float3> basePoints = PoliedroXZ(6, float3(0, 0 + height, 0), r);
+            List<float3> topPoints = PoliedroXZ(6, float3(0, 0.2f + height, 0), r);
+            Mesh<V> base_mesh = Mesh_Poliedro(topPoints, float3(0, 0 + height, 0), 1);
+            Mesh<V> lateral_mesh = CoffeMakerSection_Mesh(basePoints, topPoints);
+            Mesh<V> top_mesh = Mesh_Poliedro(topPoints, float3(0, 0.2f + height, 0));
+
+            Mesh<V> r_model = base_mesh.Add_Mesh(lateral_mesh).Add_Mesh(top_mesh);
+            r_model = r_model.Bigger_Mesh();
+
+            r_model = r_model.Transform(Transforms.RotateX(1.3415643935179014f));
+            r_model = r_model.Transform(Transforms.RotateY(2 * pi / 10));
+            r_model = r_model.Transform(Transforms.Translate(0, 2, 0));
+
+
+            return r_model;
+        }
+
         private static Mesh<V> Mesh_Poliedro(List<float3> poli, float3 center, int normal_side = 0)
         {
             V[] vertices = new V[poli.Count + 1];

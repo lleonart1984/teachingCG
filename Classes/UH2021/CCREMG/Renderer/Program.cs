@@ -236,6 +236,9 @@ namespace Renderer
             Mesh<PositionNormalCoordinate> metal_model = CoffeeMaker.GetMetalMesh();
             metal_model.ComputeNormals();
 
+            Mesh<PositionNormalCoordinate> valve_model = CoffeeMaker.GetValveMesh();
+            valve_model.ComputeNormals();
+
             Texture2D plasticTexture = new Texture2D(1, 1);
             plasticTexture.Write(0, 0, float4(0.1f, 0.1f, 0.1f, 1));
 
@@ -245,8 +248,12 @@ namespace Renderer
             string rugose_texture_t = "texture.jpeg";
             Texture2D rugose_texture = Texture2DFunctions.LoadFromFile(rugose_texture_t);
 
+            string golden_texture_t = "valve.jpg";
+            Texture2D golden_texture = Texture2DFunctions.LoadFromFile(golden_texture_t);
+            
             scene.Add(plastic_model.AsRaycast(), new Material { DiffuseMap = plasticTexture, Diffuse = float3(1, 1, 1),  TextureSampler = new Sampler { Wrap = WrapMode.Repeat }, Specular = float3(1f,1f,1f), WeightGlossy = 0.05f}, Transforms.Identity);
             scene.Add(metal_model.AsRaycast(), new Material { DiffuseMap = rugose_texture, Diffuse = float3(0.4f, 0.4f, 0.4f), TextureSampler = new Sampler { Wrap = WrapMode.Repeat }, Specular = float3(1f,1f,1f), SpecularPower = 1f, WeightMirror = 0.02f, WeightGlossy = 0.3f}, Transforms.Identity);
+            scene.Add(valve_model.AsRaycast(), new Material { DiffuseMap = golden_texture, Diffuse = float3(0.4f, 0.4f, 0.4f), TextureSampler = new Sampler { Wrap = WrapMode.Repeat }, Specular = float3(1f,1f,1f), SpecularPower = 1f, WeightMirror = 0.02f, WeightGlossy = 0.3f}, Transforms.Identity);
 
 
             var sphereModel = Raycasting.UnitarySphere.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(atan2(a.z, a.x) * 0.5f / pi + 0.5f, a.y), Normal = normalize(a) });
@@ -275,7 +282,7 @@ namespace Renderer
         static float3[] Lights = {float3(-17, 17f, 17), float3(-17, 20f, -25)};
         static float3 LightPosition1 = Lights[0];
         static float3 LightPosition2 = Lights[1];
-        static float3 LightIntensity = float3(1, 1, 1) * 2000;
+        static float3 LightIntensity = float3(1, 1, 1) * 3500;
         static float3 LightIntensityPath = float3(1, 1, 1) * 50;
 
         static void Raytracing (Texture2D texture)
@@ -476,7 +483,7 @@ namespace Renderer
             // Texture to output the image.
             Texture2D texture = new Texture2D(512, 512);
 
-            bool UseRT = false;
+            bool UseRT = true;
             if (UseRT)
             {
                 Stopwatch stopwatch = new Stopwatch();
