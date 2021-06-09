@@ -181,11 +181,14 @@ namespace Renderer
         public static float3 CameraPosition { get; set; } = float3(1.25f, 1f, -.4f);
         //public static float3 CameraPosition { get; set; } = float3(1.1f, 1f, -.75f); // Forms camera
         //public static float3 CameraPosition { get; set; } = float3(1.1f, 3f, -1.0f); // From top
-        //public static float3 CameraPosition { get; set; } = float3(1.1f, 1f, -.2f); // Close
+        //public static float3 CameraPosition { get; set; } = float3(1.1f, .1f, -2.0f); // From below
+        //public static float3 CameraPosition { get; set; } = float3(1.23f, .4f, .83f); // Close
         //public static float3 CameraPosition { get; set; } = float3(1f, 1f, 1f);  // Headstock Wall camera
         //public static float3 CameraPosition { get; set; } = float3(1f, 0.05f, .85f);  // Base camera
 
         public static float3 Target { get; set; } = float3(1.25f, .7f, .5f);
+        //public static float3 Target { get; set; } = float3(1.23f, .4f, 2f); // Strings
+        //public static float3 Target { get; set; } = LightSources[0].position;
         //public static float3 Target { get; set; } = float3(1.1f, .58f, .5f); // Forms target
         //public static float3 Target { get; set; } = float3(1.4f, 1f, 1f); // Headstock Wall target
         //public static float3 Target { get; set; } = float3(1.4f, 0.05f, .85f); // Base target
@@ -195,12 +198,12 @@ namespace Renderer
         public static float4x4 ProjectionMatrix(int height, int width) => Transforms.PerspectiveFovLH(pi_over_4, height / (float)width, 0.01f, 20);
 
         public static float3 GlobalLightIntensity { get; set; } = float3(1, 1, 1) * 120;
-        public static float3 LocalLightIntensity { get; set; } = float3(1, 1, 1) * 55; // Pathtracing
+        public static float3 LocalLightIntensity { get; set; } = float3(1, 1, 1) * 80; // Old Pathtracing
         //public static float3 LocalLightIntensity { get; set; } = float3(1, 1, 1) * 20; // Raytracing
 
-        public static (float3 position, float3 intensity, float3 scale)[] LightSources = new (float3 position, float3 intensity, float3 scale)[]
+        public static (float3 position, float3 intensity, float3 scale)[] LightSources => new (float3 position, float3 intensity, float3 scale)[]
         {
-            (float3(1.6f, 2f, 0.6f), LocalLightIntensity, float3(1,.1f,1)),
+            (float3(1.9f, 2f, 0.3f), LocalLightIntensity, float3(1,.1f,1)),
             //(Target, GlobalLightIntensity, 5f), 
             //(float3(1f, 1.5f, .5f), GlobalLightIntensity, float3(1f,.1f,1f)), // Light above guitar
             //(float3(1.9f, 1.9f, -1f), .5f*GlobalLightIntensity, float3(1f,.1f,1f)),
@@ -279,7 +282,17 @@ namespace Renderer
             //    mul(Transforms.Scale(.3f), Transforms.Translate(Target)));
 
             //scene.Add(MeshShapeGenerator<T>.Box(30).AsRaycast(), GetFrontMainGuitarBodyMaterial(),
-            //mul(Transforms.Scale(LightSources[1].scale + .1f), Transforms.Translate(LightSources[1].position)));
+            //var c = new GuitarBuilder<T>().BridgeStringMesh();
+            ////MeshShapeGenerator<T>.Cylinder(200, cylinderMat: Materials<T>.MetalStringMaterial,
+            ////                                            upFaceMat: Materials<T>.GuitarBodyHoleMaterial,
+            ////                                            downFaceMat: Materials<T>.WallMaterial);
+            //c = c.ApplyTransforms(Transforms.Scale(.3f, .3f, .3f),
+            //                      Transforms.RotateXGrad(90), Transforms.Translate(Target + float3(.1f,-.3f,-.1f)));
+            //c.ComputeNormals();
+            //foreach (var item in c.MaterialDecompose())
+            //{
+            //    scene.Add(item.AsRaycast(), (MyMaterial<T>)item.Materials[0], Transforms.Identity);
+            //}
 
             foreach ((var position, var intensity, var scale) in LightSources)
             {

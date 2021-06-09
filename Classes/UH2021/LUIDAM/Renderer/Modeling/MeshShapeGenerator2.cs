@@ -5,6 +5,7 @@ using static GMath.Gfx;
 using GMath;
 using Rendering;
 using static Renderer.Program;
+using System.Linq;
 
 namespace Renderer.Modeling
 {
@@ -143,10 +144,33 @@ namespace Renderer.Modeling
             }
             var baseCyl = MyManifold<T>.Revolution(ss, ss, x => float3(1, 0, x), float3(0,0,1), angle).Transform(Transforms.Translate(0,0,-.5f));
             face1.SetMaterial(upFaceMat);
+            face1.SetNormal(float3(0, 0, 1));
             face2.SetMaterial(downFaceMat);
+            face2.SetNormal(float3(0, 0, -1));
             face1 = MaterialsUtils.MapPlane(face1);
             face2 = MaterialsUtils.MapPlane(face2);
             baseCyl.SetMaterial(cylinderMat);
+            if (baseCylOuter == null)
+            {
+                baseCyl.NormalVertex = new float3[baseCyl.Vertices.Length];
+                Array.Copy(baseCyl.Vertices.Select(x => x.Position).ToArray(), baseCyl.NormalVertex, baseCyl.Vertices.Length);
+                baseCyl.NormalSeparators = new int[baseCyl.Vertices.Length];
+                for (int i = 0; i < baseCyl.NormalSeparators.Length; i++)
+                {
+                    baseCyl.NormalSeparators[i] = i + 1;
+                }
+            }
+            else
+            {
+                baseCyl.SetNormal(.01f);
+                baseCylOuter.NormalVertex = new float3[baseCylOuter.Vertices.Length];
+                Array.Copy(baseCylOuter.Vertices.Select(x => x.Position).ToArray(), baseCylOuter.NormalVertex, baseCylOuter.Vertices.Length);
+                baseCylOuter.NormalSeparators = new int[baseCylOuter.Vertices.Length];
+                for (int i = 0; i < baseCylOuter.NormalSeparators.Length; i++)
+                {
+                    baseCylOuter.NormalSeparators[i] = i + 1;
+                }
+            }
             baseCylOuter?.SetMaterial(cylinderMat);
             baseCyl = MaterialsUtils.MapCylinderCoordinates(baseCyl);
             if (baseCylOuter != null)

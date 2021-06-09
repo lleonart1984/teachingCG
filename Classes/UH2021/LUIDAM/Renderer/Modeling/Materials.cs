@@ -54,12 +54,18 @@ namespace Renderer.Modeling
 
         public static MyMaterial<T> GetMetalStringMaterial()
         {
-            return LoadMaterialFromFile("textures\\pin_texture.bmp", 0.04f, 60, 0, 0, bumpDir: "textures\\string_bump.bmp");
+            var mat = LoadMaterialFromFile("textures\\pin_texture.bmp", 0.04f, 60, 0, 0, bumpDir: "textures\\string_bump.bmp");
+            mat.TextureSampler = new Sampler
+            {
+                MinMagFilter = Filter.Linear,
+                MipFilter = Filter.Linear,
+            };
+            return mat;
         }
 
         public static MyMaterial<T> GetNylonStringMaterial()
         {
-            return LoadMaterialFromFile("textures\\pin_head_texture.bmp", 0.04f, 200, .7f, 0, diffuseWeight: 0.4f, refraction: 1.6f);
+            return LoadMaterialFromFile("textures\\pin_head_texture.bmp", 0.04f, 200, .7f, 0, diffuseWeight: 0.7f, refraction: 1.6f);
         }
 
         public static MyMaterial<T> GetWallMaterial()

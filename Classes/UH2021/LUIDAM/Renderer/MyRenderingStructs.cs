@@ -272,10 +272,19 @@ namespace Renderer
         public static Mesh<T> MapCylinderCoordinates<T>(Mesh<T> baseCyl) where T : struct, IVertex<T>, ICoordinatesVertex<T> // TODO
         {
             // FOR TESTING ONLY 
+            var r = (baseCyl.BoundBox.topCorner.x - baseCyl.BoundBox.oppositeCorner.x)/2;
+            var h = (baseCyl.BoundBox.topCorner.z - baseCyl.BoundBox.oppositeCorner.z);
             var clone = baseCyl.Clone();
             for (int i = 0; i < clone.Vertices.Length; i++)
             {
-                clone.Vertices[i].Coordinates = float2(clone.Vertices[i].Position.x, clone.Vertices[i].Position.y);
+                var position = clone.Vertices[i].Position;
+                //var angle = acos(position.x / r);
+                var angle = acos(position.x);
+                if (position.y < 0)
+                {
+                    angle += position.x > 0 ? 2 * pi - 2 * angle : 2 * (pi - angle);
+                }
+                clone.Vertices[i].Coordinates = float2(angle/(2 * pi), (position.z - baseCyl.BoundBox.oppositeCorner.z) / h);
             }
             return clone;
         }
