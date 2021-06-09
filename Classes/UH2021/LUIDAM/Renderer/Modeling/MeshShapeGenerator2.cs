@@ -153,7 +153,7 @@ namespace Renderer.Modeling
             if (baseCylOuter == null)
             {
                 baseCyl.NormalVertex = new float3[baseCyl.Vertices.Length];
-                Array.Copy(baseCyl.Vertices.Select(x => x.Position).ToArray(), baseCyl.NormalVertex, baseCyl.Vertices.Length);
+                Array.Copy(baseCyl.Vertices.Select(x => x.Position + 0.1f*x.Position).ToArray(), baseCyl.NormalVertex, baseCyl.Vertices.Length);
                 baseCyl.NormalSeparators = new int[baseCyl.Vertices.Length];
                 for (int i = 0; i < baseCyl.NormalSeparators.Length; i++)
                 {
@@ -162,9 +162,9 @@ namespace Renderer.Modeling
             }
             else
             {
-                baseCyl.SetNormal(.01f);
+                baseCyl.SetNormal(.001f);
                 baseCylOuter.NormalVertex = new float3[baseCylOuter.Vertices.Length];
-                Array.Copy(baseCylOuter.Vertices.Select(x => x.Position).ToArray(), baseCylOuter.NormalVertex, baseCylOuter.Vertices.Length);
+                Array.Copy(baseCylOuter.Vertices.Select(x => x.Position + 0.1f * x.Position).ToArray(), baseCylOuter.NormalVertex, baseCylOuter.Vertices.Length);
                 baseCylOuter.NormalSeparators = new int[baseCylOuter.Vertices.Length];
                 for (int i = 0; i < baseCylOuter.NormalSeparators.Length; i++)
                 {

@@ -379,6 +379,10 @@ namespace Renderer
                 var yTranslate = 0; //-height / 2.0f;
 
                 baseCylinder = baseCylinder.ApplyTransforms(Transforms.Translate((i < 3 ? 1 : -1) * 1f * (dx - width*xHoleScale), yTranslate, zTranslate));
+                for (int j = 0; j < baseCylinder.NormalVertex.Length; j++)
+                {
+                    baseCylinder.NormalVertex[j] *= -1;
+                }
 
                 AddColorToMesh(BaseCylinderColor, baseCylinder);
                 if (stringRollCylinders == null)
@@ -394,6 +398,11 @@ namespace Renderer
                                                                                    , cylinderMat:BasePinMaterial 
                                                                         ).ApplyTransforms(Transforms.RotateY(pi_over_4 * 2),
                                                                                           Transforms.Scale(xPinScale, yPinScale, yPinScale));
+
+                for (int j = 0; j < baseCylinder.NormalVertex.Length; j++)
+                {
+                    basePin.NormalVertex[j] *= -1;
+                }
                 var yHolderScale = height * 1.5f;
                 var xHolderScale = xPinScale / 4;
                 var headHolder = MeshShapeGenerator<T>.Cylinder((int)(20 * MeshScalar), upFaceMat:  BasePinMaterial

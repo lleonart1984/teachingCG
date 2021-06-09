@@ -199,7 +199,7 @@ namespace Renderer
         public static float4x4 ProjectionMatrix(int height, int width) => Transforms.PerspectiveFovLH(pi_over_4, height / (float)width, 0.01f, 20);
 
         public static float3 GlobalLightIntensity { get; set; } = float3(1, 1, 1) * 120;
-        public static float3 LocalLightIntensity { get; set; } = float3(1, 1, 1) * 80; // Old Pathtracing
+        public static float3 LocalLightIntensity { get; set; } = float3(1, 1, 1) * 100; // Old Pathtracing
         //public static float3 LocalLightIntensity { get; set; } = float3(1, 1, 1) * 20; // Raytracing
 
         public static (float3 position, float3 intensity, float3 scale)[] LightSources => new (float3 position, float3 intensity, float3 scale)[]
