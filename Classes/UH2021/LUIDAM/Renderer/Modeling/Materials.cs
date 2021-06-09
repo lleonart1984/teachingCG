@@ -25,6 +25,7 @@ namespace Renderer.Modeling
         public static MyMaterial<T> NylonStringMaterial = GetNylonStringMaterial();
         public static MyMaterial<T> WallMaterial = GetWallMaterial();
         public static MyMaterial<T> FloorMaterial = GetFloorMaterial();
+        public static MyMaterial<T> StringHubTablesMaterial = GetStringHubTablesMaterial();
 
 
         public static MyMaterial<T> GetFrontMainGuitarBodyMaterial()
@@ -39,12 +40,31 @@ namespace Renderer.Modeling
 
         public static MyMaterial<T> GetGuitarBodyHoleMaterial()
         {
-            return LoadMaterialFromFile("textures\\circle_texture.bmp", 0.01f, 60, 0.01f, 0);
+            var mat = LoadMaterialFromFile("textures\\circle_texture.bmp", 0.01f, 60, 0.01f, 0);
+            mat.TextureSampler = new Sampler
+            {
+                MinMagFilter = Filter.Linear,
+                MipFilter = Filter.Linear,
+            };
+            return mat;
         }
 
         public static MyMaterial<T> GetBasePinMaterial()
         {
             return LoadMaterialFromFile("textures\\pin_texture.bmp", 0.04f, 60, 0, 0);
+        }
+
+        public static MyMaterial<T> GetStringHubTablesMaterial()
+        {
+            return new MyMaterial<T> 
+            { 
+                Diffuse = float3(1, 1, 1), 
+                Color = float3(1, 1, 1),
+                WeightDiffuse = 1,
+                WeightGlossy = 0.01f,
+                Specular = float3(1,1,1),
+                SpecularPower = 60,
+            };
         }
 
         public static MyMaterial<T> GetBasePinHeadMaterial()

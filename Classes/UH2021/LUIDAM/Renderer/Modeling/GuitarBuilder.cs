@@ -53,7 +53,8 @@ namespace Renderer
         public static MyMaterial<T> GuitarBodySidesMaterial = Materials<T>.BackMainGuitarBodyMaterial; // TODO
         public static MyMaterial<T> GuitarBodyFrontMaterial = Materials<T>.FrontMainGuitarBodyMaterial; // TODO
         public static MyMaterial<T> GuitarBodyBackMaterial  = Materials<T>.BackMainGuitarBodyMaterial; // TODO
-        
+        public static MyMaterial<T> StringHubTableMaterial  = Materials<T>.StringHubTablesMaterial;
+
         #endregion
 
         #region Colors
@@ -273,7 +274,7 @@ namespace Renderer
                 else
                     strings += cylinder;
             }
-            return strings.ApplyTransforms(Transforms.Scale(1, 1, StringLength));
+            return strings.ApplyTransforms(Transforms.Scale(1, 1, StringLength + 1.5f));
         }
     
         public Mesh<T> BridgeMesh()
@@ -469,11 +470,20 @@ namespace Renderer
                                                                     Transforms.Translate(0, -.6f, dz -.2f));
 
             var stringHub = MeshShapeGenerator<T>.Box((int)(6 * MeshScalar), StringHubMaterial).ApplyTransforms(Transforms.Translate(0, -.5f, .5f),
-                                                                                   Transforms.Scale(BridgeWidth, 1, 1.5f),
+                                                                                   Transforms.Scale(BridgeWidth, .4f, 1.5f),
                                                                                    Transforms.Translate(0, 0, StringLength));
             stringHub +=    MeshShapeGenerator<T>.Box((int)(6 * MeshScalar), StringHubMaterial).ApplyTransforms(Transforms.Translate(0, -.5f, .5f),
-                                                                                   Transforms.Scale(BridgeWidth * 3f, .5f, 1.5f),
+                                                                                   Transforms.Scale(BridgeWidth * 3f, .2f, 1.5f),
                                                                                    Transforms.Translate(0, 0, StringLength));
+            stringHub += MeshShapeGenerator<T>.Box((int)(6 * MeshScalar), StringHubTableMaterial).ApplyTransforms(Transforms.Translate(0, -.5f, .5f),
+                                                                                Transforms.Scale(BridgeWidth, .6f, .1f),
+                                                                                Transforms.Translate(0, 0, StringLength));
+            stringHub += MeshShapeGenerator<T>.Box((int)(6 * MeshScalar), StringHubTableMaterial).ApplyTransforms(Transforms.Translate(0, -.5f, .5f),
+                                                                                Transforms.Scale(BridgeWidth, .6f, .1f),
+                                                                                Transforms.Translate(0, 0, StringLength + .7f));
+            stringHub += MeshShapeGenerator<T>.Box((int)(6 * MeshScalar), StringHubTableMaterial).ApplyTransforms(Transforms.Translate(0, -.5f, .5f),
+                                                                                Transforms.Scale(BridgeWidth, .6f, .1f),
+                                                                                Transforms.Translate(0, 0, StringLength + 1.4f));
             AddColorToMesh(StringHubColor, stringHub);
             AddColorToMesh(BodyColor, body);
             AddColorToMesh(HoleColor, hole);
