@@ -468,7 +468,10 @@ namespace Renderer
                                                    .ApplyTransforms(Transforms.RotateX(pi_over_4 * 2),
                                                                     Transforms.Scale(radius, 1, radius),
                                                                     Transforms.Translate(0, -.6f, dz -.2f));
-
+            for (int i = 0; i < hole.NormalVertex.Length; i++)
+            {
+                hole.NormalVertex[i] *= -1;
+            }
             var stringHub = MeshShapeGenerator<T>.Box((int)(6 * MeshScalar), StringHubMaterial).ApplyTransforms(Transforms.Translate(0, -.5f, .5f),
                                                                                    Transforms.Scale(BridgeWidth, .4f, 1.5f),
                                                                                    Transforms.Translate(0, 0, StringLength));
