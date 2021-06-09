@@ -6,7 +6,7 @@
 
 
 
-#### Imágen original:
+#### Imagen original:
 
 ![](./images/original.jpg)
 
