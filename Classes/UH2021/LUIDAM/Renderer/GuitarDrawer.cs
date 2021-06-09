@@ -137,6 +137,7 @@ namespace Renderer
                 }
                 Task.WaitAll(tasks.ToArray());
                 texture.Save("test.rbm");
+                texture.SaveToBmp("test.bmp");
                 Console.WriteLine($"Pass {pass} completed in {passTimer.ElapsedMilliseconds / 1000} seconds. {DateTime.Now}");
                 pass++;
             }

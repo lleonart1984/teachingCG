@@ -274,7 +274,7 @@ namespace Renderer
                 else
                     strings += cylinder;
             }
-            return strings.ApplyTransforms(Transforms.Scale(1, 1, StringLength + 1.5f));
+            return strings.ApplyTransforms(Transforms.Scale(1, 1, StringLength + 1.2f));
         }
     
         public Mesh<T> BridgeMesh()
