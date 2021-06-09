@@ -1,4 +1,4 @@
-# Informe de Computación Gráfica
+# Computación Gráfica
 
 - Yan Carlos González Blanco               **C411**
 - Henry Estévez Gómez                         **C411**
@@ -14,7 +14,7 @@
 
 Partiendo de la imagen seleccionada pasamos a aplicar los distintos métodos  estudiados que explicaremos más adelante hasta lograr obtener la mejor réplica posible.
 
-#### 1- Nube de Puntos:
+#### 1. Nube de Puntos:
 
 Este método conciste en obtener un aproximación de la figura a partir de la generación de puntos aleatorios que pertenezcan a la superficie de la misma.
 
@@ -34,7 +34,7 @@ Para generar todas la figuras geométricas necesarias utilizamos sus ecuaciones 
 
 
 
-#### 2-Mallas:
+#### 2. Mallas:
 
 De forma similar al método anteriar usando las ecuaciones paramétricas pero esta vez mediante la utilización del método _Manifold_ de la clase Rendering obtenemos nuestra figura conformada por mallas.
 
@@ -42,13 +42,13 @@ Luego se aplicaron las mismas tranformadas para obtener la escala deseada y ubic
 
 ![](./images/mallas.jpg) 
 
-#### 3- Texturas:
+#### 3. Texturas:
 
 Para agregarles texturas a la figura utilizamos la técnica _mapping texture_ con la cual podemos aplicarle la textura de metal dorado a la base y los tubos de la lámpra y a estos le agregamos características de espejo para que este material refleje de cierto modo la luz que incide en él. El foco posee una textura de color blanco.
 
 Una ves agregada las texturas pasamos a utilizar los distintos algoritmos de iluminación vistos en conferencia con los cuales obtuvimos aproximaciones de la figura.
 
-#### 4-Raytracing:
+#### 4. Raytracing:
 
 Como el raytracing utiliza la iluminación directa, ubicamos la posición de la luz alejada de nuestra lámpara y con mayor intensidad para asi obtener mas iluminación en toda la imagen, también la luz se encuentra ubicada de forma lateral-delante (diagonal derecha delantera) para obtener la sombra de nuestra lámpara en el plano trasero y observar la diferencia de iluminación en el foco entre el lado donde la luz le incide directamente y el lado en que no y posee sombra, esto nos ayuda con la profundidad de la lámpara con respecto al plano trasero. 
 
