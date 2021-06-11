@@ -2,8 +2,8 @@
 using Rendering;
 using System;
 using System.Diagnostics;
-using static GMath.Gfx;
 using System.Collections.Generic;
+using static GMath.Gfx;
 
 namespace Renderer
 {
@@ -66,7 +66,7 @@ namespace Renderer
             public float PDF;
         }
 
-        public struct Material
+       public struct Material
         {
             public float3 Emissive;
 
@@ -138,14 +138,14 @@ namespace Renderer
                     yield return new Impulse
                     {
                         Direction = R,
-                        Ratio = Specular * (WeightMirror + WeightFresnel * F) / WeightNormalization
+                        Ratio = Specular * (WeightMirror + WeightFresnel * F) / WeightNormalization / NdotL
                     };
 
                 if (WeightFresnel * (1 - F) > 0) // something to refract
                     yield return new Impulse
                     {
                         Direction = T,
-                        Ratio = Specular * WeightFresnel * (1 - F) / WeightNormalization
+                        Ratio = Specular * WeightFresnel * (1 - F) / WeightNormalization / -dot(surfel.Normal, T)
                     };
             }
 
@@ -176,67 +176,12 @@ namespace Renderer
                 return new ScatteredRay
                 {
                     Direction = wout,
-                    Ratio = EvalBRDF(surfel, wout, w) * abs(dot(surfel.Normal, wout)),
+                    Ratio = EvalBRDF(surfel, wout, w),
                     PDF = (1 - impulseProb) / (2 * pi)
                 };
             }
             
         }
-
-        #region Scenes
-
-        static void CreateRaycastScene(Scene<PositionNormalCoordinate, Material> scene)
-        {
-            Texture2D planeTexture = Texture2D.LoadFromFile("wood.jpeg");
-
-            var sphereModel = Raycasting.UnitarySphere.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(atan2(a.z, a.x) * 0.5f / pi + 0.5f, a.y), Normal = normalize(a) });
-
-            // Adding elements of the scene
-            scene.Add(sphereModel, new Material
-            {
-                Specular = float3(1, 1, 1),
-                SpecularPower = 260,
-
-                WeightDiffuse = 0,
-                WeightFresnel = 1.0f, // Glass sphere
-                RefractionIndex = 1.6f
-            },
-                Transforms.Translate(0, 1, -1.5f));
-
-            scene.Add(sphereModel, new Material
-            {
-                Specular = float3(1, 1, 1),
-                SpecularPower = 260,
-
-                WeightDiffuse = 0,
-                WeightMirror = 1.0f, // Mirror sphere
-            },
-                Transforms.Translate(1.5f, 1, 0));
-
-            scene.Add(sphereModel, new Material
-            {
-                Specular = float3(1, 1, 1)*0.1f,
-                SpecularPower = 60,
-                Diffuse = float3(1, 1, 1)
-            },
-                Transforms.Translate(-1.5f, 1, 0));
-
-            scene.Add(Raycasting.PlaneXZ.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(a.x*0.2f, a.z*0.2f), Normal = float3(0, 1, 0) }),
-                new Material { DiffuseMap = planeTexture, Diffuse = float3(1, 1, 1), TextureSampler = new Sampler { Wrap = WrapMode.Repeat, MinMagFilter = Filter.Linear } },
-                Transforms.Identity);
-
-            // Light source
-            scene.Add(sphereModel, new Material
-            {
-                Emissive = LightIntensity / (4 * pi), // power per unit area
-                WeightDiffuse = 0,
-                WeightFresnel = 1.0f, // Glass sphere
-                RefractionIndex = 1.0f
-            },
-               mul(Transforms.Scale(2.4f, 0.4f, 2.4f), Transforms.Translate(LightPosition)));
-        }
-
-        #endregion
 
         /// <summary>
         /// Payload used to pick a color from a hit intersection
@@ -244,6 +189,12 @@ namespace Renderer
         struct RTRayPayload
         {
             public float3 Color;
+
+            public void ValidateColor(){
+                Color.x = Math.Min(Color.x, 255);
+                Color.y = Math.Min(Color.y, 255);
+                Color.z = Math.Min(Color.z, 255);
+            }
             public int Bounces; // Maximum value of allowed bounces
         }
 
@@ -262,20 +213,77 @@ namespace Renderer
             public bool Shadowed;
         }
 
-        // Scene Setup
-        static float3 CameraPosition = float3(2, 4f, 4);
-        static float3 LightPosition = float3(3, 5, -2);
-        static float3 LightIntensity = float3(1, 1, 1) * 100;
+        static void CreateMeshScene(Scene<PositionNormalCoordinate, Material> scene)
+        {
+            string wood_texture_t = "wood.jpeg";
+            Texture2D wood_texture = Texture2DFunctions.LoadFromFile(wood_texture_t);
+
+            scene.Add(Raycasting.PlaneXZ.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(a.z*0.1f, a.x*0.1f), Normal = float3(0, 1, 0) }),
+                new Material { DiffuseMap = wood_texture, Diffuse = float3(1, 1, 1), TextureSampler = new Sampler { Wrap = WrapMode.Repeat }, Specular = float3(1,1,1), SpecularPower = 50, WeightGlossy = 0.2f },
+            Transforms.Identity); //Table
+
+            Texture2D wallTexture = new Texture2D(1, 1);
+            wallTexture.Write(0, 0, float4(0.86f, 0.76f, 0.75f, 1));
+
+            scene.Add(Raycasting.PlaneYZ.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(a.y, a.z), Normal = float3(-1, 0, 0) }), new Material { DiffuseMap = wallTexture, Diffuse = float3(1, 1, 1), TextureSampler = new Sampler { Wrap = WrapMode.Repeat } },
+            mul(Transforms.Translate(10f, 0, 0), Transforms.Identity)); //Wall
+
+
+            CoffeeMakerModel<PositionNormalCoordinate> CoffeeMaker = new CoffeeMakerModel<PositionNormalCoordinate>();
+            Mesh<PositionNormalCoordinate> plastic_model = CoffeeMaker.GetPlasticMesh();
+            plastic_model.ComputeNormals();
+
+            Mesh<PositionNormalCoordinate> metal_model = CoffeeMaker.GetMetalMesh();
+            metal_model.ComputeNormals();
+
+            Mesh<PositionNormalCoordinate> valve_model = CoffeeMaker.GetValveMesh();
+            valve_model.ComputeNormals();
+
+            Texture2D plasticTexture = new Texture2D(1, 1);
+            plasticTexture.Write(0, 0, float4(0.1f, 0.1f, 0.1f, 1));
+
+            Texture2D metalTexture = new Texture2D(1, 1);
+            metalTexture.Write(0, 0, float4(1f, 1f, 1f, 1));
+
+            string rugose_texture_t = "texture.jpeg";
+            Texture2D rugose_texture = Texture2DFunctions.LoadFromFile(rugose_texture_t);
+
+            string golden_texture_t = "valve.jpg";
+            Texture2D golden_texture = Texture2DFunctions.LoadFromFile(golden_texture_t);
+            
+            scene.Add(plastic_model.AsRaycast(), new Material { DiffuseMap = plasticTexture, Diffuse = float3(1, 1, 1),  TextureSampler = new Sampler { Wrap = WrapMode.Repeat }, Specular = float3(1f,1f,1f), WeightGlossy = 0.05f}, Transforms.Identity);
+            scene.Add(metal_model.AsRaycast(), new Material { DiffuseMap = rugose_texture, Diffuse = float3(0.4f, 0.4f, 0.4f), TextureSampler = new Sampler { Wrap = WrapMode.Repeat }, Specular = float3(1f,1f,1f), SpecularPower = 10f, WeightMirror = 0.02f, WeightGlossy = 0.2f}, Transforms.Identity);
+            scene.Add(valve_model.AsRaycast(), new Material { DiffuseMap = golden_texture, Diffuse = float3(0.4f, 0.4f, 0.4f), TextureSampler = new Sampler { Wrap = WrapMode.Repeat }, Specular = float3(1f,1f,1f), SpecularPower = 1f, WeightMirror = 0.02f, WeightGlossy = 0.3f}, Transforms.Identity);
+
+
+            var sphereModel = Raycasting.UnitarySphere.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(atan2(a.z, a.x) * 0.5f / pi + 0.5f, a.y), Normal = normalize(a) });
+            // Light sources
+            foreach(var light in Lights)
+            {
+                scene.Add(sphereModel, new Material
+                {
+                    Emissive = LightIntensityPath / (4 * pi), // power per unit area
+                    WeightDiffuse = 0,
+                    WeightFresnel = 1.0f, // Glass sphere
+                    RefractionIndex = 1.0f
+                },
+                mul(Transforms.Scale(10f, 10f, 10f), Transforms.Translate(light)));
+            }
+        }
+
+        static float3 CameraPosition = float3(-12f, 6.6f, 0);
+        static float3[] Lights = {float3(-17, 17f, 17), float3(-17, 20f, -25)};
+        static float3 LightIntensity = float3(1, 1, 1) * 3500;
+        static float3 LightIntensityPath = float3(1, 1, 1) * 40;
 
         static void Raytracing (Texture2D texture)
         {
             // View and projection matrices
-            float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(0, 1, 0), float3(0, 1, 0));
+            float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(0, 4, 0), float3(0, 1, 0));
             float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 20);
 
             Scene<PositionNormalCoordinate, Material> scene = new Scene<PositionNormalCoordinate, Material>();
-            //CreateMeshScene(scene);
-            CreateRaycastScene(scene);
+            CreateMeshScene(scene);
 
             // Raycaster to trace rays and check for shadow rays.
             Raytracer<ShadowRayPayload, PositionNormalCoordinate, Material> shadower = new Raytracer<ShadowRayPayload, PositionNormalCoordinate, Material>();
@@ -290,33 +298,36 @@ namespace Renderer
                 return HitResult.Stop;
             };
 
-            // Raycaster to trace rays and lit closest surfaces
-            Raytracer<RTRayPayload, PositionNormalCoordinate, Material> raycaster = new Raytracer<RTRayPayload, PositionNormalCoordinate, Material>();
-            raycaster.OnClosestHit += delegate (IRaycastContext context, PositionNormalCoordinate attribute, Material material, ref RTRayPayload payload)
+            List<Raytracer<RTRayPayload, PositionNormalCoordinate, Material>> raycasters = new List<Raytracer<RTRayPayload, PositionNormalCoordinate, Material>>();
+            foreach(var LightPosition in Lights)
             {
-                // Move geometry attribute to world space
-                attribute = attribute.Transform(context.FromGeometryToWorld);
-
-                float3 V = -normalize(context.GlobalRay.Direction);
-
-                float3 L = (LightPosition - attribute.Position);
-                float d = length(L);
-                L /= d; // normalize direction to light reusing distance to light
-
-                attribute.Normal = normalize(attribute.Normal);
-
-                if (material.BumpMap != null)
+                // Raycaster to trace rays and lit closest surfaces
+                Raytracer<RTRayPayload, PositionNormalCoordinate, Material> raycaster = new Raytracer<RTRayPayload, PositionNormalCoordinate, Material>();
+                raycaster.OnClosestHit += delegate (IRaycastContext context, PositionNormalCoordinate attribute, Material material, ref RTRayPayload payload)
                 {
-                    float3 T, B;
-                    createOrthoBasis(attribute.Normal, out T, out B);
-                    float3 tangentBump = material.BumpMap.Sample(material.TextureSampler, attribute.Coordinates).xyz * 2 - 1;
-                    float3 globalBump = tangentBump.x * T + tangentBump.y * B + tangentBump.z * attribute.Normal;
-                    attribute.Normal = globalBump;// normalize(attribute.Normal + globalBump * 5f);
-                }
+                    // Move geometry attribute to world space
+                    attribute = attribute.Transform(context.FromGeometryToWorld);
 
-                float lambertFactor = max(0, dot(attribute.Normal, L));
+                    float3 V = -normalize(context.GlobalRay.Direction);
 
-                // Check ray to light...
+                    float3 L = (LightPosition - attribute.Position);
+                    float d = length(L);
+                    L /= d; // normalize direction to light reusing distance to light
+
+                    attribute.Normal = normalize(attribute.Normal);
+
+                    if (material.BumpMap != null)
+                    {
+                        float3 T, B;
+                        createOrthoBasis(attribute.Normal, out T, out B);
+                        float3 tangentBump = material.BumpMap.Sample(material.TextureSampler, attribute.Coordinates).xyz * 2 - 1;
+                        float3 globalBump = tangentBump.x * T + tangentBump.y * B + tangentBump.z * attribute.Normal;
+                        attribute.Normal = globalBump;// normalize(attribute.Normal + globalBump * 5f);
+                    }
+
+                    float lambertFactor = max(0, dot(attribute.Normal, L));
+
+                    // Check ray to light...
                 ShadowRayPayload shadow = new ShadowRayPayload();
                 shadower.Trace(scene,
                     RayDescription.FromDir(attribute.Position + attribute.Normal * 0.001f, // Move an epsilon away from the surface to avoid self-shadowing 
@@ -344,11 +355,14 @@ namespace Renderer
 
                         payload.Color += newPayload.Color * impulse.Ratio;
                     }
-            };
-            raycaster.OnMiss += delegate (IRaycastContext context, ref RTRayPayload payload)
-            {
-                payload.Color = float3(0, 0, 0); // Blue, as the sky.
-            };
+                };
+                raycaster.OnMiss += delegate (IRaycastContext context, ref RTRayPayload payload)
+                {
+                    payload.Color = float3(0, 0, 0); // Dark, as the space.
+                };
+                raycasters.Add(raycaster);
+            }
+            
 
             /// Render all points of the screen
             for (int px = 0; px < texture.Width; px++)
@@ -363,9 +377,16 @@ namespace Renderer
                     RayDescription ray = RayDescription.FromScreen(px + 0.5f, py + 0.5f, texture.Width, texture.Height, inverse(viewMatrix), inverse(projectionMatrix), 0, 1000);
 
                     RTRayPayload coloring = new RTRayPayload();
-                    coloring.Bounces = 3;
+                    RTRayPayload aux = new RTRayPayload();
+                    aux.Bounces = 3;
 
-                    raycaster.Trace(scene, ray, ref coloring);
+                    coloring.Color = float3(0, 0, 0);
+                    foreach(var raycaster in raycasters)
+                    {
+                        raycaster.Trace(scene, ray, ref aux);
+                        coloring.Color += aux.Color;
+                        coloring.ValidateColor();
+                    }
 
                     texture.Write(px, py, float4(coloring.Color, 1));
                 }
@@ -374,12 +395,11 @@ namespace Renderer
         static void Pathtracing(Texture2D texture, int pass)
         {
             // View and projection matrices
-            float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(0, 1, 0), float3(0, 1, 0));
+            float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(0, 4, 0), float3(0, 1, 0));
             float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 20);
 
             Scene<PositionNormalCoordinate, Material> scene = new Scene<PositionNormalCoordinate, Material>();
-            //CreateMeshScene(scene);
-            CreateRaycastScene(scene);
+            CreateMeshScene(scene);
 
             // Raycaster to trace rays and lit closest surfaces
             Raytracer<PTRayPayload, PositionNormalCoordinate, Material> raycaster = new Raytracer<PTRayPayload, PositionNormalCoordinate, Material>();
@@ -402,6 +422,8 @@ namespace Renderer
                 }
 
                 ScatteredRay outgoing = material.Scatter(attribute, V);
+
+                float lambertFactor = max(0, dot(attribute.Normal, outgoing.Direction));
 
                 payload.Color += payload.Importance * material.Emissive;
                 
