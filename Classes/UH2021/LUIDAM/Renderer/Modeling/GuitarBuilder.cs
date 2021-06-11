@@ -745,15 +745,15 @@ namespace Renderer
             var bazierPoints = new List<float2>
             {
                 float2(0,0),
-                float2(0,1.05f),
-                float2(0.8498f,0.7696f),
+                float2(0,0.965f),
+                float2(0.8498f,0.746f),
                 
-                float2(0.85f,0.762f),
+                float2(0.85f,0.7f),
  
                 float2(0.972f,0.642f),
                 float2(1.205f,0.66f),
                 
-                float2(1.315f,0.786f),
+                float2(1.315f,0.736f),
 
                 float2(1.39f,0.88f),
                 float2(2.77f,1.52f),
