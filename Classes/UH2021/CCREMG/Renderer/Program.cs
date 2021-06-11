@@ -252,7 +252,7 @@ namespace Renderer
             Texture2D golden_texture = Texture2DFunctions.LoadFromFile(golden_texture_t);
             
             scene.Add(plastic_model.AsRaycast(), new Material { DiffuseMap = plasticTexture, Diffuse = float3(1, 1, 1),  TextureSampler = new Sampler { Wrap = WrapMode.Repeat }, Specular = float3(1f,1f,1f), WeightGlossy = 0.05f}, Transforms.Identity);
-            scene.Add(metal_model.AsRaycast(), new Material { DiffuseMap = rugose_texture, Diffuse = float3(0.4f, 0.4f, 0.4f), TextureSampler = new Sampler { Wrap = WrapMode.Repeat }, Specular = float3(1f,1f,1f), SpecularPower = 1f, WeightMirror = 0.02f, WeightGlossy = 0.3f}, Transforms.Identity);
+            scene.Add(metal_model.AsRaycast(), new Material { DiffuseMap = rugose_texture, Diffuse = float3(0.4f, 0.4f, 0.4f), TextureSampler = new Sampler { Wrap = WrapMode.Repeat }, Specular = float3(1f,1f,1f), SpecularPower = 10f, WeightMirror = 0.02f, WeightGlossy = 0.2f}, Transforms.Identity);
             scene.Add(valve_model.AsRaycast(), new Material { DiffuseMap = golden_texture, Diffuse = float3(0.4f, 0.4f, 0.4f), TextureSampler = new Sampler { Wrap = WrapMode.Repeat }, Specular = float3(1f,1f,1f), SpecularPower = 1f, WeightMirror = 0.02f, WeightGlossy = 0.3f}, Transforms.Identity);
 
 
@@ -274,7 +274,7 @@ namespace Renderer
         static float3 CameraPosition = float3(-12f, 6.6f, 0);
         static float3[] Lights = {float3(-17, 17f, 17), float3(-17, 20f, -25)};
         static float3 LightIntensity = float3(1, 1, 1) * 3500;
-        static float3 LightIntensityPath = float3(1, 1, 1) * 50;
+        static float3 LightIntensityPath = float3(1, 1, 1) * 40;
 
         static void Raytracing (Texture2D texture)
         {
@@ -474,7 +474,7 @@ namespace Renderer
             // Texture to output the image.
             Texture2D texture = new Texture2D(512, 512);
 
-            bool UseRT = true;
+            bool UseRT = false;
             if (UseRT)
             {
                 Stopwatch stopwatch = new Stopwatch();
