@@ -7,13 +7,16 @@
 
 ### Imagen original
 
-![Imagen Original](Image.jpg)
+<!-- ![Imagen Original](Image.jpg) -->
+<img src="Image.jpg" alt="Imagen original" style="height: 320px; width:180px;"/>
+
+
 
 ### Imagen producida usando raytracing
 
 ![Imagen Original](Raytracing.png)
 
-### Imagen producida usando pathtracing
+### Imagen producida usando pathtracing (Pasada 3345)
 
 ![Imagen Original](Pathtracing.png)
 
