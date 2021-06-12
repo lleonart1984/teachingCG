@@ -1,4 +1,4 @@
-# Proyecto de programación gráfica
+# Computación Gráfica
 
 ## Integrantes
 
@@ -8,17 +8,20 @@
 ### Imagen original
 
 <!-- ![Imagen Original](Image.jpg) -->
-<img src="Image.jpg" alt="Imagen original" style="height: 320px; width:180px;"/>
+<img src="pictures/Image.jpg" alt="Imagen original" style="height: 320px; width:180px;"/>
 
+### Imagen producida usando _raytracing_
 
+![Imagen Raytracing](pictures/Raytracing.png)
 
-### Imagen producida usando raytracing
+### Imágenes producidas usando _pathtracing_
 
-![Imagen Original](Raytracing.png)
+![Pathtracing una luz](pictures/OneLightPath.png)![Imagen Pathtracing dos luces](pictures/Pathtracing.png)
 
-### Imagen producida usando pathtracing (Pasada 3345)
+Ambas imágenes se obtuvieron con el algoritmo de _pathtracing_:
 
-![Imagen Original](Pathtracing.png)
+- La primera, con 2520 pasadas del algoritmo, tiene solo una luz que incide sobre la cafetera desde la izquierda, de modo que este lado se ve más iluminado.
+- La segunda, con 3345 pasadas, tiene dos fuentes de luz diferentes; una que es la misma que en la anterior, y otra que incide sobre la cafetera desde su lado derecho. La posición de ambas luces puede observarse mejor en la imagen producida con *raytracing*.
 
 ## Implementación
 
@@ -42,9 +45,13 @@ Para trabajar con mayor comodidad con diferentes *mesh* se implementaron las fun
 
 La idea fundamental para la construcción de cada sección de la cafetera fue la siguiente:
 
-Dado un punto `C` y un radio `r`, construir un polígono regular de `n` lados con centro en `C` y siendo `r` la distancia entre el centro y cada uno de los vértices. Dados dos polígonos construidos de esta forma, con la misma cantidad de lados, si se une con una línea los vértices homólogos de las figuras se puede obtener una sección de la cafetera. Para obtener la malla de una sección de este tipo se utilizó la función `CoffeMakerSection_Mesh` que recibe los puntos de ambos polígonos.
+Dado un punto `C` y un radio `r`, construir un polígono regular de `n` lados con centro en `C` y siendo `r` la distancia entre el centro y cada uno de los vértices. Dados dos polígonos construidos de esta forma, con la misma cantidad de lados, si se une con una línea los vértices homólogos de las figuras se puede obtener una sección de la cafetera. El resultado de esto fue el siguiente:
 
-Igualmente, la función `Mesh_Poliedro` permite construir una malla dado un polígono, como los descritos, y un punto. Así se generó, por ejemplo, la tapa de la cafetera o la superficie de la válvula.
+![Lines](pictures/Lines.jpg)
+
+Para obtener la malla de una sección de este tipo se utilizó la función `CoffeMakerSection_Mesh` que recibe los puntos de ambos polígonos. Igualmente, la función `Mesh_Poliedro` permite construir una malla dado un polígono, como los descritos, y un punto. Así se generó, por ejemplo, la tapa de la cafetera o la superficie de la válvula. La malla que se obtuvo fue la siguiente:
+
+![Mesh](pictures/Mesh.jpg)
 
 ### Materiales y sus parámetros
 
@@ -58,6 +65,6 @@ Para implementar múltiples luces, por cada luz dada, se ejecuta el algoritmo y 
 
 En particular se ubicaron dos luces, una a cada lado de la cafetera, y una más cercana que la otra; lo que implica que una de las sombras es más corta y también más oscura. Estos detalles pueden ser observados en la imagen que retorna el algoritmo de *raytracing*.
 
-En el caso del algoritmo de *pathtracing*, cuyo resultado se muestra en la otra imagen, las luces se tomaron como esferas de radio 10, las cuales simulan la luz ambiental.
+En el caso del algoritmo de *pathtracing*, como se había mencionado antes, se generó una imagen con una sola luz, y otra con dos. En el primero de los casos, precisamente como la fuente de luz era solo una, se aumentó la intensidad de la misma. En ambos casos las fuentes de luz se representaron como esferas de radio 10.
 
 > El resto del código fue el recibido durante las clases, con ligeras modificaciones para corresponder con el modelo de la cafetera.
