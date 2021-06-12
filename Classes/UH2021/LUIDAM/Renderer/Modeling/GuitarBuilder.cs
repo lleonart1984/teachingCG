@@ -524,9 +524,9 @@ namespace Renderer
         public float3 boxUpper = float3(.5f, .5f, .5f);
         public float cylinderRadius = .5f;
 
-        public void BridgeStrings(Scene<float3, NoMaterial> scene)
+        public void BridgeStrings(Scene<T, NoMaterial> scene)
         {
-            var strings = new List<(IRaycastGeometry<float3>, float4x4)>();
+            var strings = new List<(IRaycastGeometry<T>, float4x4, float3)>();
             var step = BridgeWidth / (StringWidths.Length + 1);
 
             for (int i = 0; i < StringWidths.Length; i++)
@@ -539,14 +539,14 @@ namespace Renderer
                                         Transforms.Scale(StringWidths[i], StringWidths[i], 1),
                                         Transforms.Translate(-BridgeWidth / 2 + step * (i + 1), -StringBridgeSeparation, 0),
                                         Transforms.Scale(1, 1, StringLength));
-                strings.Add((cylinder, transform));
+                strings.Add((cylinder.AttributesMap(x => new T { Position = x }), transform, ColorToFloat3(StringColors[i])));
             }
             AddToScene(scene, strings);
         }
 
-        public void Bridge(Scene<float3, NoMaterial> scene)
+        public void Bridge(Scene<T, NoMaterial> scene)
         {
-            var parts = new List<(IRaycastGeometry<float3>, float4x4)>();
+            var parts = new List<(IRaycastGeometry<T>, float4x4, float3)>();
 
             var bridge = MyRaycaster.Box(boxLower, boxUpper);
             var bridgeTransf = StackTransformations(Transforms.Translate(0, 0, .5f),
@@ -563,7 +563,7 @@ namespace Renderer
                                  mul(bridgeTransf, float4x1(boxUpper.x, boxUpper.y, boxUpper.z, 1))._m20);
             var fretsAmount = 20;
             var step = BridgeLength / fretsAmount;
-            var frets = new List<(IRaycastGeometry<float3>, float4x4)>();
+            var frets = new List<(IRaycastGeometry<T>, float4x4, float3)>();
             for (int i = 0; i < fretsAmount; i++) // Frets
             {
                 var fret = MyRaycaster.Box(boxLower, boxUpper);
@@ -572,24 +572,24 @@ namespace Renderer
                                                      Transforms.Scale(1, i == 0 ? StringBridgeSeparation : BridgeWidth / 30, 1),
                                                      Transforms.Translate(0, -.5f * BridgeHeight / 2, -baseBridge + step * i)); // This is not the correct fret spacing
 
-                frets.Add((fret, transform));
+                frets.Add((fret.AttributesMap(x => new T { Position = x }), transform, ColorToFloat3(FretColor)));
             }
             bridgeTransf  = StackTransformations(bridgeTransf , Transforms.Scale(1, 1, BridgeLength));
             bridge2Transf = StackTransformations(bridge2Transf, Transforms.Scale(1, 1, BridgeLength));
             
-            parts.Add((bridge, bridgeTransf));
-            parts.Add((bridge2, bridge2Transf));
+            parts.Add((bridge.AttributesMap(x => new T { Position = x }), bridgeTransf, ColorToFloat3(StringHubColor)));
+            parts.Add((bridge2.AttributesMap(x => new T { Position = x }), bridge2Transf, ColorToFloat3(StringHubColor)));
             parts.AddRange(frets);
             
             AddToScene(scene, parts);
         }
 
-        public void Headstock(Scene<float3, NoMaterial> scene)
+        public void Headstock(Scene<T, NoMaterial> scene)
         {
             var width = BridgeWidth * 1.3f;
             var height = BridgeHeight / 2.0f;
             var length = BridgeWidth * 2;
-            var parts = new List<(IRaycastGeometry<float3>, float4x4)>();
+            var parts = new List<(IRaycastGeometry<T>, float4x4, float3)>();
 
             var basePieceTransform = StackTransformations(Transforms.Translate(0, -.5f, -.5f),
                                                           Transforms.Scale(width, height, length));
@@ -610,10 +610,10 @@ namespace Renderer
 
             basePiece = basePiece / (hole1 | hole2);
 
-            parts.Add((basePiece, Transforms.Identity)); // Identity because the transformation is already in CSGNode
+            parts.Add((basePiece.AttributesMap(x => new T { Position = x }), Transforms.Identity, ColorToFloat3(HeadstockColor))); // Identity because the transformation is already in CSGNode
 
-            var stringRollCylinders = new List<(IRaycastGeometry<float3>, float4x4)>();
-            var stringPins = new List<(IRaycastGeometry<float3>, float4x4)>();
+            var stringRollCylinders = new List<(IRaycastGeometry<T>, float4x4, float3)>();
+            var stringPins = new List<(IRaycastGeometry<T>, float4x4, float3)>();
             var step = length * zHoleScale / 3.0f;
             for (int i = 0; i < 6; i++)
             {
@@ -627,7 +627,7 @@ namespace Renderer
                 var baseCylinderTransf = StackTransformations(Transforms.RotateY(pi_over_4 * 2),
                                                               Transforms.Scale(xBaseCylinderScale, height * yHoleScale * .25f, height * yHoleScale * .25f),
                                                               Transforms.Translate((i < 3 ? 1 : -1) * 1f * (width * xHoleScale), yTranslate, zTranslate));
-                stringRollCylinders.Add((baseCylinder, baseCylinderTransf));
+                stringRollCylinders.Add((baseCylinder.AttributesMap(x => new T { Position = x }), baseCylinderTransf, ColorToFloat3(HeadPinColor)));
 
 
                 var xPinScale = xBaseCylinderScale / 3;
@@ -662,9 +662,9 @@ namespace Renderer
                                                       Transforms.Translate((i < 3 ? 1 : -1) * xHolderScale, -yPinScale + yHolderScale, -xHolderScale * 2),
                                                       finalPosTransf);
 
-                stringPins.Add((basePin, basePinTrans));
-                stringPins.Add((headHolder, headHolderTransf));
-                stringPins.Add((head, headTransf));
+                stringPins.Add((basePin.AttributesMap(x => new T { Position = x }), basePinTrans, ColorToFloat3(BaseCylinderColor)));
+                stringPins.Add((headHolder.AttributesMap(x => new T { Position = x }), headHolderTransf, ColorToFloat3(BaseCylinderColor)));
+                stringPins.Add((head.AttributesMap(x => new T { Position = x }), headTransf, ColorToFloat3(HeadPinColor)));
             }
             parts.AddRange(stringRollCylinders);
             parts.AddRange(stringPins);
@@ -672,9 +672,9 @@ namespace Renderer
             AddToScene(scene, parts);
         }
 
-        public void MainBody(Scene<float3, NoMaterial> scene)
+        public void MainBody(Scene<T, NoMaterial> scene)
         {
-            var parts = new List<(IRaycastGeometry<float3>, float4x4)>();
+            var parts = new List<(IRaycastGeometry<T>, float4x4, float3)>();
             
             var bodyLength = BridgeLength * 1.1f;
 
@@ -704,7 +704,7 @@ namespace Renderer
             body = (body | hole) / c;
             body /= innerBody;
 
-            parts.Add((body, Transforms.Identity));
+            parts.Add((body.AttributesMap(x => new T { Position = x }), Transforms.Identity, ColorToFloat3(HeadstockColor)));
 
             var stringHub = MyRaycaster.Box(boxLower, boxUpper);
             var stringHubTransf = StackTransformations(Transforms.Translate(0, -.5f, .5f),
@@ -714,13 +714,18 @@ namespace Renderer
             var stringHub2Transf = StackTransformations(Transforms.Translate(0, -.5f, .5f),
                                                         Transforms.Scale(BridgeWidth * 3f, .5f, 1.5f),
                                                         Transforms.Translate(0, 0, StringLength));
-            parts.Add((stringHub, stringHubTransf));
-            parts.Add((stringHub2, stringHub2Transf));
+            parts.Add((stringHub.AttributesMap(x => new T { Position = x }), stringHubTransf, ColorToFloat3(BaseCylinderColor)));
+            parts.Add((stringHub2.AttributesMap(x => new T { Position = x }), stringHub2Transf, ColorToFloat3(BaseCylinderColor)));
 
             AddToScene(scene, parts);
         }
 
-        public void Guitar(Scene<float3, NoMaterial> scene)
+        private float3 ColorToFloat3(Color bodyColor)
+        {
+            return float3(bodyColor.R / 255.0f, bodyColor.G / 255.0f, bodyColor.B / 255.0f);
+        }
+
+        public void Guitar(Scene<T, NoMaterial> scene)
         {
             BridgeStrings(scene);
             Bridge(scene);
@@ -808,11 +813,11 @@ namespace Renderer
             return transform;
         }
 
-        public void AddToScene(Scene<float3, NoMaterial> scene, IEnumerable<(IRaycastGeometry<float3>, float4x4)> geometries)
+        public void AddToScene(Scene<T, NoMaterial> scene, IEnumerable<(IRaycastGeometry<T>, float4x4, float3)> geometries)
         {
-            foreach (var (geo, trans) in geometries)
+            foreach (var (geo, trans, color) in geometries)
             {
-                scene.Add(geo, new NoMaterial(), mul(trans, CSGWorldTransformation));
+                scene.Add(geo, new NoMaterial() { Color = color }, mul(trans, CSGWorldTransformation));
             }
         }
     

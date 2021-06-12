@@ -213,19 +213,18 @@ namespace Renderer
         {
             var guitar = new GuitarBuilder<T>();
             var mesh = guitar.GuitarMesh();
-            float scale = 3;
             float3 lower = mesh.BoundBox.oppositeCorner, upper = mesh.BoundBox.topCorner;
             guitar.CSGWorldTransformation = guitar.StackTransformations(
-                Transforms.RotateZ(pi),
-                Transforms.RotateX(-pi / 2),
+                Transforms.RotateZ(10 * pi / 180.0f),
+                Transforms.RotateX(-pi / 2.0f - 13.5f * pi / 180.0f),
                 MyTransforms.FitIn(lower, upper, 1, 1, 1),
-                Transforms.Scale(scale, scale, scale),
+                Transforms.Translate(1, .9f, .8f),
                 worldTransformation
                 );
             return guitar;
         }
 
-        public static void CreateCSGGuitarScene(Scene<float3, NoMaterial> scene, float4x4 worldTransformation)
+        public static void CreateCSGGuitarScene(Scene<T, NoMaterial> scene, float4x4 worldTransformation)
         {
             var guitar = CreateCSGGuitar(worldTransformation);
             guitar.Guitar(scene);
@@ -362,18 +361,18 @@ namespace Renderer
 
         public static void GuitarCSGRaycast(Texture2D texture, float4x4 worldTransformation)
         {
-            Raytracer<DefaultRayPayload, float3, NoMaterial> raycaster = new Raytracer<DefaultRayPayload, float3, NoMaterial>();
+            Raytracer<DefaultRayPayload, T, NoMaterial> raycaster = new Raytracer<DefaultRayPayload, T, NoMaterial>();
 
             // View and projection matrices
-            float4x4 viewMatrix = Transforms.LookAtLH(float3(2, 1f, 4), float3(0, 0, 0), float3(0, 1, 0));
-            float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 20);
+            float4x4 viewMatrix = ViewMatrix;
+            float4x4 projectionMatrix = ProjectionMatrix(texture.Height, texture.Width);
 
-            Scene<float3, NoMaterial> scene = new Scene<float3, NoMaterial>();
+            Scene<T, NoMaterial> scene = new Scene<T, NoMaterial>();
             CreateCSGGuitarScene(scene, worldTransformation);
 
-            raycaster.OnClosestHit += delegate (IRaycastContext context, float3 attribute, NoMaterial material, ref DefaultRayPayload payload)
+            raycaster.OnClosestHit += delegate (IRaycastContext context, T attribute, NoMaterial material, ref DefaultRayPayload payload)
             {
-                payload.Color = attribute;
+                payload.Color = material.Color;
             };
 
             RenderUtils.Draw(texture, raycaster, scene, viewMatrix, projectionMatrix, DrawStep, XGrid, YGrid);

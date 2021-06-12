@@ -1060,22 +1060,21 @@ namespace Renderer
             var height = 850;
             Texture2D texture = new Texture2D((int)(height * ratio), height);
 
-            //SimpleRaycast(texture);
-            //LitRaycast(texture);
-            //RaycastingMesh(texture);
-            //Material mat = CreateMaterialFromRawText(guitar_texture_raw", 32);
-            //RaycastingMeshTexture(texture, mat);
-            //Pathtracing(texture);
-
-
             var pathMax = 10000;
             var drawGuitar = true;
             if (drawGuitar)
             {
                 Console.WriteLine($"Started at {DateTime.Now}");
+                var csg = false;
                 var mesh = false;
                 var pathtracing = true;
-                if (mesh)
+                // Default raytracing
+
+                if (csg)
+                {
+                    GuitarDrawer<MyPositionNormalCoordinate>.GuitarCSGRaycast(texture, Transforms.Identity);
+                }
+                else if (mesh)
                 {
                     GuitarDrawer<MyPositionNormalCoordinate>.GuitarMesh(new Raster<MyPositionNormalCoordinate, MyProjectedVertex>(texture));
                 }
@@ -1111,6 +1110,11 @@ namespace Renderer
             {
                 //Raytracing(texture);
                 PathtracingInit(texture, pathMax);
+                //SimpleRaycast(texture);
+                //LitRaycast(texture);
+                //RaycastingMesh(texture);
+                //RaycastingMeshTexture(texture, mat);
+                //Pathtracing(texture);
             }
 
 

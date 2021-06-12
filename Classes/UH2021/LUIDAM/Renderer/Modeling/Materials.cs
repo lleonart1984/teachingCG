@@ -35,7 +35,7 @@ namespace Renderer.Modeling
 
         public static MyMaterial<T> GetBackMainGuitarBodyMaterial()
         {
-            return LoadMaterialFromFile("textures\\headstock_texture.bmp", 0.01f, 60, 0.04f, 0, specular: float3(1, 1, 1) * .5f);
+            return LoadMaterialFromFile("textures\\headstock_texture.bmp", 0.01f, 60, 0.04f, 0);
         }
 
         public static MyMaterial<T> GetGuitarBodyHoleMaterial()

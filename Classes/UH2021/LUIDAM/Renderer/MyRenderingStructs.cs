@@ -186,6 +186,7 @@ namespace Renderer
 
     public struct NoMaterial : IMaterial
     {
+        public float3 Color { get; set; }
     }
 
     #endregion
