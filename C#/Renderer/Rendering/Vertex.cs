@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Renderer
+namespace Rendering
 {
     /// <summary>
     /// Represents an interpolable vertices.
@@ -31,6 +31,22 @@ namespace Renderer
         /// Gets or sets the 3D position of a vertex.
         /// </summary>
         float3 Position { get; set; }
+    }
+
+    public interface INormalVertex<V> : IVertex<V> where V: struct
+    {
+        /// <summary>
+        /// Gets or sets the 3D normal of a vertex
+        /// </summary>
+        float3 Normal { get; set; }
+    }
+
+    public interface ICoordinatesVertex<V> : IVertex<V> where V : struct
+    {
+        /// <summary>
+        /// Gets or sets the 2D texture coordinates of a vertex
+        /// </summary>
+        float2 Coordinates { get; set; }
     }
 
     /// <summary>
