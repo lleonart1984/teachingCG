@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using GMath;
+using Renderer;
 using static GMath.Gfx;
 
 namespace Rendering

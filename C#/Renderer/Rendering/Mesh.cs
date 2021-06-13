@@ -44,6 +44,7 @@ namespace Rendering
             int[] newIndices = Indices.Clone() as int[];
             return new Mesh<V>(newVertices, newIndices, this.Topology);
         }
+
     }
 
     public static class MeshTools
@@ -100,6 +101,7 @@ namespace Rendering
                     }
                     break;
                 case Topology.Lines:
+
                     switch (mesh.Topology)
                     {
                         case Topology.Points:
@@ -140,6 +142,7 @@ namespace Rendering
 
             throw new ArgumentException("Wrong topology.");
         }
+
         /// <summary>
         /// Welds different vertices with positions close to each other using an epsilon decimation.
         /// </summary>
@@ -259,7 +262,6 @@ namespace Rendering
                         indices[index++] = (i + 1) * (slices + 1) + j;
                         indices[index++] = (i + 1) * (slices + 1) + (j + 1);
                     }
-
             return new Mesh<V>(vertices, indices);
         }
 
