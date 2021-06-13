@@ -53,7 +53,7 @@ Al realizar raytracing sobre el modelo basado en mallas se obtuvo el siguiente r
 
 ## Pathtracing:
 
-Al realizar pathtracing se obtuvo el siguiente resultado. Este se detuvo en el paso 165 luego de aproximadamente 15 horas de cómputo.
+Al realizar pathtracing se obtuvo el siguiente resultado. Este se detuvo en el paso 384 luego de aproximadamente 24 horas de cómputo.
 
 ![pathtracing](path.bmp)
 

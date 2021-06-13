@@ -199,12 +199,12 @@ namespace Renderer
         public static float4x4 ProjectionMatrix(int height, int width) => Transforms.PerspectiveFovLH(pi_over_4, height / (float)width, 0.01f, 20);
 
         public static float3 GlobalLightIntensity { get; set; } = float3(1, 1, 1) * 120;
-        public static float3 LocalLightIntensity { get; set; } = float3(1, 1, 1) * 100; // Old Pathtracing
+        public static float3 LocalLightIntensity { get; set; } = float3(1, 1, 1) * 800; // Old Pathtracing
         //public static float3 LocalLightIntensity { get; set; } = float3(1, 1, 1) * 20; // Raytracing
 
         public static (float3 position, float3 intensity, float3 scale)[] LightSources => new (float3 position, float3 intensity, float3 scale)[]
         {
-            (float3(1.9f, 2f, 0.3f), LocalLightIntensity, float3(1,.1f,1)),
+            (float3(1.9f, 2f, 0.3f), LocalLightIntensity, float3(.4f,.1f,.4f)),
             //(Target, GlobalLightIntensity, 5f), 
             //(float3(1f, 1.5f, .5f), GlobalLightIntensity, float3(1f,.1f,1f)), // Light above guitar
             //(float3(1.9f, 1.9f, -1f), .5f*GlobalLightIntensity, float3(1f,.1f,1f)),
