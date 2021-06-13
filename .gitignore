@@ -162,6 +162,7 @@ _UpgradeReport_Files/
 bin/
 obj/
 TestResults/
+.vscode
 ###################
 # Web publish log #
 ###################
@@ -184,6 +185,7 @@ TestResults/
 *.rar
 *.tar
 *.zip
+*.rbm
 ######################
 # Logs and databases #
 ######################
@@ -432,3 +434,4 @@ FakesAssemblies/
 *.exe
 *.out
 *.app
+*.rmb
