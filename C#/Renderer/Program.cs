@@ -1,4 +1,4 @@
-using GMath;
+﻿using GMath;
 using Rendering;
 using System;
 using System.Diagnostics;
@@ -40,7 +40,7 @@ namespace Renderer
             {
                 float4 p = float4(Position, 1);
                 p = mul(p, matrix);
-
+                
                 float4 n = float4(Normal, 0);
                 n = mul(n, matrix);
 
@@ -82,8 +82,8 @@ namespace Renderer
             // 4 float values with Diffuseness, Glossyness, Mirrorness, Fresnelness
             public float WeightDiffuse { get { return 1 - OneMinusWeightDiffuse; } set { OneMinusWeightDiffuse = 1 - value; } }
             float OneMinusWeightDiffuse; // This is intended for default values of the struct to work as 1, 0, 0, 0 weight initial settings
-            public float WeightGlossy;
-            public float WeightMirror;
+            public float WeightGlossy; 
+            public float WeightMirror; 
             public float WeightFresnel;
 
             public float WeightNormalization
@@ -138,14 +138,14 @@ namespace Renderer
                     yield return new Impulse
                     {
                         Direction = R,
-                        Ratio = Specular * (WeightMirror + WeightFresnel * F) / WeightNormalization / NdotL
+                        Ratio = Specular * (WeightMirror + WeightFresnel * F) / WeightNormalization
                     };
 
                 if (WeightFresnel * (1 - F) > 0) // something to refract
                     yield return new Impulse
                     {
                         Direction = T,
-                        Ratio = Specular * WeightFresnel * (1 - F) / WeightNormalization / -dot(surfel.Normal, T)
+                        Ratio = Specular * WeightFresnel * (1 - F) / WeightNormalization
                     };
             }
 
@@ -176,187 +176,66 @@ namespace Renderer
                 return new ScatteredRay
                 {
                     Direction = wout,
-                    Ratio = EvalBRDF(surfel, wout, w),
+                    Ratio = EvalBRDF(surfel, wout, w) * abs(dot(surfel.Normal, wout)),
                     PDF = (1 - impulseProb) / (2 * pi)
                 };
             }
-
+            
         }
 
-        #region Meshes
-        static Mesh<PositionNormalCoordinate> createcircle(float z, int d1, int d2)
+        #region Scenes
+
+        static void CreateRaycastScene(Scene<PositionNormalCoordinate, Material> scene)
         {
-            var model = Manifold<PositionNormalCoordinate>.Surface(d1, d2, (u, v) => float3((v) * sin(2 * pi * u), z, (v) * cos(2 * pi * u)));
+            Texture2D planeTexture = Texture2D.LoadFromFile("wood.jpeg");
 
-            return model;
-        }
-        static Mesh<PositionNormalCoordinate> createCilinder(int d1, int d2)
-        {
-            var a = Manifold<PositionNormalCoordinate>.Surface(d1, d2, (u, v) =>
-           {
-               float alpha = 2 * pi * u;
-               float x = cos(alpha);
-               float y = sin(alpha);
-               float z = v;
-               return float3(x, z, y);
+            var sphereModel = Raycasting.UnitarySphere.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(atan2(a.z, a.x) * 0.5f / pi + 0.5f, a.y), Normal = normalize(a) });
 
-           });
-
-            return a;
-        }
-
-        //crear la base
-        private static (Mesh<PositionNormalCoordinate>, Mesh<PositionNormalCoordinate>) createBase()
-        {
-            Mesh<PositionNormalCoordinate> cil = createCilinder(60, 60);
-            Mesh<PositionNormalCoordinate> circ = createcircle(1, 60, 60);
-            return (cil, circ);
-        }
-        //llevar a escala y ubicar la base
-        private static Mesh<PositionNormalCoordinate> setbase((Mesh<PositionNormalCoordinate>, Mesh<PositionNormalCoordinate>) _base)
-        {
-            Mesh<PositionNormalCoordinate> it1 = _base.Item1.Transform(Transforms.Scale((float)0.8, (float)0.4, (float)(0.8)));
-            Mesh<PositionNormalCoordinate> it2 = _base.Item2.Transform(Transforms.Scale((float)0.8, (float)0.4, (float)(0.8)));
-            //Mesh<PositionNormal> it2 = _base.Item2;
-            it1 = it1.Transform(Transforms.Translate(0, -2, 0));
-            it2 = it2.Transform(Transforms.Translate(0, -2, 0));
-            List<Mesh<PositionNormalCoordinate>> l = new List<Mesh<PositionNormalCoordinate>>() { it1, it2 };
-            Mesh<PositionNormalCoordinate> a = Manifold<PositionNormalCoordinate>.MorphMeshes(l, Topology.Triangles).Weld(0.000001f);
-
-            return a;
-        }
-
-        //crear los tubos
-        private static (Mesh<PositionNormalCoordinate>, Mesh<PositionNormalCoordinate>) createTubo()
-        {
-            Mesh<PositionNormalCoordinate> cil1 = createCilinder(60, 60);
-            Mesh<PositionNormalCoordinate> cil2 = createCilinder(60, 60);
-            return (cil1, cil2);
-        }
-
-        //llevar a escala y ubicar los tubos en la posicion
-        private static Mesh<PositionNormalCoordinate> setTubo((Mesh<PositionNormalCoordinate>, Mesh<PositionNormalCoordinate>) _tubo)
-        {   
-            Mesh<PositionNormalCoordinate> t1 = _tubo.Item1.Transform(Transforms.Scale((float)0.04, 2, (float)0.04));
-            Mesh<PositionNormalCoordinate> t2 = _tubo.Item2.Transform(Transforms.Scale((float)0.04, 2, (float)0.04));
-            t1 = t1.Transform(Transforms.Translate(0, (float)-1.6, 0));
-            t2 = t2.Transform(Transforms.Translate(0, (float)0.35, 0));
-            t2 = t2.Transform(Transforms.RotateZGrad(-10));
-            t2 = t2.Transform(Transforms.RotateXGrad(-10));
-            t2 = t2.Transform(Transforms.Translate(0.023f, 0, -0.1f));
-            List<Mesh<PositionNormalCoordinate>> l = new List<Mesh<PositionNormalCoordinate>>() { t1, t2 };
-            Mesh<PositionNormalCoordinate> a = Manifold<PositionNormalCoordinate>.MorphMeshes(l, Topology.Triangles).Weld(0.00000001f);
-            return a;
-
-        }
-
-        private static void GeneratingMeshes(Scene<PositionNormalCoordinate, Material> scene)
-        {   
-            //textura del foco de la lampara
-            Texture2D sphereTexture = new Texture2D(1, 1);
-            sphereTexture.Write(0, 0, float4(1, 1, 1, 1)); // white color
-
-            //textura que se usara en la base y en el tubo
-            Texture2D tuboTexture = Texture2D.LoadFromFile("gold1.jpg");
-
-            //textura de los planos 
-            Texture2D planeTexture = new Texture2D(1, 1); 
-            planeTexture.Write(0, 0, float4(1, 1, 1, 1)); // white color
-
-            //crear la base y ubicarla 
-            var _base = createBase();
-            var _base1 = setbase(_base);
-            _base1.ComputeNormals();
-            /////////////////////////////////////////
-
-            //crear el tubo y ubicarlo
-            var _tubo = createTubo();
-            var _tubo1 = setTubo(_tubo);
-            _tubo1.ComputeNormals();
-            ////////////////////////////////////////////////////
-
-
-            //crear plano XZ///////////////////////////////////////////
-            scene.Add(Raycasting.PlaneXZ.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(a.x, a.z), Normal = float3(0, 1, 0) }),
-                 new Material
-                 {
-                     DiffuseMap = planeTexture,
-                     Diffuse = float3(1, 1, 1),
-                     Specular = float3(1, 1, 1),
-                     SpecularPower = 60,
-                     TextureSampler = new Sampler { Wrap = WrapMode.Repeat }
-                 },
-                Transforms.Translate(0, -2, 0));
-            ///////////////////////////////////////////////////////
-
-            //crear plano YZ///////////////////////////////////////////
-            scene.Add(Raycasting.PlaneYZ.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(a.y, a.z), Normal = float3(1, 0, 0) }),
-                new Material
-                {
-                    DiffuseMap = planeTexture,
-                    Diffuse = float3(1, 1, 1),
-                    Specular = float3(1, 1, 1),
-                    SpecularPower = 60,
-                    TextureSampler = new Sampler { Wrap = WrapMode.Repeat }
-                },
-             mul(Transforms.Translate(-2, 0, 2), Transforms.RotateYGrad(-45)));
-            ///////////////////////////////////////////////////////
-
-            //agreagr la base de la lampara a la escena
-            scene.Add(_base1.AsRaycast(RaycastingMeshMode.Grid), new Material
+            // Adding elements of the scene
+            scene.Add(sphereModel, new Material
             {
-                DiffuseMap = tuboTexture,
-                Diffuse = float3(1f, 1f, 1f),
-                Specular = float3(1f, 1f, 1f),
-                SpecularPower = 60f,
-                WeightMirror = 0.1f,
-                TextureSampler = new Sampler
-                {
-                    Wrap = WrapMode.Repeat
-                }
-            }, Transforms.Identity);
+                Specular = float3(1, 1, 1),
+                SpecularPower = 260,
 
-            //agragar los tubos de la lampara
-            scene.Add(_tubo1.AsRaycast(RaycastingMeshMode.Grid), new Material
-            {
-                DiffuseMap = tuboTexture,
-                Diffuse = float3(1f, 1f, 1f),
-                Specular = float3(1f, 1f, 1f),
-                SpecularPower = 60f,
-                WeightMirror = 0.2f,
-                TextureSampler = new Sampler
-                {
-                    Wrap = WrapMode.Repeat
-                }
-            }, Transforms.Identity);
+                WeightDiffuse = 0,
+                WeightFresnel = 1.0f, // Glass sphere
+                RefractionIndex = 1.6f
+            },
+                Transforms.Translate(0, 1, -1.5f));
 
-            //agrgar el foco de la lampara
-            var trans = mul(Transforms.Scale((float)0.7, (float)0.7, (float)0.7), Transforms.Translate((float)0.6, (float)1.7, 0));
-            scene.Add(Raycasting.UnitarySphere.AttributesMap(a => new PositionNormalCoordinate { Position = a, Normal = normalize(a) }), new Material
+            scene.Add(sphereModel, new Material
             {
-                DiffuseMap = sphereTexture,
-                Diffuse = float3(1, 1, 1),
-                Specular = float3(1, 1, 1) * 0.1f,
+                Specular = float3(1, 1, 1),
+                SpecularPower = 260,
+
+                WeightDiffuse = 0,
+                WeightMirror = 1.0f, // Mirror sphere
+            },
+                Transforms.Translate(1.5f, 1, 0));
+
+            scene.Add(sphereModel, new Material
+            {
+                Specular = float3(1, 1, 1)*0.1f,
                 SpecularPower = 60,
+                Diffuse = float3(1, 1, 1)
+            },
+                Transforms.Translate(-1.5f, 1, 0));
 
-                TextureSampler = new Sampler
-                {
-                    Wrap = WrapMode.Repeat,
-                    MinMagFilter = Filter.Point
-                }
-            }, trans);
+            scene.Add(Raycasting.PlaneXZ.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(a.x*0.2f, a.z*0.2f), Normal = float3(0, 1, 0) }),
+                new Material { DiffuseMap = planeTexture, Diffuse = float3(1, 1, 1), TextureSampler = new Sampler { Wrap = WrapMode.Repeat, MinMagFilter = Filter.Linear } },
+                Transforms.Identity);
 
-            var r = 6;
-            scene.Add(Raycasting.UnitarySphere.AttributesMap(a => new PositionNormalCoordinate { Position = a, Coordinates = float2(atan2(a.z, a.x) * 0.5f / pi + 0.5f, a.y), Normal = normalize(a) }), new Material
+            // Light source
+            scene.Add(sphereModel, new Material
             {
-                Emissive = LightIntensity / ((r / 2) * (r / 2) * 4 * pi), // power per unit area
+                Emissive = LightIntensity / (4 * pi), // power per unit area
                 WeightDiffuse = 0,
                 WeightFresnel = 1.0f, // Glass sphere
                 RefractionIndex = 1.0f
             },
-               mul(Transforms.Scale(r, r, r), Transforms.Translate(LightPosition)));
-
+               mul(Transforms.Scale(2.4f, 0.4f, 2.4f), Transforms.Translate(LightPosition)));
         }
+
         #endregion
 
         /// <summary>
@@ -384,26 +263,19 @@ namespace Renderer
         }
 
         // Scene Setup
-        static float3 CameraPosition = float3(5f, 1f, 4);
-        //para correr el raytracing descomentar estas lineas y comentar las del pathtracing
-        #region Raytracing
-        //static float3 LightPosition = float3(8, 5.5f, 8.5f);
-        //static float3 LightIntensity = float3(1, 1, 1) * 500;
-        #endregion
+        static float3 CameraPosition = float3(2, 4f, 4);
+        static float3 LightPosition = float3(3, 5, -2);
+        static float3 LightIntensity = float3(1, 1, 1) * 100;
 
-        #region  Pathtracing    
-        static float3 LightPosition = float3(-5.5f, 7f, 5.5f);
-        static float3 LightIntensity = float3(1, 1, 1) * 150;
-        #endregion
-
-        static void MyRaytracing(Texture2D texture)
+        static void Raytracing (Texture2D texture)
         {
             // View and projection matrices
-            float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(0, 0, 0), float3(0, 1, 0));
-            float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 10);
+            float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(0, 1, 0), float3(0, 1, 0));
+            float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 20);
 
             Scene<PositionNormalCoordinate, Material> scene = new Scene<PositionNormalCoordinate, Material>();
-            GeneratingMeshes(scene);
+            //CreateMeshScene(scene);
+            CreateRaycastScene(scene);
 
             // Raycaster to trace rays and check for shadow rays.
             Raytracer<ShadowRayPayload, PositionNormalCoordinate, Material> shadower = new Raytracer<ShadowRayPayload, PositionNormalCoordinate, Material>();
@@ -499,16 +371,15 @@ namespace Renderer
                 }
         }
 
-
-        static void MyPathtracing(Texture2D texture, int pass)
+        static void Pathtracing(Texture2D texture, int pass)
         {
             // View and projection matrices
-            float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(0, 0, 0), float3(0, 1, 0));
-            float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 10);
+            float4x4 viewMatrix = Transforms.LookAtLH(CameraPosition, float3(0, 1, 0), float3(0, 1, 0));
+            float4x4 projectionMatrix = Transforms.PerspectiveFovLH(pi_over_4, texture.Height / (float)texture.Width, 0.01f, 20);
 
             Scene<PositionNormalCoordinate, Material> scene = new Scene<PositionNormalCoordinate, Material>();
-            
-            GeneratingMeshes(scene);
+            //CreateMeshScene(scene);
+            CreateRaycastScene(scene);
 
             // Raycaster to trace rays and lit closest surfaces
             Raytracer<PTRayPayload, PositionNormalCoordinate, Material> raycaster = new Raytracer<PTRayPayload, PositionNormalCoordinate, Material>();
@@ -532,10 +403,8 @@ namespace Renderer
 
                 ScatteredRay outgoing = material.Scatter(attribute, V);
 
-                float lambertFactor = max(0, dot(attribute.Normal, outgoing.Direction));
-
                 payload.Color += payload.Importance * material.Emissive;
-
+                
                 // Recursive calls for indirect light due to reflections and refractions
                 if (payload.Bounces > 0)
                 {
@@ -590,7 +459,7 @@ namespace Renderer
 
                 stopwatch.Start();
 
-                MyRaytracing(texture);
+                Raytracing(texture);
 
                 stopwatch.Stop();
 
@@ -604,7 +473,7 @@ namespace Renderer
                 while (true)
                 {
                     Console.WriteLine("Pass: " + pass);
-                    MyPathtracing(texture, pass);
+                    Pathtracing(texture, pass);
                     texture.Save("test.rbm");
                     pass++;
                 }
